@@ -1,0 +1,137 @@
+/* 字体与阅读排版 */
+body {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "Noto Sans CJK SC",
+    Arial,
+    sans-serif;
+}
+
+#article-container {
+  font-size: 16.5px;
+  line-height: 1.85;
+  letter-spacing: 0;
+}
+
+#article-container h1,
+#article-container h2,
+#article-container h3,
+#article-container h4,
+#article-container h5,
+#article-container h6 {
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family:
+    "SFMono-Regular",
+    "JetBrains Mono",
+    "Cascadia Code",
+    "Consolas",
+    monospace;
+}
+
+/* 首页分类导航条 */
+.home-categories-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+
+.home-categories-nav .cat-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  background: #fff;
+  text-decoration: none;
+  border-right: 1px solid #eee;
+  transition: background 0.2s, color 0.2s;
+}
+
+.home-categories-nav .cat-nav-item:first-child {
+  border-radius: 12px 0 0 12px;
+}
+
+.home-categories-nav .cat-nav-item:last-child {
+  border-radius: 0 12px 12px 0;
+  border-right: none;
+}
+
+.home-categories-nav .cat-nav-item:hover {
+  background: #f0f5ff;
+}
+
+.home-categories-nav .cat-nav-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.home-categories-nav .cat-nav-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.home-categories-nav .cat-nav-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.home-categories-nav .cat-nav-sub {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+/* 深色模式 */
+[data-theme="dark"] .home-categories-nav .cat-nav-item {
+  background: #2b2b2b;
+  border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .home-categories-nav .cat-nav-item:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .home-categories-nav .cat-nav-name {
+  color: #ddd;
+}
+
+[data-theme="dark"] .home-categories-nav .cat-nav-sub {
+  color: #888;
+}
+
+/* 移动端 */
+@media screen and (max-width: 768px) {
+  .home-categories-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 12px;
+    margin: 12px auto;
+  }
+
+  .home-categories-nav .cat-nav-item {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 140px;
+    justify-content: center;
+    border-radius: 10px;
+    border-right: none;
+  }
+
+  .home-categories-nav .cat-nav-item:first-child,
+  .home-categories-nav .cat-nav-item:last-child {
+    border-radius: 10px;
+  }
+}
