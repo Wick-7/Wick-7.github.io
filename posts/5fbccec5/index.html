@@ -1,0 +1,795 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《加快语言模型生成速度》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generati">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《加快语言模型生成速度》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/5fbccec5/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generati">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-04T06:06:54.000Z">
+<meta property="article:modified_time" content="2026-07-04T06:10:30.608Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Flash attention">
+<meta property="article:tag" content="Inference">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《加快语言模型生成速度》课堂笔记",
+  "url": "https://wick-7.github.io/posts/5fbccec5/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-04T06:06:54.000Z",
+  "dateModified": "2026-07-04T06:10:30.608Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/5fbccec5/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《加快语言模型生成速度》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">4</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">6</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《加快语言模型生成速度》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《加快语言模型生成速度》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-04T06:06:54.000Z" title="发表于 2026-07-04 14:06:54">2026-07-04</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-04T06:10:30.608Z" title="更新于 2026-07-04 14:10:30">2026-07-04</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="加快语言模型的生成速度：Inference-加速"><a href="#加快语言模型的生成速度：Inference-加速" class="headerlink" title="加快语言模型的生成速度：Inference 加速"></a>加快语言模型的生成速度：Inference 加速</h1><h2 id="1-核心要点"><a href="#1-核心要点" class="headerlink" title="1. 核心要点"></a>1. 核心要点</h2><p>语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：</p>
+<ol>
+<li><strong>是否改变原有 Attention 的计算结果或范围？</strong></li>
+<li><strong>是否需要为该方法重新训练或定制模型？</strong></li>
+<li><strong>为了加速，还付出了什么代价？</strong> 例如额外显存、额外计算、模型能力下降或算法复杂度上升。</li>
+</ol>
+<h2 id="2-语言模型推论回顾"><a href="#2-语言模型推论回顾" class="headerlink" title="2. 语言模型推论回顾"></a>2. 语言模型推论回顾</h2><h3 id="2-1-Autoregressive-Generation"><a href="#2-1-Autoregressive-Generation" class="headerlink" title="2.1 Autoregressive Generation"></a>2.1 Autoregressive Generation</h3><p>语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。</p>
+<p>若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value：</p>
+<p>$$
+q_i=W_Qx_i,
+\qquad
+k_i=W_Kx_i,
+\qquad
+v_i=W_Vx_i.
+$$</p>
+<p>对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为：</p>
+<p>$$
+a_{t,i}=\frac{q_t^{\top}k_i}{\sqrt{d_k}},
+\qquad i\le t.
+$$</p>
+<p>课上为了突出推论算法，常把缩放项省略，直接写成 Query 与 Key 的 dot product。</p>
+<p>经过 Softmax 后得到归一化权重：</p>
+<p>$$
+\hat a_{t,i}
+=
+\frac{e^{a_{t,i}}}
+{\sum_{j=1}^{t}e^{a_{t,j}}}.
+$$</p>
+<p>最终输出是 Value 的加权和：</p>
+<p>$$
+o_t
+=
+\sum_{i=1}^{t}\hat a_{t,i}v_i.
+$$</p>
+<h3 id="2-2-Prefill-与-Decode"><a href="#2-2-Prefill-与-Decode" class="headerlink" title="2.2 Prefill 与 Decode"></a>2.2 Prefill 与 Decode</h3><p><img src="/img/posts/5fbccec5/2026-07-04-12-19-41.png"></p>
+<p>一次完整生成可以分成两个阶段。</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>输入形式</th>
+<th>主要特点</th>
+<th>典型瓶颈</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Prefill</strong></td>
+<td>一次输入完整 Prompt</td>
+<td>多个 token 的计算可以高度并行</td>
+<td>长序列 Attention、算力与显存带宽</td>
+</tr>
+<tr>
+<td><strong>Decode</strong></td>
+<td>每次新增一个 token</td>
+<td>必须逐 token 自回归生成，时间维度难以并行</td>
+<td>读取历史 KV Cache、内存带宽与延迟</td>
+</tr>
+</tbody></table>
+<p>Prefill 会为 Prompt 中所有 token 计算 Q、K、V；Decode 时，每轮只新增一个 token，但新 Query 仍需要访问前面所有 token 的 Key 和 Value。</p>
+<hr>
+<h1 id="Part-I：Flash-Attention"><a href="#Part-I：Flash-Attention" class="headerlink" title="Part I：Flash Attention"></a>Part I：Flash Attention</h1><h2 id="3-Flash-Attention-的目标"><a href="#3-Flash-Attention-的目标" class="headerlink" title="3. Flash Attention 的目标"></a>3. Flash Attention 的目标</h2><p>Flash Attention 的关键特点是：</p>
+<ul>
+<li><strong>结果与标准 Attention 相同，不是近似算法。</strong></li>
+<li><strong>通常不需要重新训练模型，可以直接替换 Attention 的实现。</strong></li>
+<li>核心优化目标不是减少数学定义中的 Attention，而是减少 GPU 上的<strong>数据搬运次数</strong>。</li>
+</ul>
+<p>它是一种 <strong>IO-aware algorithm</strong>：算法设计直接考虑 GPU 存储层级，而不仅仅统计 FLOPs。</p>
+<hr>
+<h2 id="4-GPU-存储层级：HBM-与-SRAM"><a href="#4-GPU-存储层级：HBM-与-SRAM" class="headerlink" title="4. GPU 存储层级：HBM 与 SRAM"></a>4. GPU 存储层级：HBM 与 SRAM</h2><p>可以用“仓库”和“工作台”来类比 GPU 的两类存储。</p>
+<table>
+<thead>
+<tr>
+<th>存储</th>
+<th>课堂类比</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>HBM</strong></td>
+<td>仓库</td>
+<td>容量较大，但访问较慢</td>
+</tr>
+<tr>
+<td><strong>On-chip SRAM</strong></td>
+<td>工作台</td>
+<td>容量很小，但访问和计算很快</td>
+</tr>
+</tbody></table>
+<p><img src="/img/posts/5fbccec5/2026-07-04-12-43-18.png"></p>
+<p>GPU 中有大量并行 Execution Units。数据一旦被搬到 SRAM，矩阵计算通常很快；真正拖慢程序的往往是：</p>
+<ul>
+<li>从 HBM 读取数据到 SRAM；</li>
+<li>将中间结果从 SRAM 写回 HBM；</li>
+<li>后续步骤再次从 HBM 读取同一批中间结果。</li>
+</ul>
+<p>因此，Attention 可能不是单纯的 compute-bound，而是明显受到 <strong>memory bandwidth &#x2F; IO</strong> 限制。</p>
+<blockquote>
+<p>Flash Attention 的核心问题：能否改变计算顺序，在结果不变的前提下，让 Q、K、V 和中间量少往返 HBM？</p>
+</blockquote>
+<hr>
+<h2 id="5-标准-Attention-为什么需要反复读写"><a href="#5-标准-Attention-为什么需要反复读写" class="headerlink" title="5. 标准 Attention 为什么需要反复读写"></a>5. 标准 Attention 为什么需要反复读写</h2><p>为简化说明，先考虑一个 Query $q$ 对长度为 $L$ 的 Key 和 Value 序列进行 Attention。</p>
+<p>Attention score 为：</p>
+<p>$$
+a_i=q^{\top}k_i,
+\qquad i=1,\ldots,L.
+$$</p>
+<p>为了避免指数运算溢出，实际 Softmax 通常减去全局最大值：</p>
+<p>$$
+a_{\max}=\max_{1\le i\le L}a_i.
+\qquad 
+\hat a_i
+=
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}.
+$$</p>
+<p>输出为：</p>
+<p>$$
+o
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$</p>
+<p>当序列很长时，SRAM 无法放下与 $L$ 成比例的所有 Key、Value 或 Attention score，只能将序列切成多个 chunk。设每个 chunk 包含 $N$ 个位置，chunk 数量近似为：</p>
+<p>$$
+B=\frac{L}{N}.
+$$</p>
+<p><img src="/img/posts/5fbccec5/2026-07-04-12-45-04.png"></p>
+<p>朴素实现往往需要多次扫描数据：</p>
+<ol>
+<li>分块计算所有 $a_i$，并将 score 写回 HBM。</li>
+<li>再次读取 score，寻找全局最大值。</li>
+<li>再次读取 score，计算 Softmax 分母。</li>
+<li>再次读取 score，生成归一化权重并写回 HBM。</li>
+<li>读取 Attention 权重和 Value，计算最终加权和。</li>
+</ol>
+<p>问题不只是“做了多少乘法”，而是 $a_i$ 与 $\hat a_i$ 等大规模中间量被反复写入、读取。</p>
+<hr>
+<h2 id="6-Online-Softmax：一次扫描更新最大值和分母"><a href="#6-Online-Softmax：一次扫描更新最大值和分母" class="headerlink" title="6. Online Softmax：一次扫描更新最大值和分母"></a>6. Online Softmax：一次扫描更新最大值和分母</h2><h3 id="6-1-分块定义"><a href="#6-1-分块定义" class="headerlink" title="6.1 分块定义"></a>6.1 分块定义</h3><p>把第 $k$ 个 chunk 的位置集合记为 $I_k$。处理完前 $k$ 个 chunk 后，维护两个常数：</p>
+<ul>
+<li>$d_k$：目前见过的最大 score；</li>
+<li>$s_k$：以当前最大值 $d_k$ 为基准的指数和。</li>
+</ul>
+<p>初始化：</p>
+<p>$$
+d_0=-\infty,
+\qquad
+s_0=0.
+$$</p>
+<p>读入第 $k$ 个 chunk 后，最大值更新为：</p>
+<p>$$
+d_k
+=
+\max\left(
+ d_{k-1},
+ \max_{i\in I_k}a_i
+\right).
+$$</p>
+<p>分母更新为：</p>
+<p>$$
+s_k
+=
+s_{k-1}e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}e^{a_i-d_k}.
+$$</p>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-11-19.png"></p>
+<p>旧分母原本以 $d_{k-1}$ 为基准：</p>
+<p>$$
+s_{k-1}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_{k-1}}.
+$$</p>
+<p>当新的最大值变为 $d_k$ 时，只需乘上一个修正项：</p>
+<p>$$
+s_{k-1}e^{d_{k-1}-d_k}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_k}.
+$$</p>
+<p>因为：</p>
+<p>$$
+e^{a_i-d_{k-1}}e^{d_{k-1}-d_k}
+=
+e^{a_i-d_k}.
+$$</p>
+<p>这样便不需要重新读取之前所有 chunk。处理最后一个 chunk 后：</p>
+<p>$$
+d_B=a_{\max},
+\qquad 
+s_B
+=
+\sum_{i=1}^{L}e^{a_i-a_{\max}}.
+$$</p>
+<p>这就是完整 Softmax 的正确分母。</p>
+<hr>
+<h2 id="7-Flash-Attention：不显式保存-Attention-Matrix，直接更新输出"><a href="#7-Flash-Attention：不显式保存-Attention-Matrix，直接更新输出" class="headerlink" title="7. Flash Attention：不显式保存 Attention Matrix，直接更新输出"></a>7. Flash Attention：不显式保存 Attention Matrix，直接更新输出</h2><p>Online Softmax 仍可以先得到分母，再第二次读取 score 计算归一化权重；Flash Attention 更进一步：</p>
+<blockquote>
+<p>不必先完整生成并保存 $\hat a_i$，可以在每个 chunk 内直接结合 Value，逐步得到最终输出。</p>
+</blockquote>
+<p>令 $o_k$ 表示处理完前 $k$ 个 chunk 后，按照当前 $d_k$ 与 $s_k$ 归一化得到的局部输出。初始化：</p>
+<p>$$
+o_0=0.
+$$</p>
+<p>处理第 $k$ 个 chunk 时，输出更新为：</p>
+<p>$$
+o_k
+=
+o_{k-1}
+\frac{s_{k-1}}{s_k}
+e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}
+\frac{e^{a_i-d_k}}{s_k}v_i.
+$$</p>
+<p>第一项是在修正过去的输出：</p>
+<ul>
+<li>$d_{k-1}$ 变成了 $d_k$，需要指数修正；</li>
+<li>归一化分母从 $s_{k-1}$ 变成了 $s_k$，需要比例修正。</li>
+</ul>
+<p>第二项加入当前 chunk 的新贡献。</p>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-14-43.png"></p>
+<p>处理完最后一个 chunk 后：</p>
+<p>$$
+o_B
+=
+\sum_{i=1}^{L}
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}
+v_i
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$</p>
+<p>所以，尽管计算过程中没有把完整 Attention 权重矩阵写入 HBM，最终输出仍与标准 Attention 完全一致。</p>
+<h3 id="7-1-从单个-Query-推广到完整-Attention"><a href="#7-1-从单个-Query-推广到完整-Attention" class="headerlink" title="7.1 从单个 Query 推广到完整 Attention"></a>7.1 从单个 Query 推广到完整 Attention</h3><p>上面为了便于推导只画了一个 Query，真实实现会同时把 Q、K、V 划分为二维 tiles：</p>
+<ul>
+<li>在 SRAM 中加载一小块 Query；</li>
+<li>依次加载多块 Key 和 Value；</li>
+<li>对每一行 Query 维护对应的 running max、running sum 和输出；</li>
+<li>完成后只把最终输出写回 HBM。</li>
+</ul>
+<p>其数学思想仍是相同的 Online Softmax 与分块输出修正。</p>
+<hr>
+<h2 id="8-Flash-Attention-为什么更快"><a href="#8-Flash-Attention-为什么更快" class="headerlink" title="8. Flash Attention 为什么更快"></a>8. Flash Attention 为什么更快</h2><p>Flash Attention 的主要收益来自：</p>
+<ol>
+<li><strong>Tiling</strong>：只把当前需要的小块 Q、K、V 搬进 SRAM。</li>
+<li><strong>Kernel fusion</strong>：dot product、mask、Softmax 和 Value 加权尽量在同一计算过程中完成。</li>
+<li><strong>不物化完整 Attention Matrix</strong>：避免把长度平方级的 score 或权重矩阵频繁写入 HBM。</li>
+<li><strong>减少 HBM 读写</strong>：用少量额外计算换取大幅减少的数据搬运。</li>
+</ol>
+<h3 id="8-1-代价和限制"><a href="#8-1-代价和限制" class="headerlink" title="8.1 代价和限制"></a>8.1 代价和限制</h3><ul>
+<li>需要额外的指数修正和归一化修正，计算量可能略有增加。</li>
+<li>实现复杂，理解和编写 kernel 更困难。</li>
+<li>某些框架在 Flash Attention 模式下不会保留完整 Attention 权重，因此无法直接读取整个 Attention matrix 做可视化。</li>
+<li>序列很短时，Attention 并不是总耗时的主要部分，速度提升可能不明显。</li>
+<li>Flash Attention 减少的是运算过程中的 IO，<strong>不能消除 KV Cache 对 HBM 容量的占用</strong>。</li>
+</ul>
+<h3 id="8-2-课堂实验结论"><a href="#8-2-课堂实验结论" class="headerlink" title="8.2 课堂实验结论"></a>8.2 课堂实验结论</h3><p>课堂示例中：</p>
+<ul>
+<li>对随机 Q、K、V 做 Attention，序列长度达到 4096 时，Flash Attention 相较朴素实现可达到约 8 到 9 倍加速。</li>
+<li>在真实语言模型示例中，Prompt 较短时提升有限；Prompt 约为 7 万 token 时，示例耗时约由 2.0 秒降低至 1.3 秒。</li>
+<li>当 Prompt 增加到约 73 万 token 时出现 CUDA Out of Memory，说明即使运算方式更高效，HBM 容量仍然有限。</li>
+</ul>
+<p>这些数值与具体硬件、模型、数据类型和实现有关，应理解为课堂示范，而不是固定性能保证。</p>
+<hr>
+<h1 id="Part-II：KV-Cache"><a href="#Part-II：KV-Cache" class="headerlink" title="Part II：KV Cache"></a>Part II：KV Cache</h1><h2 id="9-KV-Cache-的基本机制"><a href="#9-KV-Cache-的基本机制" class="headerlink" title="9. KV Cache 的基本机制"></a>9. KV Cache 的基本机制</h2><h3 id="9-1-Prefill-阶段"><a href="#9-1-Prefill-阶段" class="headerlink" title="9.1 Prefill 阶段"></a>9.1 Prefill 阶段</h3><p>Prompt 一次性进入模型后，每一层都会为各 token 计算 Q、K、V。不同位置的输出可以并行计算。</p>
+<p>Prefill 完成后：</p>
+<ul>
+<li>保存每一层、每一个历史 token 的 Key 和 Value；</li>
+<li>不需要保存过去的 Query。</li>
+</ul>
+<h3 id="9-2-Decode-阶段"><a href="#9-2-Decode-阶段" class="headerlink" title="9.2 Decode 阶段"></a>9.2 Decode 阶段</h3><p>假设当前生成第 $t$ 个 token，只需：</p>
+<ol>
+<li>为新 token 计算 $q_t$、$k_t$、$v_t$；</li>
+<li>用 $q_t$ 与缓存中的所有历史 Key 计算 Attention；</li>
+<li>用得到的权重对所有历史 Value 做加权和；</li>
+<li>将新的 $k_t$、$v_t$ 追加到 Cache。</li>
+</ol>
+<h3 id="9-3-为什么保存-K、V，不保存-Q"><a href="#9-3-为什么保存-K、V，不保存-Q" class="headerlink" title="9.3 为什么保存 K、V，不保存 Q"></a>9.3 为什么保存 K、V，不保存 Q</h3><p>未来生成新 token 时，需要的是“新的 Query 对过去所有 Key 进行检索，再读取过去的 Value”。过去 token 的 Query 已经完成了它当时的计算，以后不会再次使用。</p>
+<p>因此：</p>
+<ul>
+<li>Key 和 Value 会被未来所有 token 重复访问；</li>
+<li>旧 Query 不会再被使用。</li>
+</ul>
+<h3 id="9-4-本质上的时间—空间交换"><a href="#9-4-本质上的时间—空间交换" class="headerlink" title="9.4 本质上的时间—空间交换"></a>9.4 本质上的时间—空间交换</h3><p>KV Cache 避免重复计算历史 token 的 K、V，显著加快 Decode；代价是缓存量随以下因素线性增长：</p>
+<ul>
+<li>序列长度；</li>
+<li>Transformer 层数；</li>
+<li>KV Head 数量；</li>
+<li>每个 Head 的维度；</li>
+<li>Batch size；</li>
+<li>数值精度所占字节数。</li>
+</ul>
+<hr>
+<h2 id="10-KV-Cache-的显存计算"><a href="#10-KV-Cache-的显存计算" class="headerlink" title="10. KV Cache 的显存计算"></a>10. KV Cache 的显存计算</h2><p>只考虑单个 token、单个 batch 时，KV Cache 大小可写成：</p>
+<p>$$
+M_{\text{token}}
+=
+2
+\times N_{\text{layer}}
+\times N_{\text{KV-head}}
+\times d_{\text{head}}
+\times b,
+$$</p>
+<p>其中：</p>
+<ul>
+<li>前面的 $2$ 表示同时保存 Key 和 Value；</li>
+<li>$b$ 表示每个数占用的字节数，例如 FP16 为 2 Byte。</li>
+</ul>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-31-34.png"><br>以 Gemma 2 27B 的参数做<strong>简化</strong>估算：</p>
+<p>$$
+46
+\times 32
+\times 128
+\times 2
+\times 2
+=
+753664\ \text{Bytes}.
+$$</p>
+<p>约为：</p>
+<p>$$
+736\ \text{KiB}
+\approx
+0.72\ \text{MiB/token}.
+$$</p>
+<p>若把 80 GiB 全部用于该 KV Cache，理想化上限约为：</p>
+<p>$$
+\frac{80\ \text{GiB}}{0.72\ \text{MiB/token}}
+\approx
+114000\ \text{tokens}.
+$$</p>
+<p>如果有 batch，整体 KV Cache 还要再乘 batch size：</p>
+<p>$$
+M_{\text{total}}
+=
+B_{\text{batch}}
+\times L_{\text{seq}}
+\times M_{\text{token}}.
+$$</p>
+<hr>
+<h2 id="11-MHA、MQA-与-GQA"><a href="#11-MHA、MQA-与-GQA" class="headerlink" title="11. MHA、MQA 与 GQA"></a>11. MHA、MQA 与 GQA</h2><p>KV Cache 只保存 K 和 V，因此减少 KV Head 数量可以直接降低 Cache 大小和 Decode 时的内存读取量。</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th align="right">Query Head</th>
+<th align="right">KV Head</th>
+<th>核心思想</th>
+<th>KV Cache</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>MHA</strong></td>
+<td align="right">多个</td>
+<td align="right">与 Query 数量相同</td>
+<td>每个 Query Head 有独立 K、V</td>
+<td>最大</td>
+<td>表达能力强，但显存占用高</td>
+</tr>
+<tr>
+<td><strong>MQA</strong></td>
+<td align="right">多个</td>
+<td align="right">1 组</td>
+<td>所有 Query Head 共享同一组 K、V</td>
+<td>最小</td>
+<td>可能明显损伤模型能力</td>
+</tr>
+<tr>
+<td><strong>GQA</strong></td>
+<td align="right">多个</td>
+<td align="right">介于 1 与 Query Head 数之间</td>
+<td>每组 K、V 服务多个 Query Head</td>
+<td>居中</td>
+<td>在效果和效率之间折中</td>
+</tr>
+</tbody></table>
+<p>若 Query Head 数为 $H_q$，KV Head 数为 $H_{kv}$，则 KV Cache 大小与 $H_{kv}$ 近似成正比：</p>
+<p>$$
+M_{\text{KV}}
+\propto
+H_{kv}.
+$$</p>
+<p>每组 KV 对应的 Query 数约为：</p>
+<p>$$
+G
+=
+\frac{H_q}{H_{kv}}.
+$$</p>
+<p>重要区别：</p>
+<ul>
+<li>不是让多个 K、V 共享一个 Query；</li>
+<li>而是让多个 Query 共享一组 K、V；</li>
+<li>原因是只有 K、V 需要长期缓存，Query 不需要缓存。</li>
+</ul>
+<p>MQA 和 GQA 改变了原始 MHA 架构，通常需要在训练模型时就采用相应设计，不能简单把任意现成模型无损改成 MQA 或 GQA。</p>
+<hr>
+<h2 id="12-Multi-Head-Latent-Attention（MLA）"><a href="#12-Multi-Head-Latent-Attention（MLA）" class="headerlink" title="12. Multi-Head Latent Attention（MLA）"></a>12. Multi-Head Latent Attention（MLA）</h2><h3 id="12-1-核心思想"><a href="#12-1-核心思想" class="headerlink" title="12.1 核心思想"></a>12.1 核心思想</h3><p>MHA 需要缓存多组高维 K、V。MLA 在输入与多组 K、V 之间加入低维 bottleneck，将每个 token 压缩成 latent vector $c_i$，缓存时主要保存这个低维表示。</p>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-47-42.png"></p>
+<p>简化表示为：</p>
+<p>$$
+c_i=W_Dx_i.
+$$</p>
+<p>每个 Head 的 Key 和 Value 可由 latent vector 线性映射得到：</p>
+<p>$$
+k_i=W_Kc_i,
+\qquad
+v_i=W_Vc_i.
+$$</p>
+<p>MLA 的关键不只是“压缩”，而是可以利用线性代数改变运算顺序，避免对序列中的每个 latent vector 都进行完整解压缩。</p>
+<h3 id="12-2-Attention-score-不需要逐-token-解压-Key"><a href="#12-2-Attention-score-不需要逐-token-解压-Key" class="headerlink" title="12.2 Attention score 不需要逐 token 解压 Key"></a>12.2 Attention score 不需要逐 token 解压 Key</h3><p>原本：</p>
+<p>$$
+a_i=q^{\top}k_i.
+$$</p>
+<p>代入 $k_i=W_Kc_i$：</p>
+<p>$$
+a_i
+=q^{\top}W_Kc_i
+=
+\left(W_K^{\top}q\right)^{\top}c_i.
+$$</p>
+<p>定义压缩空间中的 Query：</p>
+<p>$$
+q'=W_K^{\top}q.
+$$</p>
+<p>于是：</p>
+<p>$$
+a_i={q'}^{\top}c_i.
+$$</p>
+<p>因此不需要先把每个 $c_i$ 解压成 $k_i$，只需把当前 Query 变换一次，再直接与所有缓存的 latent vectors 做 dot product。</p>
+<h3 id="12-3-Weighted-Sum-不需要逐-token-解压-Value"><a href="#12-3-Weighted-Sum-不需要逐-token-解压-Value" class="headerlink" title="12.3 Weighted Sum 不需要逐 token 解压 Value"></a>12.3 Weighted Sum 不需要逐 token 解压 Value</h3><p><img src="/img/posts/5fbccec5/2026-07-04-13-48-37.png"><br>标准输出为：</p>
+<p>$$
+o
+=
+\sum_i\hat a_i v_i.
+$$</p>
+<p>代入 $v_i=W_Vc_i$：</p>
+<p>$$
+o
+=
+\sum_i\hat a_iW_Vc_i
+=
+W_V\left(\sum_i\hat a_i c_i\right).
+$$</p>
+<p>所以可以：</p>
+<ol>
+<li>先在低维 latent space 中完成加权和；</li>
+<li>最后只对汇总后的一个向量做一次映射。</li>
+</ol>
+<p>而不是对长度为 $L$ 的每个 token 分别解压。</p>
+<h3 id="12-4-特点"><a href="#12-4-特点" class="headerlink" title="12.4 特点"></a>12.4 特点</h3><ul>
+<li>大幅压缩需要保存的 KV 信息。</li>
+<li>需要模型在训练时学习压缩和映射，属于模型架构设计。</li>
+<li>相对于原始 MHA，它改变了 Attention 的参数化方式；但在该架构内部，上述换序计算本身是代数等价的，不是数值近似。</li>
+</ul>
+<hr>
+<h2 id="13-Sliding-Window-Attention"><a href="#13-Sliding-Window-Attention" class="headerlink" title="13. Sliding Window Attention"></a>13. Sliding Window Attention</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-52-31.png"></p>
+<p>Sliding Window Attention 将每个 token 的可见范围限制为最近 $W$ 个 token：</p>
+<p>$$
+\mathcal A_t
+=
+\left\{
+\max(1,t-W+1),\ldots,t
+\right\}.
+$$</p>
+<p>每层只需保存固定窗口内的 KV，Cache 不再随序列无限增长。虽然单层只能看到局部，但通过多层堆叠，较早 token 的信息可被中间位置吸收后再传递给更高层，有效感受野随深度扩大——不过长距离信息仍可能逐层衰减或丢失。实际使用时常与 Full Attention 层交替，兼顾效率与全局信息传递。</p>
+<hr>
+<h2 id="14-StreamingLLM-与-Attention-Sink"><a href="#14-StreamingLLM-与-Attention-Sink" class="headerlink" title="14. StreamingLLM 与 Attention Sink"></a>14. StreamingLLM 与 Attention Sink</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-53-58.png"></p>
+<p>单纯只保留最近窗口在长序列下表现会明显下降。StreamingLLM 发现：<strong>额外保留序列最开头的少数 token</strong> 就能让模型稳定处理远超训练长度的流式输入：</p>
+<p>$$
+\mathcal A_t
+=
+\{1,2,\ldots,S\}
+\cup
+\{t-W+1,\ldots,t\}.
+$$</p>
+<p>其原理是 Softmax 权重之和必须为 1，即使当前没有需要关注的上下文，模型也必须将多余 Attention 分配给某些位置。开头的 token 往往充当了 <strong>Attention Sink</strong>——模型把”无处可放”的注意力集中到它们身上。删除这些 sink token 会破坏已形成的 Attention 行为；保留它们后表现显著恢复。这里的要点是：开头 token 被保留不一定因为语义重要，而可能是因为它们承担了稳定 Attention 分布的结构性作用。该方法可在 Inference 阶段直接应用，也可在训练时显式加入。</p>
+<hr>
+<h2 id="15-KV-Cache-Pruning"><a href="#15-KV-Cache-Pruning" class="headerlink" title="15. KV Cache Pruning"></a>15. KV Cache Pruning</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-54-15.png"></p>
+<p>Scissorhands、H2O 等工作观察到：每次生成时真正获得明显 Attention 的历史 token 只占少数（heavy hitters），大量 KV 长期存在却几乎不再被访问。因此可在显存达到预算上限时，保留最近 token 和累计 Attention 较高的 token，删除长期未使用的 KV，将显存放在固定预算内。</p>
+<ul>
+<li><strong>优点</strong>：通常可直接用于已有模型，丢弃大量 KV 后性能仍可能接近完整 Cache。</li>
+<li><strong>风险</strong>：被删 token 以后可能重新变得重要但无法恢复；困难的长距离推理、信息检索任务可能明显退化。核心难点在于判断哪些 KV 可以安全删除。</li>
+</ul>
+<hr>
+<h2 id="16-跨对话的-KV-Cache：Prompt-Caching"><a href="#16-跨对话的-KV-Cache：Prompt-Caching" class="headerlink" title="16. 跨对话的 KV Cache：Prompt Caching"></a>16. 跨对话的 KV Cache：Prompt Caching</h2><p>前面的 KV Cache 主要是在同一个生成过程中复用历史 K、V。服务平台还可以在<strong>不同请求之间</strong>复用相同前缀的 KV Cache。</p>
+<h3 id="16-1-只有相同-Prefix-才能复用"><a href="#16-1-只有相同-Prefix-才能复用" class="headerlink" title="16.1 只有相同 Prefix 才能复用"></a>16.1 只有相同 Prefix 才能复用</h3><p>在 Causal Transformer 中，一个 token 的表示不仅取决于它自身，还取决于它前面的全部 token。</p>
+<p>例如两条序列：</p>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-54-47.png"></p>
+<p>公共前缀“大家好，我是”对应的 K、V 可以复用；从“大”和“小”开始，前缀已经不同，后续即使再次出现相同的“金”字，其 K、V 也不能直接复用。</p>
+<p>原因可概括为：</p>
+<p>$$
+(k_i,v_i)
+=
+f(x_1,x_2,\ldots,x_i),
+$$</p>
+<p>而不是只由当前 token $x_i$ 决定。</p>
+<h3 id="16-2-System-Prompt-的排列原则"><a href="#16-2-System-Prompt-的排列原则" class="headerlink" title="16.2 System Prompt 的排列原则"></a>16.2 System Prompt 的排列原则</h3><p>为了提高 Cache Hit：</p>
+<ul>
+<li><strong>稳定、不常变化的内容放在前面</strong>；</li>
+<li><strong>日期、用户输入、任务参数等易变化内容放在后面</strong>。</li>
+</ul>
+<p><img src="/img/posts/5fbccec5/2026-07-04-13-55-34.png"><br>对于 AI Agent，常见的稳定前缀包括：</p>
+<ul>
+<li>可使用的工具及调用规则；</li>
+<li>Agent 的固定行为规范；</li>
+<li>身份、长期目标、固定记忆检索方式；</li>
+<li>长而稳定的 system prompt。</li>
+</ul>
+<p>容易变化的内容包括：</p>
+<ul>
+<li>当前时间；</li>
+<li>用户本轮输入；</li>
+<li>动态环境状态；</li>
+<li>临时变量和任务参数。</li>
+</ul>
+<h3 id="16-3-Prompt-改写示例"><a href="#16-3-Prompt-改写示例" class="headerlink" title="16.3 Prompt 改写示例"></a>16.3 Prompt 改写示例</h3><p>Cache Hit 较少的写法：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">帮我订从台北到波士顿的班机</span><br><span class="line">帮我订从旧金山到纽约的班机</span><br></pre></td></tr></table></figure>
+
+<p>因为地点较早出现，前缀很快分叉。</p>
+<p>更有利于缓存的写法：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">帮我订从 X 到 Y 的班机。X=台北，Y=波士顿</span><br><span class="line">帮我订从 X 到 Y 的班机。X=旧金山，Y=纽约</span><br></pre></td></tr></table></figure>
+
+<p>固定模板被放在前面，变化参数被移到后面，公共前缀更长。</p>
+<h3 id="16-4-为什么-Prompt-Caching-与成本有关"><a href="#16-4-为什么-Prompt-Caching-与成本有关" class="headerlink" title="16.4 为什么 Prompt Caching 与成本有关"></a>16.4 为什么 Prompt Caching 与成本有关</h3><p>如果前缀的 KV 已经计算完成，平台无需再次对这部分 Prompt 执行完整 Prefill，只需读取已有缓存。课程以 API 对 cached input 提供更低价格为例，说明计算成本与账单成本之间的联系。</p>
+<p>需要区分：</p>
+<ul>
+<li><strong>KV Cache</strong>：通常指单次会话或生成过程中的历史 KV；</li>
+<li><strong>Prompt Caching &#x2F; Prefix Caching</strong>：服务系统在多个请求之间复用相同前缀的 KV。</li>
+</ul>
+<p>二者保存的核心对象相同，但复用范围不同。</p>
+<hr>
+<h1 id="Part-III：Speculative-Decoding-简述"><a href="#Part-III：Speculative-Decoding-简述" class="headerlink" title="Part III：Speculative Decoding 简述"></a>Part III：Speculative Decoding 简述</h1><h2 id="17-基本思想"><a href="#17-基本思想" class="headerlink" title="17. 基本思想"></a>17. 基本思想</h2><p>Speculative Decoding 使用一个较小、较快的 draft model 先一次提出多个候选 token，再由较大的 target model 一次并行检查这些候选。</p>
+<p>若多个候选被接受，大模型的一次前向计算便可推进多个 token，而不是每次只推进一个 token。</p>
+<h3 id="17-1-特点"><a href="#17-1-特点" class="headerlink" title="17.1 特点"></a>17.1 特点</h3><ul>
+<li>理论上通过正确的接受—拒绝与概率修正，可以保持目标模型原本的生成分布。</li>
+<li>不一定需要重新训练大模型，可搭配不同的小模型。</li>
+<li>代价是额外运行一个 draft model；若小模型预测经常不被接受，收益会下降。</li>
+</ul>
+<hr>
+<h2 id="18-方法总表"><a href="#18-方法总表" class="headerlink" title="18. 方法总表"></a>18. 方法总表</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-57-49.png"></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/5fbccec5/">https://wick-7.github.io/posts/5fbccec5/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Inference/">Inference</a><a class="post-meta__tags" href="/tags/Flash-attention/">Flash attention</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a><a class="pagination-related" href="/posts/f1d5593e/" title="《生成式AI时代下的机器学习 第四讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第四讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 每一种架构都有存在的理由任何网络架构都带有特定的归纳偏置（inductive bias）。 CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合； Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。 同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？  本节结论： 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。  2. Transformer（这里主要关注 Self-Attention）出现的理由在 Self-Attention 出现之前主流使用 RNNs 做序列建模：输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。  注意： $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。  广义 RNN ...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">4</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">6</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%8A%A0%E5%BF%AB%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E7%94%9F%E6%88%90%E9%80%9F%E5%BA%A6%EF%BC%9AInference-%E5%8A%A0%E9%80%9F"><span class="toc-number">1.</span> <span class="toc-text">加快语言模型的生成速度：Inference 加速</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%A0%B8%E5%BF%83%E8%A6%81%E7%82%B9"><span class="toc-number">1.1.</span> <span class="toc-text">1. 核心要点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%8E%A8%E8%AE%BA%E5%9B%9E%E9%A1%BE"><span class="toc-number">1.2.</span> <span class="toc-text">2. 语言模型推论回顾</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-Autoregressive-Generation"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 Autoregressive Generation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Prefill-%E4%B8%8E-Decode"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 Prefill 与 Decode</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-I%EF%BC%9AFlash-Attention"><span class="toc-number">2.</span> <span class="toc-text">Part I：Flash Attention</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Flash-Attention-%E7%9A%84%E7%9B%AE%E6%A0%87"><span class="toc-number">2.1.</span> <span class="toc-text">3. Flash Attention 的目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-GPU-%E5%AD%98%E5%82%A8%E5%B1%82%E7%BA%A7%EF%BC%9AHBM-%E4%B8%8E-SRAM"><span class="toc-number">2.2.</span> <span class="toc-text">4. GPU 存储层级：HBM 与 SRAM</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E6%A0%87%E5%87%86-Attention-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E5%8F%8D%E5%A4%8D%E8%AF%BB%E5%86%99"><span class="toc-number">2.3.</span> <span class="toc-text">5. 标准 Attention 为什么需要反复读写</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Online-Softmax%EF%BC%9A%E4%B8%80%E6%AC%A1%E6%89%AB%E6%8F%8F%E6%9B%B4%E6%96%B0%E6%9C%80%E5%A4%A7%E5%80%BC%E5%92%8C%E5%88%86%E6%AF%8D"><span class="toc-number">2.4.</span> <span class="toc-text">6. Online Softmax：一次扫描更新最大值和分母</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E5%88%86%E5%9D%97%E5%AE%9A%E4%B9%89"><span class="toc-number">2.4.1.</span> <span class="toc-text">6.1 分块定义</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-Flash-Attention%EF%BC%9A%E4%B8%8D%E6%98%BE%E5%BC%8F%E4%BF%9D%E5%AD%98-Attention-Matrix%EF%BC%8C%E7%9B%B4%E6%8E%A5%E6%9B%B4%E6%96%B0%E8%BE%93%E5%87%BA"><span class="toc-number">2.5.</span> <span class="toc-text">7. Flash Attention：不显式保存 Attention Matrix，直接更新输出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E4%BB%8E%E5%8D%95%E4%B8%AA-Query-%E6%8E%A8%E5%B9%BF%E5%88%B0%E5%AE%8C%E6%95%B4-Attention"><span class="toc-number">2.5.1.</span> <span class="toc-text">7.1 从单个 Query 推广到完整 Attention</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-Flash-Attention-%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9B%B4%E5%BF%AB"><span class="toc-number">2.6.</span> <span class="toc-text">8. Flash Attention 为什么更快</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E4%BB%A3%E4%BB%B7%E5%92%8C%E9%99%90%E5%88%B6"><span class="toc-number">2.6.1.</span> <span class="toc-text">8.1 代价和限制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E8%AF%BE%E5%A0%82%E5%AE%9E%E9%AA%8C%E7%BB%93%E8%AE%BA"><span class="toc-number">2.6.2.</span> <span class="toc-text">8.2 课堂实验结论</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-II%EF%BC%9AKV-Cache"><span class="toc-number">3.</span> <span class="toc-text">Part II：KV Cache</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#9-KV-Cache-%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%9C%BA%E5%88%B6"><span class="toc-number">3.1.</span> <span class="toc-text">9. KV Cache 的基本机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-Prefill-%E9%98%B6%E6%AE%B5"><span class="toc-number">3.1.1.</span> <span class="toc-text">9.1 Prefill 阶段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-Decode-%E9%98%B6%E6%AE%B5"><span class="toc-number">3.1.2.</span> <span class="toc-text">9.2 Decode 阶段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BF%9D%E5%AD%98-K%E3%80%81V%EF%BC%8C%E4%B8%8D%E4%BF%9D%E5%AD%98-Q"><span class="toc-number">3.1.3.</span> <span class="toc-text">9.3 为什么保存 K、V，不保存 Q</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-4-%E6%9C%AC%E8%B4%A8%E4%B8%8A%E7%9A%84%E6%97%B6%E9%97%B4%E2%80%94%E7%A9%BA%E9%97%B4%E4%BA%A4%E6%8D%A2"><span class="toc-number">3.1.4.</span> <span class="toc-text">9.4 本质上的时间—空间交换</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-KV-Cache-%E7%9A%84%E6%98%BE%E5%AD%98%E8%AE%A1%E7%AE%97"><span class="toc-number">3.2.</span> <span class="toc-text">10. KV Cache 的显存计算</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-MHA%E3%80%81MQA-%E4%B8%8E-GQA"><span class="toc-number">3.3.</span> <span class="toc-text">11. MHA、MQA 与 GQA</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-Multi-Head-Latent-Attention%EF%BC%88MLA%EF%BC%89"><span class="toc-number">3.4.</span> <span class="toc-text">12. Multi-Head Latent Attention（MLA）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3"><span class="toc-number">3.4.1.</span> <span class="toc-text">12.1 核心思想</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-Attention-score-%E4%B8%8D%E9%9C%80%E8%A6%81%E9%80%90-token-%E8%A7%A3%E5%8E%8B-Key"><span class="toc-number">3.4.2.</span> <span class="toc-text">12.2 Attention score 不需要逐 token 解压 Key</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-3-Weighted-Sum-%E4%B8%8D%E9%9C%80%E8%A6%81%E9%80%90-token-%E8%A7%A3%E5%8E%8B-Value"><span class="toc-number">3.4.3.</span> <span class="toc-text">12.3 Weighted Sum 不需要逐 token 解压 Value</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-4-%E7%89%B9%E7%82%B9"><span class="toc-number">3.4.4.</span> <span class="toc-text">12.4 特点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-Sliding-Window-Attention"><span class="toc-number">3.5.</span> <span class="toc-text">13. Sliding Window Attention</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-StreamingLLM-%E4%B8%8E-Attention-Sink"><span class="toc-number">3.6.</span> <span class="toc-text">14. StreamingLLM 与 Attention Sink</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-KV-Cache-Pruning"><span class="toc-number">3.7.</span> <span class="toc-text">15. KV Cache Pruning</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-%E8%B7%A8%E5%AF%B9%E8%AF%9D%E7%9A%84-KV-Cache%EF%BC%9APrompt-Caching"><span class="toc-number">3.8.</span> <span class="toc-text">16. 跨对话的 KV Cache：Prompt Caching</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#16-1-%E5%8F%AA%E6%9C%89%E7%9B%B8%E5%90%8C-Prefix-%E6%89%8D%E8%83%BD%E5%A4%8D%E7%94%A8"><span class="toc-number">3.8.1.</span> <span class="toc-text">16.1 只有相同 Prefix 才能复用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-2-System-Prompt-%E7%9A%84%E6%8E%92%E5%88%97%E5%8E%9F%E5%88%99"><span class="toc-number">3.8.2.</span> <span class="toc-text">16.2 System Prompt 的排列原则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-3-Prompt-%E6%94%B9%E5%86%99%E7%A4%BA%E4%BE%8B"><span class="toc-number">3.8.3.</span> <span class="toc-text">16.3 Prompt 改写示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-4-%E4%B8%BA%E4%BB%80%E4%B9%88-Prompt-Caching-%E4%B8%8E%E6%88%90%E6%9C%AC%E6%9C%89%E5%85%B3"><span class="toc-number">3.8.4.</span> <span class="toc-text">16.4 为什么 Prompt Caching 与成本有关</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-III%EF%BC%9ASpeculative-Decoding-%E7%AE%80%E8%BF%B0"><span class="toc-number">4.</span> <span class="toc-text">Part III：Speculative Decoding 简述</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#17-%E5%9F%BA%E6%9C%AC%E6%80%9D%E6%83%B3"><span class="toc-number">4.1.</span> <span class="toc-text">17. 基本思想</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#17-1-%E7%89%B9%E7%82%B9"><span class="toc-number">4.1.1.</span> <span class="toc-text">17.1 特点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E6%96%B9%E6%B3%95%E6%80%BB%E8%A1%A8"><span class="toc-number">4.2.</span> <span class="toc-text">18. 方法总表</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记">《加快语言模型生成速度》课堂笔记</a><time datetime="2026-07-04T06:06:54.000Z" title="发表于 2026-07-04 14:06:54">2026-07-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记">《生成式AI时代下的机器学习 第二讲》课堂笔记</a><time datetime="2026-07-03T12:49:08.000Z" title="发表于 2026-07-03 20:49:08">2026-07-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/f1d5593e/" title="《生成式AI时代下的机器学习 第四讲》课堂笔记">《生成式AI时代下的机器学习 第四讲》课堂笔记</a><time datetime="2026-07-03T04:25:08.000Z" title="发表于 2026-07-03 12:25:08">2026-07-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/d95d7e09/" title="我的第一篇博客">我的第一篇博客</a><time datetime="2026-05-24T11:18:49.000Z" title="发表于 2026-05-24 19:18:49">2026-05-24</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
