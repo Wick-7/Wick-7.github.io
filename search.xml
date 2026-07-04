@@ -1,86 +1,971 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-  
-    
-    <entry>
-      <title>《生成式AI时代下的机器学习 第二讲》课堂笔记</title>
-      <link href="/posts/a823301/"/>
-      <url>/posts/a823301/</url>
-      
-        <content type="html"><![CDATA[<h2 id="1-什么是-AI-Agent"><a href="#1-什么是-AI-Agent" class="headerlink" title="1. 什么是 AI Agent"></a>1. 什么是 AI Agent</h2><p>AI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。</p><p>普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。</p><p>最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。<br><img src="/img/posts/a823301/2026-07-03-20-18-18.png"><br>AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment interaction 非常接近。</p><p>$$Goal → Observation_t → Action_t → Environment → Observation_t+1 → …$$</p><h2 id="2-从-RL-Agent-到-LLM-Agent"><a href="#2-从-RL-Agent-到-LLM-Agent" class="headerlink" title="2. 从 RL Agent 到 LLM Agent"></a>2. 从 RL Agent 到 LLM Agent</h2><p>传统 Reinforcement Learning 的做法是先把任务目标设计成 reward，再训练一个 policy 去 maximize reward。以围棋为例，可以把胜利设为 +1、失败设为 -1，然后通过大量交互让模型学习。</p><p>这种路线的主要限制是 task-specific：通常每一个任务都要重新定义环境、action space 和 reward，并训练一套新的参数。一个会下围棋的模型不会因此自然获得下西洋棋或操作网页的能力。</p><p>LLM Agent 的想法不同：直接把已有的 Large Language Model 放入 Agent loop。goal 可以用自然语言表达；observation 可以是文字、图片或其他多模态信息；模型输出一段描述 action 的文字，再由外部系统把这段文字翻译为真正可以执行的操作。<br><img src="/img/posts/a823301/2026-07-03-20-20-26.png"><br>从 LLM 自己的角度看，它没有突然学会一种全新的算法。goal、observation、action、下一次 observation 会依次进入 context，模型一直在做 next-token prediction。所谓 Agent，更多是对现有 LLM 能力的一种系统化使用方式，而不是重新训练出的新模型。</p><p>这也解释了为什么强大的 LLM 仍可能在棋类等任务中违反规则：语言上的流畅与对环境状态、规则约束和长期计划的可靠维护并不是同一件事。</p><h2 id="3-使用-LLM-驱动-Agent-的优势与限制"><a href="#3-使用-LLM-驱动-Agent-的优势与限制" class="headerlink" title="3. 使用 LLM 驱动 Agent 的优势与限制"></a>3. 使用 LLM 驱动 Agent 的优势与限制</h2><p>第一项优势是 action space 更开放。传统 Agent 通常只能从预先定义好的有限动作中选择；LLM 可以生成近乎任意的文字，因此可以表达更多行动，也更容易扩展到新的工具和任务。</p><p>第二项优势是能够直接利用 richer feedback。传统 RL 往往把环境反馈压缩成一个 reward 数值，但数值本身信息很少，reward 设计也很困难。LLM Agent 可以直接阅读 compile error、网页提示、测试结果或用户意见，从具体错误中修改下一步行为。</p><p>第三项优势是通用性。相同的基础模型可以在不同 prompt、不同工具和不同环境包装下承担 programmer、web agent、research assistant 等角色，而不一定要为每个任务单独训练。</p><p>但开放 action space 也意味着更难验证。语言模型可能产生看似合理、实际上不可执行或不符合规则的 action；多步执行还会放大早期错误。因此，一个完整 Agent system 通常还需要 memory、tool interface、validator、planner、permission control 等外部机制。</p><h2 id="4-Agent-的三个关键能力"><a href="#4-Agent-的三个关键能力" class="headerlink" title="4. Agent 的三个关键能力"></a>4. Agent 的三个关键能力</h2><p>第一，能否根据过去的 experience 和当前 feedback 调整行为。这里不依赖更新模型参数，而是改变模型在下一步能够看到的 context。</p><p>第二，能否使用外部 tools。模型不可能把所有知识和能力都存进参数，因此需要搜索、执行代码、调用 API，甚至向其他 AI 求助。</p><p>第三，能否 planning。Agent 不仅要产生眼前的 action，还要考虑一连串动作如何共同实现最终 goal，并在环境变化时重新规划。</p><p>这三部分彼此相连：memory 为 planning 提供过去经验，tools 扩展可执行能力，而 planning 决定何时读取 memory、何时调用 tool、何时直接行动。</p><h2 id="5-不更新参数，如何根据反馈改变行为"><a href="#5-不更新参数，如何根据反馈改变行为" class="headerlink" title="5. 不更新参数，如何根据反馈改变行为"></a>5. 不更新参数，如何根据反馈改变行为</h2><p>假设 programmer agent 写出的代码出现 compile error。传统学习思路会想到收集数据、更新 parameters；本课强调另一条路线：把 error message 直接加入后续输入，模型面对不同 context，自然会产生不同代码。</p><p>这类改变属于 in-context adaptation，而不是 model training。模型参数没有变化，变化的是输入中新增了什么信息。对于 LLM 来说，“第一次写错”和“看过错误日志后重写”是两个不同的续写条件。<br><img src="/img/posts/a823301/2026-07-03-20-23-56.png"><br>问题在于不能把 Agent 一生中的全部记录都塞进 context。随着交互步数增加，序列会变得过长，计算成本上升，重要经验也会被大量琐碎内容淹没。课程用 Highly Superior Autobiographical Memory 的类比说明：记住全部细节不一定等于更会思考。</p><p>因此，真正的问题不是“能不能存下来”，而是“什么值得存、什么时候读取、如何把零散经历整理成有用经验”。</p><h2 id="6-Agent-Memory：Read、Write-与-Reflection"><a href="#6-Agent-Memory：Read、Write-与-Reflection" class="headerlink" title="6. Agent Memory：Read、Write 与 Reflection"></a>6. Agent Memory：Read、Write 与 Reflection</h2><p>Memory 可以看作 Agent 的长期经验库。它与当前 context 不同：context 是模型这一次直接看到的内容；memory 则可以长期保存，但需要额外模块把合适的信息取出来。<br><img src="/img/posts/a823301/2026-07-03-20-26-04.png"><br>Read 模块负责 retrieval。当前 observation 相当于 query，过去经历构成 database，系统从中选出 relevant experience，再把这些经验放入 prompt。技术上它与 RAG 非常相似，区别主要在于资料来源：一般 RAG 检索外部知识，Agent memory 检索自己的经历。</p><p>Write 模块决定什么值得进入长期记忆。把每一个 observation 都保存会让 memory 被“桌子还在那里”“房间没有变化”等细节塞满。Write 可以由另一个 LLM 或 Agent 自己判断事件的重要性、novelty、长期价值和失败代价。</p><p>Reflection 模块对已有记忆进行更高层次的整理，例如总结规律、抽象策略、建立事件之间的因果或实体关系。它也可以把经历组织为 knowledge graph，再用 GraphRAG、HippoRAG 一类方法检索。</p><p>Reflection 并不天然可靠。它可能从有限证据推导出错误结论，并把错误总结长期保存。因此 memory system 需要保留原始证据、标注来源和时间，并允许用户或系统修正。</p><p>ChatGPT 的 memory 可以作为直观例子：明确说“记住这件事”可能触发 Write；之后相关问题会触发 Read。但模型可能把对话重新表述后再保存，所以记忆内容不一定逐字准确。</p><p>$$\text{Memory System} = \text{Write} + \text{Read / Retrieval} + \text{Reflection}$$</p><h2 id="7-Tool-Use-与-Function-Calling"><a href="#7-Tool-Use-与-Function-Calling" class="headerlink" title="7. Tool Use 与 Function Calling"></a>7. Tool Use 与 Function Calling</h2><p>对 Agent 而言，tool 是一个只需知道 interface、无需理解内部实现的外部能力。常见工具包括 Search Engine、Python、database、calculator、浏览器，以及具有不同能力的其他 AI。</p><p>工具可以统一抽象为 function：模型需要知道函数名称、参数含义、调用格式和返回结果。所谓 tool use 或 function calling，本质上是模型决定“此时应该调用哪个 function，并提供什么 arguments”。<br><img src="/img/posts/a823301/2026-07-03-20-28-47.png"><br>一个通用流程是：System Prompt 说明可用工具和调用格式；User Prompt 给出当前任务；模型生成结构化 tool call；Agent runtime 解析这段输出并真正执行函数；工具结果作为 observation 写回 context；模型继续生成最终回答或下一次调用。</p><p>必须区分“模型输出了一串调用文字”和“函数真的被执行”。LLM 只会生成 token，真正连接 API、处理权限、执行代码和捕获错误的是 Agent developer 编写的 orchestration layer。</p><p>System Prompt 通常包含开发者长期固定的规则，User Prompt 则是本次用户输入。它们在实际平台上可能具有不同优先级，但无论具体 API 如何设计，核心都是让模型清楚知道可做什么、何时调用、输出应该满足什么 schema。</p><p>$$\text{LLM} \to \text{tool call} \to \text{runtime executes function} \to \text{tool output} \to \text{LLM}$$</p><h2 id="8-工具很多时如何选择，以及如何自己制造工具"><a href="#8-工具很多时如何选择，以及如何自己制造工具" class="headerlink" title="8. 工具很多时如何选择，以及如何自己制造工具"></a>8. 工具很多时如何选择，以及如何自己制造工具</h2><p>当工具只有几个时，可以把全部 description 放入 prompt；当工具达到数百或数千个时，完整阅读所有说明既浪费 context，也会增加选错工具的概率。</p><p>解决办法与 memory retrieval 相似：把 tool descriptions 存入工具库，根据当前 observation 先做 tool retrieval &#x2F; tool selection，只把少量候选工具的 schema 提供给决策模型。<br><img src="/img/posts/a823301/2026-07-03-20-33-48.png"><br>工具选择本身可以使用 embedding retrieval、classifier、LLM reranker 或层级目录。它要同时考虑 relevance、cost、latency、权限、可靠性与数据隐私，而不只是语义相似度。</p><p>LLM 还可以 make tools。因为工具本质上可以是一段 function，模型能够为反复出现的问题编写脚本，验证成功后把它保存到工具库，未来再次调用。</p><p>这种“把成功做法封装成工具”的机制与 memory 很相似：一个保存自然语言经验，一个保存可执行程序。两者都把一次性的尝试转化为可复用资产。</p><h2 id="9-不要盲信工具：Internal-Knowledge-与-External-Knowledge"><a href="#9-不要盲信工具：Internal-Knowledge-与-External-Knowledge" class="headerlink" title="9. 不要盲信工具：Internal Knowledge 与 External Knowledge"></a>9. 不要盲信工具：Internal Knowledge 与 External Knowledge</h2><p>工具可能出错，检索内容也可能是玩笑、广告、过时资料或恶意信息。课程以搜索结果建议在披萨中加入胶水的例子说明：RAG 能找到资料，不代表资料可信，也不代表模型能够正确理解语境。<br><img src="/img/posts/a823301/2026-07-03-20-34-33.png"><br>LLM 在使用工具时会在 internal knowledge 与 external knowledge 之间权衡。外部结果如果与模型原有信念略有差异，模型可能接受；如果数值极端不合理，模型可能回到自己的 prior 并指出工具异常。</p><p>这种判断不是稳定的事实验证器。课程示例中，100°C 的异常温度仍可能被直接接受，而 10000°C 才触发质疑，说明模型的 sanity check 有阈值、也有不一致性。<br><img src="/img/posts/a823301/2026-07-03-20-35-43.png"><br>有些研究指出：外部信息与模型 prior 差距越大，越难改变模型；模型对原答案越有信心，也越不容易被检索内容说服。</p><p>当多个来源冲突时，模型可能受到不应影响内容正确性的因素左右。例如：模型可能更信任 AI-generated text、较新的发布日期，以及某些页面视觉模板；而来源标签本身未必产生预期影响。</p><p>即使工具返回的每条资料都正确，最终 synthesis 仍可能错误，例如把同名人物的信息混合。可靠 Agent 需要 cross-check、source attribution、constraint validation 和异常检测，而不是把工具输出直接复制给用户。</p><p>使用工具还存在 cost。对于 3×4 这样的简单问题，调用计算器可能比模型直接回答更慢；是否调用应由任务难度、准确性要求、latency 和成本共同决定。</p><h2 id="10-Reactive-Response-与显式-Planning"><a href="#10-Reactive-Response-与显式-Planning" class="headerlink" title="10. Reactive Response 与显式 Planning"></a>10. Reactive Response 与显式 Planning</h2><p>Reactive Agent 只根据当前 observation 立刻产生下一步 action。它可能在简单任务中足够有效，但容易局部贪心：每一步看似合理，组合起来却无法完成长期目标。</p><p>显式 planning 要求模型先生成一串可能的 actions，再把 plan 放回 context，后续动作按照计划执行。Plan-and-Solve 一类 prompting 方法体现了“先整体分解，再逐步执行”的思想。<br><img src="/img/posts/a823301/2026-07-03-20-43-27.png"><br>计划不能被视为不可修改的脚本。action 之后的 observation 由环境决定，对手可能走出意外棋步，网页可能弹出广告，API 可能失败。Agent 应在关键 observation 后重新检查 plan，并产生 plan′。</p><p>理想流程不是“每一步都推翻全部计划”，也不是“无论发生什么都坚持原计划”，而是持续比较预期状态与真实状态，只在偏差足以影响目标时 replan。</p><p>$$\begin{aligned}\text{plan}_t &amp;= P(\text{goal}, \text{observation}_t, \text{memory}) \\\text{action}_t &amp;= \pi(\text{observation}_t, \text{plan}_t)\end{aligned}$$</p><h2 id="11-强化规划：Tree-Search、World-Model-与-Reasoning"><a href="#11-强化规划：Tree-Search、World-Model-与-Reasoning" class="headerlink" title="11. 强化规划：Tree Search、World Model 与 Reasoning"></a>11. 强化规划：Tree Search、World Model 与 Reasoning</h2><p>一种加强 planning 的方法是 search：从当前状态尝试多个 action，观察后继状态，再继续展开，寻找能到达目标的路径。由于完整搜索代价巨大，需要用 value estimate 或 LLM judge 提前剪掉“看起来没有希望”的分支。<br><img src="/img/posts/a823301/2026-07-03-20-44-40.png"><br>Tree Search for Language Model Agents 展示了这种思想在 web agent 中的应用：模型探索候选路径，对成功概率打分，保留更有希望的路线。它比单次 reactive decision 更像真正的规划。</p><p>真实环境搜索存在 irreversible action：披萨已经下单后，不能因为另一分支更好就当作从未发生。因此，很多搜索不能直接在现实中反复试错。</p><p>解决思路是把探索放进内部 simulation。World Model 根据假想 action 预测可能出现的 observation，Agent 在“脑内小剧场”中比较分支，只把选中的 action 真正执行。Web agent 研究可以让 LLM 用文字模拟点击某个按钮后的页面变化。</p><p>Reasoning model 的长链思考也可被理解为内部 rollout：它尝试不同步骤、模拟后果、找到一个 plan，再执行第一步。课程中的积木例子展示了这种效果。</p><p>但更长 reasoning 并不总是更好。The Danger of Overthinking 指出，一些 Agent 会在可以低风险试一下时持续思考，或在尚未行动前就因为想象困难而放弃。有效 Agent 要在 thinking 与 acting 之间做资源分配。</p>]]></content>
-      
-      
+<search>
+  <entry>
+    <title>《加快语言模型生成速度》课堂笔记</title>
+    <url>/posts/5fbccec5/</url>
+    <content><![CDATA[加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：
+
+是否改变原有 Attention 的计算结果或范围？
+是否需要为该方法重新训练或定制模型？
+为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。
+
+2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。
+若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value：
+$$
+q_i=W_Qx_i,
+\qquad
+k_i=W_Kx_i,
+\qquad
+v_i=W_Vx_i.
+$$
+对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为：
+$$
+a_{t,i}=\frac{q_t^{\top}k_i}{\sqrt{d_k}},
+\qquad i\le t.
+$$
+课上为了突出推论算法，常把缩放项省略，直接写成 Query 与 Key 的 dot product。
+经过 Softmax 后得到归一化权重：
+$$
+\hat a_{t,i}
+=
+\frac{e^{a_{t,i}}}
+{\sum_{j=1}^{t}e^{a_{t,j}}}.
+$$
+最终输出是 Value 的加权和：
+$$
+o_t
+=
+\sum_{i=1}^{t}\hat a_{t,i}v_i.
+$$
+2.2 Prefill 与 Decode
+一次完整生成可以分成两个阶段。
+
+
+
+阶段
+输入形式
+主要特点
+典型瓶颈
+
+
+
+Prefill
+一次输入完整 Prompt
+多个 token 的计算可以高度并行
+长序列 Attention、算力与显存带宽
+
+
+Decode
+每次新增一个 token
+必须逐 token 自回归生成，时间维度难以并行
+读取历史 KV Cache、内存带宽与延迟
+
+
+Prefill 会为 Prompt 中所有 token 计算 Q、K、V；Decode 时，每轮只新增一个 token，但新 Query 仍需要访问前面所有 token 的 Key 和 Value。
+
+Part I：Flash Attention3. Flash Attention 的目标Flash Attention 的关键特点是：
+
+结果与标准 Attention 相同，不是近似算法。
+通常不需要重新训练模型，可以直接替换 Attention 的实现。
+核心优化目标不是减少数学定义中的 Attention，而是减少 GPU 上的数据搬运次数。
+
+它是一种 IO-aware algorithm：算法设计直接考虑 GPU 存储层级，而不仅仅统计 FLOPs。
+
+4. GPU 存储层级：HBM 与 SRAM可以用“仓库”和“工作台”来类比 GPU 的两类存储。
+
+
+
+存储
+课堂类比
+特点
+
+
+
+HBM
+仓库
+容量较大，但访问较慢
+
+
+On-chip SRAM
+工作台
+容量很小，但访问和计算很快
+
+
+
+GPU 中有大量并行 Execution Units。数据一旦被搬到 SRAM，矩阵计算通常很快；真正拖慢程序的往往是：
+
+从 HBM 读取数据到 SRAM；
+将中间结果从 SRAM 写回 HBM；
+后续步骤再次从 HBM 读取同一批中间结果。
+
+因此，Attention 可能不是单纯的 compute-bound，而是明显受到 memory bandwidth &#x2F; IO 限制。
+
+Flash Attention 的核心问题：能否改变计算顺序，在结果不变的前提下，让 Q、K、V 和中间量少往返 HBM？
+
+
+5. 标准 Attention 为什么需要反复读写为简化说明，先考虑一个 Query $q$ 对长度为 $L$ 的 Key 和 Value 序列进行 Attention。
+Attention score 为：
+$$
+a_i=q^{\top}k_i,
+\qquad i=1,\ldots,L.
+$$
+为了避免指数运算溢出，实际 Softmax 通常减去全局最大值：
+$$
+a_{\max}=\max_{1\le i\le L}a_i.
+\qquad 
+\hat a_i
+=
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}.
+$$
+输出为：
+$$
+o
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$
+当序列很长时，SRAM 无法放下与 $L$ 成比例的所有 Key、Value 或 Attention score，只能将序列切成多个 chunk。设每个 chunk 包含 $N$ 个位置，chunk 数量近似为：
+$$
+B=\frac{L}{N}.
+$$
+
+朴素实现往往需要多次扫描数据：
+
+分块计算所有 $a_i$，并将 score 写回 HBM。
+再次读取 score，寻找全局最大值。
+再次读取 score，计算 Softmax 分母。
+再次读取 score，生成归一化权重并写回 HBM。
+读取 Attention 权重和 Value，计算最终加权和。
+
+问题不只是“做了多少乘法”，而是 $a_i$ 与 $\hat a_i$ 等大规模中间量被反复写入、读取。
+
+6. Online Softmax：一次扫描更新最大值和分母6.1 分块定义把第 $k$ 个 chunk 的位置集合记为 $I_k$。处理完前 $k$ 个 chunk 后，维护两个常数：
+
+$d_k$：目前见过的最大 score；
+$s_k$：以当前最大值 $d_k$ 为基准的指数和。
+
+初始化：
+$$
+d_0=-\infty,
+\qquad
+s_0=0.
+$$
+读入第 $k$ 个 chunk 后，最大值更新为：
+$$
+d_k
+=
+\max\left(
+ d_{k-1},
+ \max_{i\in I_k}a_i
+\right).
+$$
+分母更新为：
+$$
+s_k
+=
+s_{k-1}e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}e^{a_i-d_k}.
+$$
+
+旧分母原本以 $d_{k-1}$ 为基准：
+$$
+s_{k-1}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_{k-1}}.
+$$
+当新的最大值变为 $d_k$ 时，只需乘上一个修正项：
+$$
+s_{k-1}e^{d_{k-1}-d_k}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_k}.
+$$
+因为：
+$$
+e^{a_i-d_{k-1}}e^{d_{k-1}-d_k}
+=
+e^{a_i-d_k}.
+$$
+这样便不需要重新读取之前所有 chunk。处理最后一个 chunk 后：
+$$
+d_B=a_{\max},
+\qquad 
+s_B
+=
+\sum_{i=1}^{L}e^{a_i-a_{\max}}.
+$$
+这就是完整 Softmax 的正确分母。
+
+7. Flash Attention：不显式保存 Attention Matrix，直接更新输出Online Softmax 仍可以先得到分母，再第二次读取 score 计算归一化权重；Flash Attention 更进一步：
+
+不必先完整生成并保存 $\hat a_i$，可以在每个 chunk 内直接结合 Value，逐步得到最终输出。
+
+令 $o_k$ 表示处理完前 $k$ 个 chunk 后，按照当前 $d_k$ 与 $s_k$ 归一化得到的局部输出。初始化：
+$$
+o_0=0.
+$$
+处理第 $k$ 个 chunk 时，输出更新为：
+$$
+o_k
+=
+o_{k-1}
+\frac{s_{k-1}}{s_k}
+e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}
+\frac{e^{a_i-d_k}}{s_k}v_i.
+$$
+第一项是在修正过去的输出：
+
+$d_{k-1}$ 变成了 $d_k$，需要指数修正；
+归一化分母从 $s_{k-1}$ 变成了 $s_k$，需要比例修正。
+
+第二项加入当前 chunk 的新贡献。
+
+处理完最后一个 chunk 后：
+$$
+o_B
+=
+\sum_{i=1}^{L}
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}
+v_i
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$
+所以，尽管计算过程中没有把完整 Attention 权重矩阵写入 HBM，最终输出仍与标准 Attention 完全一致。
+7.1 从单个 Query 推广到完整 Attention上面为了便于推导只画了一个 Query，真实实现会同时把 Q、K、V 划分为二维 tiles：
+
+在 SRAM 中加载一小块 Query；
+依次加载多块 Key 和 Value；
+对每一行 Query 维护对应的 running max、running sum 和输出；
+完成后只把最终输出写回 HBM。
+
+其数学思想仍是相同的 Online Softmax 与分块输出修正。
+
+8. Flash Attention 为什么更快Flash Attention 的主要收益来自：
+
+Tiling：只把当前需要的小块 Q、K、V 搬进 SRAM。
+Kernel fusion：dot product、mask、Softmax 和 Value 加权尽量在同一计算过程中完成。
+不物化完整 Attention Matrix：避免把长度平方级的 score 或权重矩阵频繁写入 HBM。
+减少 HBM 读写：用少量额外计算换取大幅减少的数据搬运。
+
+8.1 代价和限制
+需要额外的指数修正和归一化修正，计算量可能略有增加。
+实现复杂，理解和编写 kernel 更困难。
+某些框架在 Flash Attention 模式下不会保留完整 Attention 权重，因此无法直接读取整个 Attention matrix 做可视化。
+序列很短时，Attention 并不是总耗时的主要部分，速度提升可能不明显。
+Flash Attention 减少的是运算过程中的 IO，不能消除 KV Cache 对 HBM 容量的占用。
+
+8.2 课堂实验结论课堂示例中：
+
+对随机 Q、K、V 做 Attention，序列长度达到 4096 时，Flash Attention 相较朴素实现可达到约 8 到 9 倍加速。
+在真实语言模型示例中，Prompt 较短时提升有限；Prompt 约为 7 万 token 时，示例耗时约由 2.0 秒降低至 1.3 秒。
+当 Prompt 增加到约 73 万 token 时出现 CUDA Out of Memory，说明即使运算方式更高效，HBM 容量仍然有限。
+
+这些数值与具体硬件、模型、数据类型和实现有关，应理解为课堂示范，而不是固定性能保证。
+
+Part II：KV Cache9. KV Cache 的基本机制9.1 Prefill 阶段Prompt 一次性进入模型后，每一层都会为各 token 计算 Q、K、V。不同位置的输出可以并行计算。
+Prefill 完成后：
+
+保存每一层、每一个历史 token 的 Key 和 Value；
+不需要保存过去的 Query。
+
+9.2 Decode 阶段假设当前生成第 $t$ 个 token，只需：
+
+为新 token 计算 $q_t$、$k_t$、$v_t$；
+用 $q_t$ 与缓存中的所有历史 Key 计算 Attention；
+用得到的权重对所有历史 Value 做加权和；
+将新的 $k_t$、$v_t$ 追加到 Cache。
+
+9.3 为什么保存 K、V，不保存 Q未来生成新 token 时，需要的是“新的 Query 对过去所有 Key 进行检索，再读取过去的 Value”。过去 token 的 Query 已经完成了它当时的计算，以后不会再次使用。
+因此：
+
+Key 和 Value 会被未来所有 token 重复访问；
+旧 Query 不会再被使用。
+
+9.4 本质上的时间—空间交换KV Cache 避免重复计算历史 token 的 K、V，显著加快 Decode；代价是缓存量随以下因素线性增长：
+
+序列长度；
+Transformer 层数；
+KV Head 数量；
+每个 Head 的维度；
+Batch size；
+数值精度所占字节数。
+
+
+10. KV Cache 的显存计算只考虑单个 token、单个 batch 时，KV Cache 大小可写成：
+$$
+M_{\text{token}}
+=
+2
+\times N_{\text{layer}}
+\times N_{\text{KV-head}}
+\times d_{\text{head}}
+\times b,
+$$
+其中：
+
+前面的 $2$ 表示同时保存 Key 和 Value；
+$b$ 表示每个数占用的字节数，例如 FP16 为 2 Byte。
+
+以 Gemma 2 27B 的参数做简化估算：
+$$
+46
+\times 32
+\times 128
+\times 2
+\times 2
+=
+753664\ \text{Bytes}.
+$$
+约为：
+$$
+736\ \text{KiB}
+\approx
+0.72\ \text{MiB/token}.
+$$
+若把 80 GiB 全部用于该 KV Cache，理想化上限约为：
+$$
+\frac{80\ \text{GiB}}{0.72\ \text{MiB/token}}
+\approx
+114000\ \text{tokens}.
+$$
+如果有 batch，整体 KV Cache 还要再乘 batch size：
+$$
+M_{\text{total}}
+=
+B_{\text{batch}}
+\times L_{\text{seq}}
+\times M_{\text{token}}.
+$$
+
+11. MHA、MQA 与 GQAKV Cache 只保存 K 和 V，因此减少 KV Head 数量可以直接降低 Cache 大小和 Decode 时的内存读取量。
+
+
+
+方法
+Query Head
+KV Head
+核心思想
+KV Cache
+代价
+
+
+
+MHA
+多个
+与 Query 数量相同
+每个 Query Head 有独立 K、V
+最大
+表达能力强，但显存占用高
+
+
+MQA
+多个
+1 组
+所有 Query Head 共享同一组 K、V
+最小
+可能明显损伤模型能力
+
+
+GQA
+多个
+介于 1 与 Query Head 数之间
+每组 K、V 服务多个 Query Head
+居中
+在效果和效率之间折中
+
+
+若 Query Head 数为 $H_q$，KV Head 数为 $H_{kv}$，则 KV Cache 大小与 $H_{kv}$ 近似成正比：
+$$
+M_{\text{KV}}
+\propto
+H_{kv}.
+$$
+每组 KV 对应的 Query 数约为：
+$$
+G
+=
+\frac{H_q}{H_{kv}}.
+$$
+重要区别：
+
+不是让多个 K、V 共享一个 Query；
+而是让多个 Query 共享一组 K、V；
+原因是只有 K、V 需要长期缓存，Query 不需要缓存。
+
+MQA 和 GQA 改变了原始 MHA 架构，通常需要在训练模型时就采用相应设计，不能简单把任意现成模型无损改成 MQA 或 GQA。
+
+12. Multi-Head Latent Attention（MLA）12.1 核心思想MHA 需要缓存多组高维 K、V。MLA 在输入与多组 K、V 之间加入低维 bottleneck，将每个 token 压缩成 latent vector $c_i$，缓存时主要保存这个低维表示。
+
+简化表示为：
+$$
+c_i=W_Dx_i.
+$$
+每个 Head 的 Key 和 Value 可由 latent vector 线性映射得到：
+$$
+k_i=W_Kc_i,
+\qquad
+v_i=W_Vc_i.
+$$
+MLA 的关键不只是“压缩”，而是可以利用线性代数改变运算顺序，避免对序列中的每个 latent vector 都进行完整解压缩。
+12.2 Attention score 不需要逐 token 解压 Key原本：
+$$
+a_i=q^{\top}k_i.
+$$
+代入 $k_i=W_Kc_i$：
+$$
+a_i
+=q^{\top}W_Kc_i
+=
+\left(W_K^{\top}q\right)^{\top}c_i.
+$$
+定义压缩空间中的 Query：
+$$
+q'=W_K^{\top}q.
+$$
+于是：
+$$
+a_i={q'}^{\top}c_i.
+$$
+因此不需要先把每个 $c_i$ 解压成 $k_i$，只需把当前 Query 变换一次，再直接与所有缓存的 latent vectors 做 dot product。
+12.3 Weighted Sum 不需要逐 token 解压 Value标准输出为：
+$$
+o
+=
+\sum_i\hat a_i v_i.
+$$
+代入 $v_i=W_Vc_i$：
+$$
+o
+=
+\sum_i\hat a_iW_Vc_i
+=
+W_V\left(\sum_i\hat a_i c_i\right).
+$$
+所以可以：
+
+先在低维 latent space 中完成加权和；
+最后只对汇总后的一个向量做一次映射。
+
+而不是对长度为 $L$ 的每个 token 分别解压。
+12.4 特点
+大幅压缩需要保存的 KV 信息。
+需要模型在训练时学习压缩和映射，属于模型架构设计。
+相对于原始 MHA，它改变了 Attention 的参数化方式；但在该架构内部，上述换序计算本身是代数等价的，不是数值近似。
+
+
+13. Sliding Window Attention
+Sliding Window Attention 将每个 token 的可见范围限制为最近 $W$ 个 token：
+$$
+\mathcal A_t
+=
+\left\{
+\max(1,t-W+1),\ldots,t
+\right\}.
+$$
+每层只需保存固定窗口内的 KV，Cache 不再随序列无限增长。虽然单层只能看到局部，但通过多层堆叠，较早 token 的信息可被中间位置吸收后再传递给更高层，有效感受野随深度扩大——不过长距离信息仍可能逐层衰减或丢失。实际使用时常与 Full Attention 层交替，兼顾效率与全局信息传递。
+
+14. StreamingLLM 与 Attention Sink
+单纯只保留最近窗口在长序列下表现会明显下降。StreamingLLM 发现：额外保留序列最开头的少数 token 就能让模型稳定处理远超训练长度的流式输入：
+$$
+\mathcal A_t
+=
+\{1,2,\ldots,S\}
+\cup
+\{t-W+1,\ldots,t\}.
+$$
+其原理是 Softmax 权重之和必须为 1，即使当前没有需要关注的上下文，模型也必须将多余 Attention 分配给某些位置。开头的 token 往往充当了 Attention Sink——模型把”无处可放”的注意力集中到它们身上。删除这些 sink token 会破坏已形成的 Attention 行为；保留它们后表现显著恢复。这里的要点是：开头 token 被保留不一定因为语义重要，而可能是因为它们承担了稳定 Attention 分布的结构性作用。该方法可在 Inference 阶段直接应用，也可在训练时显式加入。
+
+15. KV Cache Pruning
+Scissorhands、H2O 等工作观察到：每次生成时真正获得明显 Attention 的历史 token 只占少数（heavy hitters），大量 KV 长期存在却几乎不再被访问。因此可在显存达到预算上限时，保留最近 token 和累计 Attention 较高的 token，删除长期未使用的 KV，将显存放在固定预算内。
+
+优点：通常可直接用于已有模型，丢弃大量 KV 后性能仍可能接近完整 Cache。
+风险：被删 token 以后可能重新变得重要但无法恢复；困难的长距离推理、信息检索任务可能明显退化。核心难点在于判断哪些 KV 可以安全删除。
+
+
+16. 跨对话的 KV Cache：Prompt Caching前面的 KV Cache 主要是在同一个生成过程中复用历史 K、V。服务平台还可以在不同请求之间复用相同前缀的 KV Cache。
+16.1 只有相同 Prefix 才能复用在 Causal Transformer 中，一个 token 的表示不仅取决于它自身，还取决于它前面的全部 token。
+例如两条序列：
+
+公共前缀“大家好，我是”对应的 K、V 可以复用；从“大”和“小”开始，前缀已经不同，后续即使再次出现相同的“金”字，其 K、V 也不能直接复用。
+原因可概括为：
+$$
+(k_i,v_i)
+=
+f(x_1,x_2,\ldots,x_i),
+$$
+而不是只由当前 token $x_i$ 决定。
+16.2 System Prompt 的排列原则为了提高 Cache Hit：
+
+稳定、不常变化的内容放在前面；
+日期、用户输入、任务参数等易变化内容放在后面。
+
+对于 AI Agent，常见的稳定前缀包括：
+
+可使用的工具及调用规则；
+Agent 的固定行为规范；
+身份、长期目标、固定记忆检索方式；
+长而稳定的 system prompt。
+
+容易变化的内容包括：
+
+当前时间；
+用户本轮输入；
+动态环境状态；
+临时变量和任务参数。
+
+16.3 Prompt 改写示例Cache Hit 较少的写法：
+帮我订从台北到波士顿的班机帮我订从旧金山到纽约的班机
+
+因为地点较早出现，前缀很快分叉。
+更有利于缓存的写法：
+帮我订从 X 到 Y 的班机。X=台北，Y=波士顿帮我订从 X 到 Y 的班机。X=旧金山，Y=纽约
+
+固定模板被放在前面，变化参数被移到后面，公共前缀更长。
+16.4 为什么 Prompt Caching 与成本有关如果前缀的 KV 已经计算完成，平台无需再次对这部分 Prompt 执行完整 Prefill，只需读取已有缓存。课程以 API 对 cached input 提供更低价格为例，说明计算成本与账单成本之间的联系。
+需要区分：
+
+KV Cache：通常指单次会话或生成过程中的历史 KV；
+Prompt Caching &#x2F; Prefix Caching：服务系统在多个请求之间复用相同前缀的 KV。
+
+二者保存的核心对象相同，但复用范围不同。
+
+Part III：Speculative Decoding 简述17. 基本思想Speculative Decoding 使用一个较小、较快的 draft model 先一次提出多个候选 token，再由较大的 target model 一次并行检查这些候选。
+若多个候选被接受，大模型的一次前向计算便可推进多个 token，而不是每次只推进一个 token。
+17.1 特点
+理论上通过正确的接受—拒绝与概率修正，可以保持目标模型原本的生成分布。
+不一定需要重新训练大模型，可搭配不同的小模型。
+代价是额外运行一个 draft model；若小模型预测经常不被接受，收益会下降。
+
+
+18. 方法总表
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Agent </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《生成式AI时代下的机器学习 第四讲》课堂笔记</title>
-      <link href="/posts/f1d5593e/"/>
-      <url>/posts/f1d5593e/</url>
-      
-        <content type="html"><![CDATA[<h2 id="1-每一种架构都有存在的理由"><a href="#1-每一种架构都有存在的理由" class="headerlink" title="1. 每一种架构都有存在的理由"></a>1. 每一种架构都有存在的理由</h2><p>任何网络架构都带有特定的归纳偏置（inductive bias）。</p><p><img src="/img/posts/f1d5593e/2026-07-03-12-38-24.png"><br>CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合；</p><p><img src="/img/posts/f1d5593e/2026-07-03-12-39-35.png"><br><img src="/img/posts/f1d5593e/2026-07-03-12-40-03.png"><br>Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。</p><p>同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？</p><blockquote><p><strong>本节结论：</strong> 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。</p></blockquote><h2 id="2-Transformer（这里主要关注-Self-Attention）出现的理由"><a href="#2-Transformer（这里主要关注-Self-Attention）出现的理由" class="headerlink" title="2. Transformer（这里主要关注 Self-Attention）出现的理由"></a>2. Transformer（这里主要关注 Self-Attention）出现的理由</h2><p><img src="/img/posts/f1d5593e/2026-07-03-12-46-27.png"><br>在 Self-Attention 出现之前主流使用 RNNs 做序列建模：<br>输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。<br>RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。<br><img src="/img/posts/f1d5593e/2026-07-03-12-52-53.png"></p><blockquote><p><strong>注意：</strong> $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。</p></blockquote><p>广义 RNN 可以写成下式，其中 $f_A$ 负责整理旧记忆，$f_B$ 负责写入新信息，$f_C$ 负责从记忆中读出当前输出。三个函数可以随时间变化，并由当前输入控制。</p><p>$$H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t)$$</p><p><em>状态更新：整理旧记忆 + 写入新信息</em></p><p>$$y_t = f_{C,t}(H_t)$$</p><p><em>从当前状态读取输出</em></p><blockquote><p><strong>本节结论：</strong> RNN 的优势是推理时只需要保留一个固定大小的状态；其传统劣势是状态必须按时间顺序更新，训练不容易并行。</p></blockquote><p>当 $f_A、f_B、f_C$ 由当前输入决定时，模型可以动态控制遗忘、写入与读出。LSTM&#x2F;GRU 的门控机制正是在实现这种条件化的状态更新。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-08-32.png"></p><p>可以把它类比为 AI Agent 的记忆系统：H 是 memory；$f_B$ 是 Write，决定哪些新信息写入；$f_A$ 是 Reflection，决定如何整理或遗忘旧信息；$f_C$ 是 Read，决定当前读取什么。<br><img src="/img/posts/f1d5593e/2026-07-03-13-09-05.png"></p><p>这个类比非常重要，因为后续 Linear Attention 的主要问题恰恰是为了并行化而去掉了 Reflection，之后 RetNet、Mamba、DeltaNet 又尝试把“可控的记忆更新”加回来。</p><h2 id="3-Self-Attention：直接从所有历史位置读取"><a href="#3-Self-Attention：直接从所有历史位置读取" class="headerlink" title="3. Self-Attention：直接从所有历史位置读取"></a>3. Self-Attention：直接从所有历史位置读取</h2><p><img src="/img/posts/f1d5593e/2026-07-03-13-10-14.png"><br>Self-Attention 为每个输入 $x_i$ 生成 $Query、Key、Value$。计算位置 $t$ 的输出时，用 $q_i$ 与所有允许访问的 $k_i$ 计算相似度，再经过 softmax 得到归一化权重，最后对$v_i$ 加权求和。</p><p>$$q_t = W_Q x_t, \quad k_i = W_K x_i, \quad v_i = W_V x_i$$</p><p>$$y_t = \sum_{i \le t} \text{softmax}_i(q_t^\top k_i / \sqrt{d}) \cdot v_i$$</p><p>Attention 的概念早于 2017 年；“Attention Is All You Need”的关键贡献不是发明 Attention，而是去掉循环结构，主要依赖 Attention 构造 Transformer。</p><p>在自回归生成时，第 t 步需要访问此前所有 Key&#x2F;Value，因此随着序列变长，每步计算量和 KV Cache 都会增长。</p><blockquote><p><strong>本节结论：</strong> Self-Attention 不把过去压成单个状态，而是保留并显式访问过去的表示。</p></blockquote><h2 id="4-Transformer-为什么取代传统-RNN：训练并行化"><a href="#4-Transformer-为什么取代传统-RNN：训练并行化" class="headerlink" title="4. Transformer 为什么取代传统 RNN：训练并行化"></a>4. Transformer 为什么取代传统 RNN：训练并行化</h2><p><img src="/img/posts/f1d5593e/2026-07-03-13-40-54.png"></p><p>训练语言模型时，可以把完整目标序列右移一位作为输入，并同时预测每个位置的下一个 token。Self-Attention 中各位置的 Q、K、V 和输出可以主要通过矩阵乘法一次并行计算。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-41-12.png"></p><p>矩阵乘法非常适合 GPU。相比之下，传统 RNN 必须先得到 $H_1$，才能得到 $H_2$，再得到 $H_3$，GPU 会因为时间依赖而等待。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-41-44.png"></p><p>所以 Transformer 的核心历史优势不是“真正无限的记忆”，而是训练吞吐量高、并行性好、容易扩大模型与数据规模。</p><p>代价是推理时成本随上下文变长而增长。RAG、Agent、多模态输入又不断推动上下文长度增加，因此人们重新关注具有固定状态的 RNN 类架构。</p><blockquote><p><strong>本节结论：</strong> Transformer 赢得主流地位的关键是训练效率。<br><img src="/img/posts/f1d5593e/2026-07-03-13-42-37.png"></p></blockquote><h2 id="5-RNN-能否并行？从递推展开到-Linear-Attention"><a href="#5-RNN-能否并行？从递推展开到-Linear-Attention" class="headerlink" title="5. RNN 能否并行？从递推展开到 Linear Attention"></a>5. RNN 能否并行？从递推展开到 Linear Attention</h2><h3 id="5-1-一般的-RNN-形式"><a href="#5-1-一般的-RNN-形式" class="headerlink" title="5.1 一般的 RNN 形式"></a>5.1 一般的 RNN 形式</h3><p>考虑一个广义的 RNN：</p><p>$$H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t), \qquad y_t = f_{C,t}(H_t)$$</p><p>其中：</p><ul><li>$H_t$ 是第 $t$ 个时间点的 hidden state</li><li>$f_{A,t}$ 负责处理或整理旧的记忆</li><li>$f_{B,t}$ 负责将当前输入 $x_t$ 写入记忆</li><li>$f_{C,t}$ 负责从记忆 $H_t$ 中读取信息，产生输出 $y_t$</li></ul><p>假设初始状态满足 $f_{A,1}(H_0) = 0$，则前几个时间点为：</p><p>$$\begin{aligned}H_1 &amp;= f_{A,1}(H_0) + f_{B,1}(x_1) = f_{B,1}(x_1), \\H_2 &amp;= f_{A,2}(H_1) + f_{B,2}(x_2)      = f_{A,2}\!\left(f_{B,1}(x_1)\right) + f_{B,2}(x_2), \\H_3 &amp;= f_{A,3}(H_2) + f_{B,3}(x_3) \\    &amp;= f_{A,3}\!\left(        f_{A,2}\!\left(f_{B,1}(x_1)\right)        + f_{B,2}(x_2)       \right) + f_{B,3}(x_3).\end{aligned}$$</p><p>因此 $H_t$ 中存在大量嵌套运算：</p><p>$$H_t = f_{A,t}\!\left(        f_{A,t-1}\!\left(            \cdots            f_{A,2}\!\left(f_{B,1}(x_1)\right) + \cdots        \right)      \right) + f_{B,t}(x_t)$$</p><p>由于计算 $H_t$ 必须先得到 $H_{t-1}$，而计算 $H_{t-1}$ 又必须先得到 $H_{t-2}$，所以一般 RNN 在训练时难以并行。</p><h3 id="5-2-将状态更新简化为累加"><a href="#5-2-将状态更新简化为累加" class="headerlink" title="5.2 将状态更新简化为累加"></a>5.2 将状态更新简化为累加</h3><p>为了消除这种复杂的序列依赖，令：</p><p>$$f_{A,t}(H_{t-1}) = H_{t-1}$$</p><p>即不再对旧记忆执行复杂的 Reflection，而只是直接保留旧记忆。</p><p>于是状态更新变为：</p><p>$$H_t = H_{t-1} + f_{B,t}(x_t)$$</p><p>记 $D_t = f_{B,t}(x_t)$，并令 $H_0 = 0$，则：</p><p>$$\begin{aligned}H_1 &amp;= D_1, \\H_2 &amp;= D_1 + D_2, \\H_3 &amp;= D_1 + D_2 + D_3, \\&amp;\ \vdots \\H_t &amp;= D_1 + D_2 + \cdots + D_t = \sum_{i=1}^{t} D_i\end{aligned}$$</p><p>此时每一个 $D_i$ 都只依赖当前输入 $x_i$，因此所有 $D_i$ 可以同时计算。</p><h3 id="5-3-将-hidden-state-设为矩阵"><a href="#5-3-将-hidden-state-设为矩阵" class="headerlink" title="5.3 将 hidden state 设为矩阵"></a>5.3 将 hidden state 设为矩阵</h3><p>令 hidden state 为一个矩阵：</p><p>$$H_t \in \mathbb{R}^{d_v \times d_k}$$</p><p>写入记忆的内容同样是一个矩阵：</p><p>$$D_t = f_{B,t}(x_t) \in \mathbb{R}^{d_v \times d_k}$$</p><p>读取记忆时，使用一个 query vector：</p><p>$$q_t = W_Q x_t, \qquad q_t \in \mathbb{R}^{d_k}$$</p><p>定义读取函数为：</p><p>$$f_{C,t}(H_t) = H_t q_t$$</p><p>因此 $y_t = H_t q_t$。</p><p>将 $H_t = \sum_{i=1}^{t} D_i$ 代入，可得：</p><p>$$\begin{aligned}y_t &amp;= \left(\sum_{i=1}^{t} D_i\right) q_t \\    &amp;= \sum_{i=1}^{t} D_i q_t\end{aligned}$$</p><p>例如：</p><p>$$\begin{aligned}y_1 &amp;= D_1 q_1, \\y_2 &amp;= D_1 q_2 + D_2 q_2, \\y_3 &amp;= D_1 q_3 + D_2 q_3 + D_3 q_3, \\&amp;\ \vdots \\y_t &amp;= D_1 q_t + D_2 q_t + \cdots + D_t q_t\end{aligned}$$</p><h3 id="5-4-使用-outer-product-写入记忆"><a href="#5-4-使用-outer-product-写入记忆" class="headerlink" title="5.4 使用 outer product 写入记忆"></a>5.4 使用 outer product 写入记忆</h3><p>对于每个输入 $x_t$，分别产生 value 和 key：</p><p>$$v_t = W_V x_t, \qquad k_t = W_K x_t$$</p><p>其中 $v_t \in \mathbb{R}^{d_v}$，$k_t \in \mathbb{R}^{d_k}$。</p><p>定义写入记忆的矩阵为：</p><p>$$D_t = v_t k_t^{\top}$$</p><p>这是一个 outer product：$v_t k_t^{\top} \in \mathbb{R}^{d_v \times d_k}$。</p><p>因此 hidden state 的更新公式变为：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}$$</p><p>展开后：</p><p>$$H_t = \sum_{i=1}^{t} v_i k_i^{\top}$$</p><p>这里可以将 $v_i$ 理解为要写入记忆的内容，将 $k_i$ 理解为决定这些内容写入哪个位置的地址。</p><h3 id="5-5-推导输出公式"><a href="#5-5-推导输出公式" class="headerlink" title="5.5 推导输出公式"></a>5.5 推导输出公式</h3><p>将 $D_i = v_i k_i^{\top}$ 代入输出公式：</p><p>$$\begin{aligned}y_t &amp;= \sum_{i=1}^{t} D_i q_t \\    &amp;= \sum_{i=1}^{t} v_i k_i^{\top} q_t\end{aligned}$$</p><p>由于 $k_i^{\top} q_t$ 是一个 scalar，因此可以写为：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>定义 attention score：</p><p>$$a_{t,i} = k_i^{\top} q_t$$</p><p>于是：</p><p>$$y_t = \sum_{i=1}^{t} a_{t,i} v_i$$</p><p>展开为：</p><p>$$\begin{aligned}y_1 &amp;= v_1 k_1^{\top} q_1, \\y_2 &amp;= v_1 k_1^{\top} q_2 + v_2 k_2^{\top} q_2, \\y_3 &amp;= v_1 k_1^{\top} q_3 + v_2 k_2^{\top} q_3 + v_3 k_3^{\top} q_3, \\&amp;\ \vdots \\y_t &amp;= v_1 k_1^{\top} q_t + v_2 k_2^{\top} q_t + \cdots + v_t k_t^{\top} q_t \\    &amp;= a_{t,1} v_1 + a_{t,2} v_2 + \cdots + a_{t,t} v_t\end{aligned}$$</p><p>这个形式已经与 causal Self-Attention 完全相同，区别是这里没有使用 Softmax，因此称为 <strong>Linear Attention</strong>。</p><h3 id="5-6-与标准-Self-Attention-的比较"><a href="#5-6-与标准-Self-Attention-的比较" class="headerlink" title="5.6 与标准 Self-Attention 的比较"></a>5.6 与标准 Self-Attention 的比较</h3><p><img src="/img/posts/f1d5593e/2026-07-03-13-59-51.png"><br>标准 causal Self-Attention 为：</p><p>$$\widetilde{a}_{t,i} =\frac{    \exp\!\left(q_t^{\top} k_i / \sqrt{d_k}\right)}{    \sum_{j=1}^{t} \exp\!\left(q_t^{\top} k_j / \sqrt{d_k}\right)}$$</p><p>并计算：</p><p>$$y_t = \sum_{i=1}^{t} \widetilde{a}_{t,i} v_i$$</p><p>Linear Attention 则直接使用 $a_{t,i} = k_i^{\top} q_t$，因此：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>也就是说：</p><p>$$\text{Linear Attention} = \text{Self-Attention without Softmax}$$</p><h3 id="5-7-Training-时的并行形式"><a href="#5-7-Training-时的并行形式" class="headerlink" title="5.7 Training 时的并行形式"></a>5.7 Training 时的并行形式</h3><p>将所有 query、key 和 value 按列排列：</p><p>$$Q = \begin{bmatrix} q_1 &amp; q_2 &amp; \cdots &amp; q_T \end{bmatrix}, \quadK = \begin{bmatrix} k_1 &amp; k_2 &amp; \cdots &amp; k_T \end{bmatrix}, \quadV = \begin{bmatrix} v_1 &amp; v_2 &amp; \cdots &amp; v_T \end{bmatrix}$$</p><p>其中 $Q, K \in \mathbb{R}^{d_k \times T}$，$V \in \mathbb{R}^{d_v \times T}$。</p><p>注意 $K^{\top} Q \in \mathbb{R}^{T \times T}$，且其第 $(i,t)$ 个元素为：</p><p>$$(K^{\top} Q)_{i,t} = k_i^{\top} q_t$$</p><p>定义 causal mask：</p><p>$$M_{i,t} =\begin{cases}1, &amp; i \leq t, \\0, &amp; i &gt; t\end{cases}$$</p><p>于是所有位置的输出可以一次写成：</p><p>$$Y = V\left[\left(K^{\top} Q\right) \odot M\right]$$</p><p>其中 $Y = \begin{bmatrix} y_1 &amp; y_2 &amp; \cdots &amp; y_T \end{bmatrix}$。</p><p>因此在 Training 阶段，Linear Attention 可以像 Self-Attention 一样通过矩阵运算并行计算所有输出。</p><h3 id="5-8-Inference-时的-RNN-形式"><a href="#5-8-Inference-时的-RNN-形式" class="headerlink" title="5.8 Inference 时的 RNN 形式"></a>5.8 Inference 时的 RNN 形式</h3><p>在 autoregressive inference 中，不需要保存过去所有的 key 和 value，只需要保存当前矩阵状态 $H_{t-1}$。</p><p>每产生一个新的 token，只需计算：</p><p>$$q_t = W_Q x_t, \qquad k_t = W_K x_t, \qquad v_t = W_V x_t$$</p><p>然后更新状态：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}$$</p><p>最后读取：</p><p>$$y_t = H_t q_t$$</p><p>因此核心递归公式为：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}, \qquady_t = H_t q_t$$</p><p>展开后又得到：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>所以 Linear Attention 具有两种等价的计算方式：</p><p>$$\begin{aligned}\text{Training:}\quad &amp;\text{像 Self-Attention，可以并行计算}, \\\text{Inference:}\quad &amp;\text{像 RNN，递归更新固定大小的 state}.\end{aligned}$$</p><p><img src="/img/posts/f1d5593e/2026-07-03-14-00-55.png"></p><blockquote><p><strong>本节结论：</strong> Linear Attention 的关键等价：训练时可写成 Attention 形式并行计算；推理时可写成 RNN 形式，用固定状态逐步更新。</p></blockquote><h2 id="6-Linear-Attention-的”写入—读取”解释"><a href="#6-Linear-Attention-的”写入—读取”解释" class="headerlink" title="6. Linear Attention 的”写入—读取”解释"></a>6. Linear Attention 的”写入—读取”解释</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-02-20.png"></p><p>状态 $H_t$ 可以看成一个矩阵记忆库。$v_t$ 是要写入的内容，$k_t$ 决定把内容分配到哪些列；外积 $v_t k_t^\top$ 因而是一次结构化写入。</p><p>读取时，$q_t$ 决定从哪些列取出多少信息，$H_t q_t$ 得到最终输出。</p><p><img src="/img/posts/f1d5593e/2026-07-03-14-02-59.png"></p><p>展开递推后，输出等于所有历史 Value 的加权和，权重为 $k_i^\top q_t$。它与普通 Self-Attention 的主要形式差异是没有 softmax。</p><blockquote><p><strong>本节结论：</strong> Key 控制“写到哪里”，Value 表示“写什么”，Query 控制“从哪里读”。</p></blockquote><h2 id="7-为什么没有-Softmax-的-Linear-Attention-往往较弱？"><a href="#7-为什么没有-Softmax-的-Linear-Attention-往往较弱？" class="headerlink" title="7. 为什么没有 Softmax 的 Linear Attention 往往较弱？"></a>7. 为什么没有 Softmax 的 Linear Attention 往往较弱？</h2><p>常见说法是 RNN 状态有限，而 Self-Attention 可以访问任意长历史。但课件强调：<strong>有限维的 Query&#x2F;Key 空间同样无法为无限多位置提供彼此正交、完全无干扰的地址，因此 Self-Attention 也不是字面意义上的无限记忆。</strong></p><p>更关键的差别是 softmax 带来的相对竞争。某个分数是否重要，不只取决于自身大小，也取决于同一上下文中是否出现更高分数。新出现的更重要信息会降低旧信息的归一化权重。</p><p>原始 Linear Attention 中，$H_t = H_{t-1} + v_t k_t^\top$，写入后信息永久累积，模型不会主动遗忘或重整记忆；随着序列增长，干扰不断积累。</p><blockquote><p><strong>本节结论：</strong> Softmax 的价值不仅是归一化，它让不同位置竞争，使“重要性”依上下文动态改变；Linear Attention 则需要额外机制实现遗忘与重写。</p></blockquote><h2 id="8-RetNet：让记忆逐渐衰减"><a href="#8-RetNet：让记忆逐渐衰减" class="headerlink" title="8. RetNet：让记忆逐渐衰减"></a>8. RetNet：让记忆逐渐衰减</h2><p>Retention Network 在旧状态前乘固定衰减系数 $\gamma$（通常 $0 &lt; \gamma &lt; 1$），使较久远的信息指数衰减。</p><p>递推推理时，每一步仍只维护固定状态。并行训练时，位置 $i$ 对位置 $t$ 的贡献额外乘 $\gamma^{t-i}$，因此仍可写成类似 Attention 的并行形式。</p><p>缺点是所有信息按同一速度衰减，无法根据内容决定哪些信息应长期保留。</p><p>$$H_t = \gamma H_{t-1} + v_t k_t^\top, \quad y_t = H_t q_t$$</p><h2 id="9-Gated-Retention-与更细粒度-Reflection"><a href="#9-Gated-Retention-与更细粒度-Reflection" class="headerlink" title="9. Gated Retention 与更细粒度 Reflection"></a>9. Gated Retention 与更细粒度 Reflection</h2><p>Gated Retention 把固定 $\gamma$ 改成输入相关的 $\gamma_t$，例如 $\gamma_t = \text{sigmoid}(W_\gamma x_t)$。模型可以在段落切换、不重要 token 等情形下快速遗忘，也可以在重要信息出现时接近 1、长期保留。<br><img src="/img/posts/f1d5593e/2026-07-03-14-07-07.png"><br>更一般地，可以使用矩阵门 $G_t$ 与旧状态逐元素相乘：$H_t = G_t \odot H_{t-1} + v_t k_t^\top$。若 $G_t$ 采用可分解结构 $1 s_t^\top$，就能分别对记忆矩阵的不同列执行抹去、保留或减弱，并保持可并行实现的结构。</p><p>很多现代模型都可以统一写成“先变换旧状态，再写入新外积，最后读取”的广义 RNN 形式。</p><p>$$\gamma_t = \text{sigmoid}(W_\gamma x_t)$$</p><p>$$H_t = \gamma_t H_{t-1} + v_t k_t^\top$$</p><p><em>Gated Retention</em></p><p>$$H_t = G_t \odot H_{t-1} + v_t k_t^\top$$</p><h2 id="10-Mamba-与-Mamba-2"><a href="#10-Mamba-与-Mamba-2" class="headerlink" title="10. Mamba 与 Mamba-2"></a>10. Mamba 与 Mamba-2</h2><p>Mamba 属于选择性状态空间模型（Selective State Space Model）。在统一递推视角下，它也是对旧状态进行输入相关的变换，再写入新信息。第一代 Mamba 的状态更新形式较复杂，来源于连续时间状态空间模型的离散化。</p><p>由于第一代 Mamba 不能完全化成简单的全矩阵乘法，训练中使用 hardware-aware selective scan&#x2F;scan algorithm 来获得并行效率。</p><p>Mamba-2 的核心更新可写成与 Gated Retention 相近的时间相关衰减形式。这里应理解为”核心递推结构相似”，而不是说完整网络模块的每个细节都相同。</p><p>Mamba 引起关注的原因是：它在一些语言建模实验中取得了可与改进型 Transformer 竞争的效果，同时自回归推理吞吐量更高，尤其适合长序列。</p><h2 id="11-DeltaNet：写入前先擦除冲突记忆"><a href="#11-DeltaNet：写入前先擦除冲突记忆" class="headerlink" title="11. DeltaNet：写入前先擦除冲突记忆"></a>11. DeltaNet：写入前先擦除冲突记忆</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-09-44.png"></p><p>DeltaNet 不只是整体衰减旧状态，而是先计算当前 Key 所指向的位置已经存了什么：$H_{t-1} k_t$。随后把旧内容向量与目标 $v_t$ 的差异用于更新，实现”先擦除，再写入”。</p><p>它的更新可等价看成对一个局部记忆损失执行一步梯度下降。</p><p>$$H_t = H_{t-1} - \beta_t(H_{t-1} k_t - v_t) k_t^\top$$</p><p><em>DeltaNet：擦除旧关联并写入新关联</em></p><p>$$L_t(H) = \frac{1}{2} \| H k_t - v_t \|^2$$</p><p><em>上述更新等价于对该损失执行一步梯度下降</em></p><p>若把状态矩阵视为参数，那么 DeltaNet 的更新就是测试时的一步梯度下降。Titans 将这一观点扩展为”Learning to Memorize at Test Time”：模型在处理输入时动态更新长期记忆。</p><p>这类方法把序列模型与在线学习联系起来：推理不再只是固定参数的前向传播，部分记忆参数会根据当前样本发生变化。</p><h2 id="12-应用、边界与研究趋势"><a href="#12-应用、边界与研究趋势" class="headerlink" title="12. 应用、边界与研究趋势"></a>12. 应用、边界与研究趋势</h2><p>Mamba&#x2F;Linear-Attention 类模型已从小规模实验扩展到更大的语言模型与多模态模型，说明固定状态路线具有实际可扩展性。</p><p>在视觉任务中，是否需要 Mamba 取决于任务。MambaOut 的讨论表明，图像分类未必需要大范围序列混合，CNN 的局部归纳偏置可能足够；但图像分割等需要全局关系的任务仍可能受益。</p><p>另一个趋势是不从零训练，而是把现有 Transformer 中的 Self-Attention 替换为 Mamba&#x2F;SSM&#x2F;Linear Attention，并尽量迁移原有参数，再进行微调。</p><p>最终问题仍未结束：到未来，Self-Attention 会继续长期占据主导，还是会被混合架构或状态空间模型取代？更现实的答案可能不是单一胜者，而是不同模块根据任务与硬件约束组合使用。</p><h2 id="13-各式Model（截止当时课件）"><a href="#13-各式Model（截止当时课件）" class="headerlink" title="13. 各式Model（截止当时课件）"></a>13. 各式Model（截止当时课件）</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-11-25.png"></p>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Inference</tag>
+        <tag>Flash attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式AI时代下的机器学习 第二讲》课堂笔记</title>
+    <url>/posts/a823301/</url>
+    <content><![CDATA[1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。
+普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。
+最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment interaction 非常接近。
+$$
+Goal → Observation_t → Action_t → Environment → Observation_t+1 → …
+$$
+2. 从 RL Agent 到 LLM Agent传统 Reinforcement Learning 的做法是先把任务目标设计成 reward，再训练一个 policy 去 maximize reward。以围棋为例，可以把胜利设为 +1、失败设为 -1，然后通过大量交互让模型学习。
+这种路线的主要限制是 task-specific：通常每一个任务都要重新定义环境、action space 和 reward，并训练一套新的参数。一个会下围棋的模型不会因此自然获得下西洋棋或操作网页的能力。
+LLM Agent 的想法不同：直接把已有的 Large Language Model 放入 Agent loop。goal 可以用自然语言表达；observation 可以是文字、图片或其他多模态信息；模型输出一段描述 action 的文字，再由外部系统把这段文字翻译为真正可以执行的操作。从 LLM 自己的角度看，它没有突然学会一种全新的算法。goal、observation、action、下一次 observation 会依次进入 context，模型一直在做 next-token prediction。所谓 Agent，更多是对现有 LLM 能力的一种系统化使用方式，而不是重新训练出的新模型。
+这也解释了为什么强大的 LLM 仍可能在棋类等任务中违反规则：语言上的流畅与对环境状态、规则约束和长期计划的可靠维护并不是同一件事。
+3. 使用 LLM 驱动 Agent 的优势与限制第一项优势是 action space 更开放。传统 Agent 通常只能从预先定义好的有限动作中选择；LLM 可以生成近乎任意的文字，因此可以表达更多行动，也更容易扩展到新的工具和任务。
+第二项优势是能够直接利用 richer feedback。传统 RL 往往把环境反馈压缩成一个 reward 数值，但数值本身信息很少，reward 设计也很困难。LLM Agent 可以直接阅读 compile error、网页提示、测试结果或用户意见，从具体错误中修改下一步行为。
+第三项优势是通用性。相同的基础模型可以在不同 prompt、不同工具和不同环境包装下承担 programmer、web agent、research assistant 等角色，而不一定要为每个任务单独训练。
+但开放 action space 也意味着更难验证。语言模型可能产生看似合理、实际上不可执行或不符合规则的 action；多步执行还会放大早期错误。因此，一个完整 Agent system 通常还需要 memory、tool interface、validator、planner、permission control 等外部机制。
+4. Agent 的三个关键能力第一，能否根据过去的 experience 和当前 feedback 调整行为。这里不依赖更新模型参数，而是改变模型在下一步能够看到的 context。
+第二，能否使用外部 tools。模型不可能把所有知识和能力都存进参数，因此需要搜索、执行代码、调用 API，甚至向其他 AI 求助。
+第三，能否 planning。Agent 不仅要产生眼前的 action，还要考虑一连串动作如何共同实现最终 goal，并在环境变化时重新规划。
+这三部分彼此相连：memory 为 planning 提供过去经验，tools 扩展可执行能力，而 planning 决定何时读取 memory、何时调用 tool、何时直接行动。
+5. 不更新参数，如何根据反馈改变行为假设 programmer agent 写出的代码出现 compile error。传统学习思路会想到收集数据、更新 parameters；本课强调另一条路线：把 error message 直接加入后续输入，模型面对不同 context，自然会产生不同代码。
+这类改变属于 in-context adaptation，而不是 model training。模型参数没有变化，变化的是输入中新增了什么信息。对于 LLM 来说，“第一次写错”和“看过错误日志后重写”是两个不同的续写条件。问题在于不能把 Agent 一生中的全部记录都塞进 context。随着交互步数增加，序列会变得过长，计算成本上升，重要经验也会被大量琐碎内容淹没。课程用 Highly Superior Autobiographical Memory 的类比说明：记住全部细节不一定等于更会思考。
+因此，真正的问题不是“能不能存下来”，而是“什么值得存、什么时候读取、如何把零散经历整理成有用经验”。
+6. Agent Memory：Read、Write 与 ReflectionMemory 可以看作 Agent 的长期经验库。它与当前 context 不同：context 是模型这一次直接看到的内容；memory 则可以长期保存，但需要额外模块把合适的信息取出来。Read 模块负责 retrieval。当前 observation 相当于 query，过去经历构成 database，系统从中选出 relevant experience，再把这些经验放入 prompt。技术上它与 RAG 非常相似，区别主要在于资料来源：一般 RAG 检索外部知识，Agent memory 检索自己的经历。
+Write 模块决定什么值得进入长期记忆。把每一个 observation 都保存会让 memory 被“桌子还在那里”“房间没有变化”等细节塞满。Write 可以由另一个 LLM 或 Agent 自己判断事件的重要性、novelty、长期价值和失败代价。
+Reflection 模块对已有记忆进行更高层次的整理，例如总结规律、抽象策略、建立事件之间的因果或实体关系。它也可以把经历组织为 knowledge graph，再用 GraphRAG、HippoRAG 一类方法检索。
+Reflection 并不天然可靠。它可能从有限证据推导出错误结论，并把错误总结长期保存。因此 memory system 需要保留原始证据、标注来源和时间，并允许用户或系统修正。
+ChatGPT 的 memory 可以作为直观例子：明确说“记住这件事”可能触发 Write；之后相关问题会触发 Read。但模型可能把对话重新表述后再保存，所以记忆内容不一定逐字准确。
+$$
+\text{Memory System} = \text{Write} + \text{Read / Retrieval} + \text{Reflection}
+$$
+7. Tool Use 与 Function Calling对 Agent 而言，tool 是一个只需知道 interface、无需理解内部实现的外部能力。常见工具包括 Search Engine、Python、database、calculator、浏览器，以及具有不同能力的其他 AI。
+工具可以统一抽象为 function：模型需要知道函数名称、参数含义、调用格式和返回结果。所谓 tool use 或 function calling，本质上是模型决定“此时应该调用哪个 function，并提供什么 arguments”。一个通用流程是：System Prompt 说明可用工具和调用格式；User Prompt 给出当前任务；模型生成结构化 tool call；Agent runtime 解析这段输出并真正执行函数；工具结果作为 observation 写回 context；模型继续生成最终回答或下一次调用。
+必须区分“模型输出了一串调用文字”和“函数真的被执行”。LLM 只会生成 token，真正连接 API、处理权限、执行代码和捕获错误的是 Agent developer 编写的 orchestration layer。
+System Prompt 通常包含开发者长期固定的规则，User Prompt 则是本次用户输入。它们在实际平台上可能具有不同优先级，但无论具体 API 如何设计，核心都是让模型清楚知道可做什么、何时调用、输出应该满足什么 schema。
+$$
+\text{LLM} \to \text{tool call} \to \text{runtime executes function} \to \text{tool output} \to \text{LLM}
+$$
+8. 工具很多时如何选择，以及如何自己制造工具当工具只有几个时，可以把全部 description 放入 prompt；当工具达到数百或数千个时，完整阅读所有说明既浪费 context，也会增加选错工具的概率。
+解决办法与 memory retrieval 相似：把 tool descriptions 存入工具库，根据当前 observation 先做 tool retrieval &#x2F; tool selection，只把少量候选工具的 schema 提供给决策模型。工具选择本身可以使用 embedding retrieval、classifier、LLM reranker 或层级目录。它要同时考虑 relevance、cost、latency、权限、可靠性与数据隐私，而不只是语义相似度。
+LLM 还可以 make tools。因为工具本质上可以是一段 function，模型能够为反复出现的问题编写脚本，验证成功后把它保存到工具库，未来再次调用。
+这种“把成功做法封装成工具”的机制与 memory 很相似：一个保存自然语言经验，一个保存可执行程序。两者都把一次性的尝试转化为可复用资产。
+9. 不要盲信工具：Internal Knowledge 与 External Knowledge工具可能出错，检索内容也可能是玩笑、广告、过时资料或恶意信息。课程以搜索结果建议在披萨中加入胶水的例子说明：RAG 能找到资料，不代表资料可信，也不代表模型能够正确理解语境。LLM 在使用工具时会在 internal knowledge 与 external knowledge 之间权衡。外部结果如果与模型原有信念略有差异，模型可能接受；如果数值极端不合理，模型可能回到自己的 prior 并指出工具异常。
+这种判断不是稳定的事实验证器。课程示例中，100°C 的异常温度仍可能被直接接受，而 10000°C 才触发质疑，说明模型的 sanity check 有阈值、也有不一致性。有些研究指出：外部信息与模型 prior 差距越大，越难改变模型；模型对原答案越有信心，也越不容易被检索内容说服。
+当多个来源冲突时，模型可能受到不应影响内容正确性的因素左右。例如：模型可能更信任 AI-generated text、较新的发布日期，以及某些页面视觉模板；而来源标签本身未必产生预期影响。
+即使工具返回的每条资料都正确，最终 synthesis 仍可能错误，例如把同名人物的信息混合。可靠 Agent 需要 cross-check、source attribution、constraint validation 和异常检测，而不是把工具输出直接复制给用户。
+使用工具还存在 cost。对于 3×4 这样的简单问题，调用计算器可能比模型直接回答更慢；是否调用应由任务难度、准确性要求、latency 和成本共同决定。
+10. Reactive Response 与显式 PlanningReactive Agent 只根据当前 observation 立刻产生下一步 action。它可能在简单任务中足够有效，但容易局部贪心：每一步看似合理，组合起来却无法完成长期目标。
+显式 planning 要求模型先生成一串可能的 actions，再把 plan 放回 context，后续动作按照计划执行。Plan-and-Solve 一类 prompting 方法体现了“先整体分解，再逐步执行”的思想。计划不能被视为不可修改的脚本。action 之后的 observation 由环境决定，对手可能走出意外棋步，网页可能弹出广告，API 可能失败。Agent 应在关键 observation 后重新检查 plan，并产生 plan′。
+理想流程不是“每一步都推翻全部计划”，也不是“无论发生什么都坚持原计划”，而是持续比较预期状态与真实状态，只在偏差足以影响目标时 replan。
+$$
+\begin{aligned}
+\text{plan}_t &amp;= P(\text{goal}, \text{observation}_t, \text{memory}) \\
+\text{action}_t &amp;= \pi(\text{observation}_t, \text{plan}_t)
+\end{aligned}
+$$
+11. 强化规划：Tree Search、World Model 与 Reasoning一种加强 planning 的方法是 search：从当前状态尝试多个 action，观察后继状态，再继续展开，寻找能到达目标的路径。由于完整搜索代价巨大，需要用 value estimate 或 LLM judge 提前剪掉“看起来没有希望”的分支。Tree Search for Language Model Agents 展示了这种思想在 web agent 中的应用：模型探索候选路径，对成功概率打分，保留更有希望的路线。它比单次 reactive decision 更像真正的规划。
+真实环境搜索存在 irreversible action：披萨已经下单后，不能因为另一分支更好就当作从未发生。因此，很多搜索不能直接在现实中反复试错。
+解决思路是把探索放进内部 simulation。World Model 根据假想 action 预测可能出现的 observation，Agent 在“脑内小剧场”中比较分支，只把选中的 action 真正执行。Web agent 研究可以让 LLM 用文字模拟点击某个按钮后的页面变化。
+Reasoning model 的长链思考也可被理解为内部 rollout：它尝试不同步骤、模拟后果、找到一个 plan，再执行第一步。课程中的积木例子展示了这种效果。
+但更长 reasoning 并不总是更好。The Danger of Overthinking 指出，一些 Agent 会在可以低风险试一下时持续思考，或在尚未行动前就因为想象困难而放弃。有效 Agent 要在 thinking 与 acting 之间做资源分配。
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Attention </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>我的第一篇博客</title>
-      <link href="/posts/d95d7e09/"/>
-      <url>/posts/d95d7e09/</url>
-      
-        <content type="html"><![CDATA[<p>Hello!这是我的第一篇blog。:)</p>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式AI时代下的机器学习 第四讲》课堂笔记</title>
+    <url>/posts/f1d5593e/</url>
+    <content><![CDATA[1. 每一种架构都有存在的理由任何网络架构都带有特定的归纳偏置（inductive bias）。
+CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合；
+Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。
+同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？
+
+本节结论： 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。
+
+2. Transformer（这里主要关注 Self-Attention）出现的理由在 Self-Attention 出现之前主流使用 RNNs 做序列建模：输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。
+
+注意： $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。
+
+广义 RNN 可以写成下式，其中 $f_A$ 负责整理旧记忆，$f_B$ 负责写入新信息，$f_C$ 负责从记忆中读出当前输出。三个函数可以随时间变化，并由当前输入控制。
+$$
+H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t)
+$$
+状态更新：整理旧记忆 + 写入新信息
+$$
+y_t = f_{C,t}(H_t)
+$$
+从当前状态读取输出
+
+本节结论： RNN 的优势是推理时只需要保留一个固定大小的状态；其传统劣势是状态必须按时间顺序更新，训练不容易并行。
+
+当 $f_A、f_B、f_C$ 由当前输入决定时，模型可以动态控制遗忘、写入与读出。LSTM&#x2F;GRU 的门控机制正是在实现这种条件化的状态更新。
+
+可以把它类比为 AI Agent 的记忆系统：H 是 memory；$f_B$ 是 Write，决定哪些新信息写入；$f_A$ 是 Reflection，决定如何整理或遗忘旧信息；$f_C$ 是 Read，决定当前读取什么。
+这个类比非常重要，因为后续 Linear Attention 的主要问题恰恰是为了并行化而去掉了 Reflection，之后 RetNet、Mamba、DeltaNet 又尝试把“可控的记忆更新”加回来。
+3. Self-Attention：直接从所有历史位置读取Self-Attention 为每个输入 $x_i$ 生成 $Query、Key、Value$。计算位置 $t$ 的输出时，用 $q_i$ 与所有允许访问的 $k_i$ 计算相似度，再经过 softmax 得到归一化权重，最后对$v_i$ 加权求和。
+$$
+q_t = W_Q x_t, \quad k_i = W_K x_i, \quad v_i = W_V x_i
+$$
+$$
+y_t = \sum_{i \le t} \text{softmax}_i(q_t^\top k_i / \sqrt{d}) \cdot v_i
+$$
+Attention 的概念早于 2017 年；“Attention Is All You Need”的关键贡献不是发明 Attention，而是去掉循环结构，主要依赖 Attention 构造 Transformer。
+在自回归生成时，第 t 步需要访问此前所有 Key&#x2F;Value，因此随着序列变长，每步计算量和 KV Cache 都会增长。
+
+本节结论： Self-Attention 不把过去压成单个状态，而是保留并显式访问过去的表示。
+
+4. Transformer 为什么取代传统 RNN：训练并行化
+训练语言模型时，可以把完整目标序列右移一位作为输入，并同时预测每个位置的下一个 token。Self-Attention 中各位置的 Q、K、V 和输出可以主要通过矩阵乘法一次并行计算。
+
+矩阵乘法非常适合 GPU。相比之下，传统 RNN 必须先得到 $H_1$，才能得到 $H_2$，再得到 $H_3$，GPU 会因为时间依赖而等待。
+
+所以 Transformer 的核心历史优势不是“真正无限的记忆”，而是训练吞吐量高、并行性好、容易扩大模型与数据规模。
+代价是推理时成本随上下文变长而增长。RAG、Agent、多模态输入又不断推动上下文长度增加，因此人们重新关注具有固定状态的 RNN 类架构。
+
+本节结论： Transformer 赢得主流地位的关键是训练效率。
+
+5. RNN 能否并行？从递推展开到 Linear Attention5.1 一般的 RNN 形式考虑一个广义的 RNN：
+$$
+H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t), \qquad y_t = f_{C,t}(H_t)
+$$
+其中：
+
+$H_t$ 是第 $t$ 个时间点的 hidden state
+$f_{A,t}$ 负责处理或整理旧的记忆
+$f_{B,t}$ 负责将当前输入 $x_t$ 写入记忆
+$f_{C,t}$ 负责从记忆 $H_t$ 中读取信息，产生输出 $y_t$
+
+假设初始状态满足 $f_{A,1}(H_0) = 0$，则前几个时间点为：
+$$
+\begin{aligned}
+H_1 &amp;= f_{A,1}(H_0) + f_{B,1}(x_1) = f_{B,1}(x_1), \\
+H_2 &amp;= f_{A,2}(H_1) + f_{B,2}(x_2)
+      = f_{A,2}\!\left(f_{B,1}(x_1)\right) + f_{B,2}(x_2), \\
+H_3 &amp;= f_{A,3}(H_2) + f_{B,3}(x_3) \\
+    &amp;= f_{A,3}\!\left(
+        f_{A,2}\!\left(f_{B,1}(x_1)\right)
+        + f_{B,2}(x_2)
+       \right) + f_{B,3}(x_3).
+\end{aligned}
+$$
+因此 $H_t$ 中存在大量嵌套运算：
+$$
+H_t = f_{A,t}\!\left(
+        f_{A,t-1}\!\left(
+            \cdots
+            f_{A,2}\!\left(f_{B,1}(x_1)\right) + \cdots
+        \right)
+      \right) + f_{B,t}(x_t)
+$$
+由于计算 $H_t$ 必须先得到 $H_{t-1}$，而计算 $H_{t-1}$ 又必须先得到 $H_{t-2}$，所以一般 RNN 在训练时难以并行。
+5.2 将状态更新简化为累加为了消除这种复杂的序列依赖，令：
+$$
+f_{A,t}(H_{t-1}) = H_{t-1}
+$$
+即不再对旧记忆执行复杂的 Reflection，而只是直接保留旧记忆。
+于是状态更新变为：
+$$
+H_t = H_{t-1} + f_{B,t}(x_t)
+$$
+记 $D_t = f_{B,t}(x_t)$，并令 $H_0 = 0$，则：
+$$
+\begin{aligned}
+H_1 &amp;= D_1, \\
+H_2 &amp;= D_1 + D_2, \\
+H_3 &amp;= D_1 + D_2 + D_3, \\
+&amp;\ \vdots \\
+H_t &amp;= D_1 + D_2 + \cdots + D_t = \sum_{i=1}^{t} D_i
+\end{aligned}
+$$
+此时每一个 $D_i$ 都只依赖当前输入 $x_i$，因此所有 $D_i$ 可以同时计算。
+5.3 将 hidden state 设为矩阵令 hidden state 为一个矩阵：
+$$
+H_t \in \mathbb{R}^{d_v \times d_k}
+$$
+写入记忆的内容同样是一个矩阵：
+$$
+D_t = f_{B,t}(x_t) \in \mathbb{R}^{d_v \times d_k}
+$$
+读取记忆时，使用一个 query vector：
+$$
+q_t = W_Q x_t, \qquad q_t \in \mathbb{R}^{d_k}
+$$
+定义读取函数为：
+$$
+f_{C,t}(H_t) = H_t q_t
+$$
+因此 $y_t = H_t q_t$。
+将 $H_t = \sum_{i=1}^{t} D_i$ 代入，可得：
+$$
+\begin{aligned}
+y_t &amp;= \left(\sum_{i=1}^{t} D_i\right) q_t \\
+    &amp;= \sum_{i=1}^{t} D_i q_t
+\end{aligned}
+$$
+例如：
+$$
+\begin{aligned}
+y_1 &amp;= D_1 q_1, \\
+y_2 &amp;= D_1 q_2 + D_2 q_2, \\
+y_3 &amp;= D_1 q_3 + D_2 q_3 + D_3 q_3, \\
+&amp;\ \vdots \\
+y_t &amp;= D_1 q_t + D_2 q_t + \cdots + D_t q_t
+\end{aligned}
+$$
+5.4 使用 outer product 写入记忆对于每个输入 $x_t$，分别产生 value 和 key：
+$$
+v_t = W_V x_t, \qquad k_t = W_K x_t
+$$
+其中 $v_t \in \mathbb{R}^{d_v}$，$k_t \in \mathbb{R}^{d_k}$。
+定义写入记忆的矩阵为：
+$$
+D_t = v_t k_t^{\top}
+$$
+这是一个 outer product：$v_t k_t^{\top} \in \mathbb{R}^{d_v \times d_k}$。
+因此 hidden state 的更新公式变为：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}
+$$
+展开后：
+$$
+H_t = \sum_{i=1}^{t} v_i k_i^{\top}
+$$
+这里可以将 $v_i$ 理解为要写入记忆的内容，将 $k_i$ 理解为决定这些内容写入哪个位置的地址。
+5.5 推导输出公式将 $D_i = v_i k_i^{\top}$ 代入输出公式：
+$$
+\begin{aligned}
+y_t &amp;= \sum_{i=1}^{t} D_i q_t \\
+    &amp;= \sum_{i=1}^{t} v_i k_i^{\top} q_t
+\end{aligned}
+$$
+由于 $k_i^{\top} q_t$ 是一个 scalar，因此可以写为：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+定义 attention score：
+$$
+a_{t,i} = k_i^{\top} q_t
+$$
+于是：
+$$
+y_t = \sum_{i=1}^{t} a_{t,i} v_i
+$$
+展开为：
+$$
+\begin{aligned}
+y_1 &amp;= v_1 k_1^{\top} q_1, \\
+y_2 &amp;= v_1 k_1^{\top} q_2 + v_2 k_2^{\top} q_2, \\
+y_3 &amp;= v_1 k_1^{\top} q_3 + v_2 k_2^{\top} q_3 + v_3 k_3^{\top} q_3, \\
+&amp;\ \vdots \\
+y_t &amp;= v_1 k_1^{\top} q_t + v_2 k_2^{\top} q_t + \cdots + v_t k_t^{\top} q_t \\
+    &amp;= a_{t,1} v_1 + a_{t,2} v_2 + \cdots + a_{t,t} v_t
+\end{aligned}
+$$
+这个形式已经与 causal Self-Attention 完全相同，区别是这里没有使用 Softmax，因此称为 Linear Attention。
+5.6 与标准 Self-Attention 的比较标准 causal Self-Attention 为：
+$$
+\widetilde{a}_{t,i} =
+\frac{
+    \exp\!\left(q_t^{\top} k_i / \sqrt{d_k}\right)
+}{
+    \sum_{j=1}^{t} \exp\!\left(q_t^{\top} k_j / \sqrt{d_k}\right)
+}
+$$
+并计算：
+$$
+y_t = \sum_{i=1}^{t} \widetilde{a}_{t,i} v_i
+$$
+Linear Attention 则直接使用 $a_{t,i} = k_i^{\top} q_t$，因此：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+也就是说：
+$$
+\text{Linear Attention} = \text{Self-Attention without Softmax}
+$$
+5.7 Training 时的并行形式将所有 query、key 和 value 按列排列：
+$$
+Q = \begin{bmatrix} q_1 &amp; q_2 &amp; \cdots &amp; q_T \end{bmatrix}, \quad
+K = \begin{bmatrix} k_1 &amp; k_2 &amp; \cdots &amp; k_T \end{bmatrix}, \quad
+V = \begin{bmatrix} v_1 &amp; v_2 &amp; \cdots &amp; v_T \end{bmatrix}
+$$
+其中 $Q, K \in \mathbb{R}^{d_k \times T}$，$V \in \mathbb{R}^{d_v \times T}$。
+注意 $K^{\top} Q \in \mathbb{R}^{T \times T}$，且其第 $(i,t)$ 个元素为：
+$$
+(K^{\top} Q)_{i,t} = k_i^{\top} q_t
+$$
+定义 causal mask：
+$$
+M_{i,t} =
+\begin{cases}
+1, &amp; i \leq t, \\
+0, &amp; i &gt; t
+\end{cases}
+$$
+于是所有位置的输出可以一次写成：
+$$
+Y = V\left[\left(K^{\top} Q\right) \odot M\right]
+$$
+其中 $Y = \begin{bmatrix} y_1 &amp; y_2 &amp; \cdots &amp; y_T \end{bmatrix}$。
+因此在 Training 阶段，Linear Attention 可以像 Self-Attention 一样通过矩阵运算并行计算所有输出。
+5.8 Inference 时的 RNN 形式在 autoregressive inference 中，不需要保存过去所有的 key 和 value，只需要保存当前矩阵状态 $H_{t-1}$。
+每产生一个新的 token，只需计算：
+$$
+q_t = W_Q x_t, \qquad k_t = W_K x_t, \qquad v_t = W_V x_t
+$$
+然后更新状态：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}
+$$
+最后读取：
+$$
+y_t = H_t q_t
+$$
+因此核心递归公式为：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}, \qquad
+y_t = H_t q_t
+$$
+展开后又得到：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+所以 Linear Attention 具有两种等价的计算方式：
+$$
+\begin{aligned}
+\text{Training:}\quad &amp;\text{像 Self-Attention，可以并行计算}, \\
+\text{Inference:}\quad &amp;\text{像 RNN，递归更新固定大小的 state}.
+\end{aligned}
+$$
+
+
+本节结论： Linear Attention 的关键等价：训练时可写成 Attention 形式并行计算；推理时可写成 RNN 形式，用固定状态逐步更新。
+
+6. Linear Attention 的”写入—读取”解释
+状态 $H_t$ 可以看成一个矩阵记忆库。$v_t$ 是要写入的内容，$k_t$ 决定把内容分配到哪些列；外积 $v_t k_t^\top$ 因而是一次结构化写入。
+读取时，$q_t$ 决定从哪些列取出多少信息，$H_t q_t$ 得到最终输出。
+
+展开递推后，输出等于所有历史 Value 的加权和，权重为 $k_i^\top q_t$。它与普通 Self-Attention 的主要形式差异是没有 softmax。
+
+本节结论： Key 控制“写到哪里”，Value 表示“写什么”，Query 控制“从哪里读”。
+
+7. 为什么没有 Softmax 的 Linear Attention 往往较弱？常见说法是 RNN 状态有限，而 Self-Attention 可以访问任意长历史。但课件强调：有限维的 Query&#x2F;Key 空间同样无法为无限多位置提供彼此正交、完全无干扰的地址，因此 Self-Attention 也不是字面意义上的无限记忆。
+更关键的差别是 softmax 带来的相对竞争。某个分数是否重要，不只取决于自身大小，也取决于同一上下文中是否出现更高分数。新出现的更重要信息会降低旧信息的归一化权重。
+原始 Linear Attention 中，$H_t = H_{t-1} + v_t k_t^\top$，写入后信息永久累积，模型不会主动遗忘或重整记忆；随着序列增长，干扰不断积累。
+
+本节结论： Softmax 的价值不仅是归一化，它让不同位置竞争，使“重要性”依上下文动态改变；Linear Attention 则需要额外机制实现遗忘与重写。
+
+8. RetNet：让记忆逐渐衰减Retention Network 在旧状态前乘固定衰减系数 $\gamma$（通常 $0 &lt; \gamma &lt; 1$），使较久远的信息指数衰减。
+递推推理时，每一步仍只维护固定状态。并行训练时，位置 $i$ 对位置 $t$ 的贡献额外乘 $\gamma^{t-i}$，因此仍可写成类似 Attention 的并行形式。
+缺点是所有信息按同一速度衰减，无法根据内容决定哪些信息应长期保留。
+$$
+H_t = \gamma H_{t-1} + v_t k_t^\top, \quad y_t = H_t q_t
+$$
+9. Gated Retention 与更细粒度 ReflectionGated Retention 把固定 $\gamma$ 改成输入相关的 $\gamma_t$，例如 $\gamma_t = \text{sigmoid}(W_\gamma x_t)$。模型可以在段落切换、不重要 token 等情形下快速遗忘，也可以在重要信息出现时接近 1、长期保留。更一般地，可以使用矩阵门 $G_t$ 与旧状态逐元素相乘：$H_t = G_t \odot H_{t-1} + v_t k_t^\top$。若 $G_t$ 采用可分解结构 $1 s_t^\top$，就能分别对记忆矩阵的不同列执行抹去、保留或减弱，并保持可并行实现的结构。
+很多现代模型都可以统一写成“先变换旧状态，再写入新外积，最后读取”的广义 RNN 形式。
+$$
+\gamma_t = \text{sigmoid}(W_\gamma x_t)
+$$
+$$
+H_t = \gamma_t H_{t-1} + v_t k_t^\top
+$$
+Gated Retention
+$$
+H_t = G_t \odot H_{t-1} + v_t k_t^\top
+$$
+10. Mamba 与 Mamba-2Mamba 属于选择性状态空间模型（Selective State Space Model）。在统一递推视角下，它也是对旧状态进行输入相关的变换，再写入新信息。第一代 Mamba 的状态更新形式较复杂，来源于连续时间状态空间模型的离散化。
+由于第一代 Mamba 不能完全化成简单的全矩阵乘法，训练中使用 hardware-aware selective scan&#x2F;scan algorithm 来获得并行效率。
+Mamba-2 的核心更新可写成与 Gated Retention 相近的时间相关衰减形式。这里应理解为”核心递推结构相似”，而不是说完整网络模块的每个细节都相同。
+Mamba 引起关注的原因是：它在一些语言建模实验中取得了可与改进型 Transformer 竞争的效果，同时自回归推理吞吐量更高，尤其适合长序列。
+11. DeltaNet：写入前先擦除冲突记忆
+DeltaNet 不只是整体衰减旧状态，而是先计算当前 Key 所指向的位置已经存了什么：$H_{t-1} k_t$。随后把旧内容向量与目标 $v_t$ 的差异用于更新，实现”先擦除，再写入”。
+它的更新可等价看成对一个局部记忆损失执行一步梯度下降。
+$$
+H_t = H_{t-1} - \beta_t(H_{t-1} k_t - v_t) k_t^\top
+$$
+DeltaNet：擦除旧关联并写入新关联
+$$
+L_t(H) = \frac{1}{2} \| H k_t - v_t \|^2
+$$
+上述更新等价于对该损失执行一步梯度下降
+若把状态矩阵视为参数，那么 DeltaNet 的更新就是测试时的一步梯度下降。Titans 将这一观点扩展为”Learning to Memorize at Test Time”：模型在处理输入时动态更新长期记忆。
+这类方法把序列模型与在线学习联系起来：推理不再只是固定参数的前向传播，部分记忆参数会根据当前样本发生变化。
+12. 应用、边界与研究趋势Mamba&#x2F;Linear-Attention 类模型已从小规模实验扩展到更大的语言模型与多模态模型，说明固定状态路线具有实际可扩展性。
+在视觉任务中，是否需要 Mamba 取决于任务。MambaOut 的讨论表明，图像分类未必需要大范围序列混合，CNN 的局部归纳偏置可能足够；但图像分割等需要全局关系的任务仍可能受益。
+另一个趋势是不从零训练，而是把现有 Transformer 中的 Self-Attention 替换为 Mamba&#x2F;SSM&#x2F;Linear Attention，并尽量迁移原有参数，再进行微调。
+最终问题仍未结束：到未来，Self-Attention 会继续长期占据主导，还是会被混合架构或状态空间模型取代？更现实的答案可能不是单一胜者，而是不同模块根据任务与硬件约束组合使用。
+13. 各式Model（截止当时课件）
+]]></content>
       <categories>
-          
-          <category> 闲言碎语 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 随笔 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-  
-  
+      <tags>
+        <tag>AI</tag>
+        <tag>Attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>我的第一篇博客</title>
+    <url>/posts/d95d7e09/</url>
+    <content><![CDATA[Hello!这是我的第一篇blog。:)
+]]></content>
+      <categories>
+        <category>闲言碎语</category>
+      </categories>
+      <tags>
+        <tag>随笔</tag>
+      </tags>
+  </entry>
 </search>
