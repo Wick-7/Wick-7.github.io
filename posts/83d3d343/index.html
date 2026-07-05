@@ -1,0 +1,877 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《生成式AI时代下的机器学习 第七讲》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="大型语言模型的学习历程：Pre-training、SFT 与 RLHF 以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT   1. 整体框架：大型语言模型如何一步步变成聊天助手 大型语言模型的训练分为三个阶段：    阶段 全称 主要目标 人类提供什么 形象比喻    Pre-training Pre-training">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《生成式AI时代下的机器学习 第七讲》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/83d3d343/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="大型语言模型的学习历程：Pre-training、SFT 与 RLHF 以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT   1. 整体框架：大型语言模型如何一步步变成聊天助手 大型语言模型的训练分为三个阶段：    阶段 全称 主要目标 人类提供什么 形象比喻    Pre-training Pre-training">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-05T11:12:22.000Z">
+<meta property="article:modified_time" content="2026-07-05T14:36:53.073Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Pre-training">
+<meta property="article:tag" content="RLHF">
+<meta property="article:tag" content="SFT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《生成式AI时代下的机器学习 第七讲》课堂笔记",
+  "url": "https://wick-7.github.io/posts/83d3d343/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-05T11:12:22.000Z",
+  "dateModified": "2026-07-05T14:36:53.073Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/83d3d343/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《生成式AI时代下的机器学习 第七讲》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《生成式AI时代下的机器学习 第七讲》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《生成式AI时代下的机器学习 第七讲》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-05T11:12:22.000Z" title="发表于 2026-07-05 19:12:22">2026-07-05</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-05T14:36:53.073Z" title="更新于 2026-07-05 22:36:53">2026-07-05</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="大型语言模型的学习历程：Pre-training、SFT-与-RLHF"><a href="#大型语言模型的学习历程：Pre-training、SFT-与-RLHF" class="headerlink" title="大型语言模型的学习历程：Pre-training、SFT 与 RLHF"></a>大型语言模型的学习历程：Pre-training、SFT 与 RLHF</h1><blockquote>
+<p>以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT</p>
+</blockquote>
+<hr>
+<h2 id="1-整体框架：大型语言模型如何一步步变成聊天助手"><a href="#1-整体框架：大型语言模型如何一步步变成聊天助手" class="headerlink" title="1. 整体框架：大型语言模型如何一步步变成聊天助手"></a>1. 整体框架：大型语言模型如何一步步变成聊天助手</h2><p><img src="/img/posts/83d3d343/2026-07-05-19-58-28.png"></p>
+<p>大型语言模型的训练分为三个阶段：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>全称</th>
+<th>主要目标</th>
+<th>人类提供什么</th>
+<th>形象比喻</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pre-training</td>
+<td>Pre-training</td>
+<td>熟悉语言、吸收世界知识，学会基本的文字接龙</td>
+<td>大量原始文本，人类直接标注较少</td>
+<td>学龄前：看到什么学什么</td>
+</tr>
+<tr>
+<td>SFT</td>
+<td>Supervised Fine-Tuning</td>
+<td>学会按照指令回答，形成有用的助手行为</td>
+<td>问题与标准答案</td>
+<td>上学校：老师给标准答案</td>
+</tr>
+<tr>
+<td>RLHF</td>
+<td>Reinforcement Learning with Human Feedback</td>
+<td>根据人类偏好改善完整回答</td>
+<td>对答案的偏好、排序或分数</td>
+<td>出社会：别人只告诉你好不好</td>
+</tr>
+</tbody></table>
+<h3 id="1-1-Alignment-的含义"><a href="#1-1-Alignment-的含义" class="headerlink" title="1.1 Alignment 的含义"></a>1.1 Alignment 的含义</h3><p><strong>Alignment（对齐）</strong> 是让模型的行为符合人类的需求、偏好和价值观。</p>
+<p>狭义文献中，Alignment 有时主要指 RLHF；但从课程的定义看：</p>
+<ul>
+<li>SFT 用人类提供的标准答案进行对齐；</li>
+<li>RLHF 用人类提供的反馈进行对齐；</li>
+<li>因此，SFT 和 RLHF 都属于 Alignment。</li>
+</ul>
+<h3 id="1-2-三阶段的关系不是重新训练，而是连续初始化"><a href="#1-2-三阶段的关系不是重新训练，而是连续初始化" class="headerlink" title="1.2 三阶段的关系不是重新训练，而是连续初始化"></a>1.2 三阶段的关系不是重新训练，而是连续初始化</h3><p>每个阶段都继承前一阶段的参数：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">随机初始化</span><br><span class="line">   ↓</span><br><span class="line">Pre-trained Model</span><br><span class="line">   ↓ 作为初始化</span><br><span class="line">SFT Model</span><br><span class="line">   ↓ 作为初始化</span><br><span class="line">RLHF / RL Model</span><br></pre></td></tr></table></figure>
+
+<p>这样做的原因是：前一阶段已经把参数带到一个较好的区域，后一阶段不需要从随机状态重新学习。</p>
+<h3 id="1-3-三阶段真正改变的主要是“教材”"><a href="#1-3-三阶段真正改变的主要是“教材”" class="headerlink" title="1.3 三阶段真正改变的主要是“教材”"></a>1.3 三阶段真正改变的主要是“教材”</h3><p>从机器学习的三个步骤看：</p>
+<ol>
+<li>定义学习目标与训练数据；</li>
+<li>确定模型的函数搜索范围，例如 Transformer；</li>
+<li>使用优化器寻找较好的参数，例如 Adam。</li>
+</ol>
+<p>Pre-training、SFT 和 RLHF 通常沿用同一模型架构，参数也需要能够继承。因此三阶段最核心的差异是：<strong>训练数据和评价信号不同</strong>。</p>
+<p>不过，严格来说第三阶段还改变了目标函数：前两阶段最小化 token-level Cross Entropy，第三阶段最大化整段回答的 Reward。</p>
+<hr>
+<h2 id="2-三个阶段共同的基础：都在进行文字接龙"><a href="#2-三个阶段共同的基础：都在进行文字接龙" class="headerlink" title="2. 三个阶段共同的基础：都在进行文字接龙"></a>2. 三个阶段共同的基础：都在进行文字接龙</h2><h3 id="2-1-文字接龙本质上是分类问题"><a href="#2-1-文字接龙本质上是分类问题" class="headerlink" title="2.1 文字接龙本质上是分类问题"></a>2.1 文字接龙本质上是分类问题</h3><p>在图像分类中，模型从若干类别中选择一类；在语言模型中，<strong>词表中的每一个 Token 都是一个类别</strong>。<br>给定前文，模型输出下一个 Token 的概率分布。</p>
+<h3 id="2-2-自回归概率分解"><a href="#2-2-自回归概率分解" class="headerlink" title="2.2 自回归概率分解"></a>2.2 自回归概率分解</h3><p>一句话由多个 Token 构成。自回归语言模型把整段文本的概率分解为逐 Token 的条件概率：</p>
+<p>$$
+P_\theta(x_1,x_2,\ldots,x_T)
+=
+\prod_{t=1}^{T}P_\theta(x_t\mid x_{&lt;t})
+$$</p>
+<p>其中：</p>
+<ul>
+<li>$x_t$：第 $t$ 个 Token；</li>
+<li>$x_{&lt;t}$：第 $t$ 个 Token 之前的全部上下文；</li>
+<li>$θ$：语言模型的参数。</li>
+</ul>
+<h3 id="2-3-Softmax-输出"><a href="#2-3-Softmax-输出" class="headerlink" title="2.3 Softmax 输出"></a>2.3 Softmax 输出</h3><p>模型先对词表中的每个 Token 输出一个 logit，再通过 Softmax 变成概率：</p>
+<p>$$
+p_\theta(v\mid x_{&lt;t})
+=
+\frac{\exp(z_v)}{\sum_{u\in\mathcal V}\exp(z_u)}
+$$</p>
+<p>其中 $V$ 是词表，词表大小就是分类类别数，现代模型通常有数万到数十万个 Token 类别。</p>
+<h3 id="2-4-Cross-Entropy-Negative-Log-Likelihood"><a href="#2-4-Cross-Entropy-Negative-Log-Likelihood" class="headerlink" title="2.4 Cross Entropy &#x2F; Negative Log-Likelihood"></a>2.4 Cross Entropy &#x2F; Negative Log-Likelihood</h3><p>若真实的下一个 Token 是 $x_t$，单个位置的损失为：</p>
+<p>$$
+\ell_t
+=
+-\log P_\theta(x_t\mid x_{&lt;t})
+$$</p>
+<p>整段训练文本的损失为：</p>
+<p>$$
+L
+=
+-\sum_{t=1}^{T}\log P_\theta(x_t\mid x_{&lt;t})
+$$</p>
+<p>模型使用 Gradient Descent 调整参数，使正确 Token 的概率增大，从而降低 Cross Entropy。</p>
+<hr>
+<h2 id="3-从文字到-Token：训练与推理如何完成“文字接龙”"><a href="#3-从文字到-Token：训练与推理如何完成“文字接龙”" class="headerlink" title="3. 从文字到 Token：训练与推理如何完成“文字接龙”"></a>3. 从文字到 Token：训练与推理如何完成“文字接龙”</h2><h3 id="3-1-为什么需要-Tokenization"><a href="#3-1-为什么需要-Tokenization" class="headerlink" title="3.1 为什么需要 Tokenization"></a>3.1 为什么需要 Tokenization</h3><p>课件把语言模型描述为一个拥有巨大类别数的分类器。要真正送入 Transformer，文字还需要先经过 Tokenization，被转换成有限符号集合中的一维 Token 序列。神经网络处理的是这些 Token ID，而不是人眼直接看到的字词。</p>
+<p>一种极端做法是使用 bit：词表只有 $0$ 和 $1$，但序列会极长。另一种做法是使用更大的符号集合，换取更短的序列。因此 Tokenization 本质上在权衡：</p>
+<ul>
+<li>Vocabulary Size；</li>
+<li>Sequence Length；</li>
+<li>对不同语言和字符的表示效率。</li>
+</ul>
+<h3 id="3-2-Byte-Pair-Encoding-的直觉"><a href="#3-2-Byte-Pair-Encoding-的直觉" class="headerlink" title="3.2 Byte Pair Encoding 的直觉"></a>3.2 Byte Pair Encoding 的直觉</h3><p>常见 Tokenizer 会从 byte 出发，反复寻找最常出现的相邻符号对，把它们合并成新 Token。高频字符串会成为一个整体 Token，低频字符串则被拆成多个 Token。<br>因此：</p>
+<ul>
+<li>Token 不一定等于一个字或一个单词；</li>
+<li>大小写、空格、标点都可能改变切分；</li>
+<li>模型实际看到的是 Token ID，而不是人眼中的字符；</li>
+<li>拼写、逐字符操作和罕见语言可能因此更困难。</li>
+</ul>
+<h3 id="3-3-神经网络训练的输入与输出"><a href="#3-3-神经网络训练的输入与输出" class="headerlink" title="3.3 神经网络训练的输入与输出"></a>3.3 神经网络训练的输入与输出</h3><p>输入是长度不超过 Context Window 的 Token 序列，输出是下一个 Token 的概率分布。</p>
+<p>训练时不断从语料中截取窗口：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">上下文 Token → Transformer → 下一个 Token 的概率分布</span><br></pre></td></tr></table></figure>
+
+<p>训练初期参数随机，输出近似随机；经过大量梯度更新后，概率分布逐渐符合训练语料中的统计规律。</p>
+<h3 id="3-4-Inference：模型如何生成文本"><a href="#3-4-Inference：模型如何生成文本" class="headerlink" title="3.4 Inference：模型如何生成文本"></a>3.4 Inference：模型如何生成文本</h3><p>训练完成后，参数固定，进入 Inference 阶段：</p>
+<ol>
+<li>输入已有 Token；</li>
+<li>模型预测下一个 Token 的概率；</li>
+<li>从概率分布中选择或采样一个 Token；</li>
+<li>将新 Token 加入上下文；</li>
+<li>重复以上过程，直到生成结束符或达到长度限制。</li>
+</ol>
+<p>因此，一次完整回答是逐 Token 生成的。只要中间某个 Token 改变，之后的上下文就会随之改变，后续整条生成路径也可能不同。这正是为什么 SFT 或 RLHF 只需轻微调整少数关键 Token 的概率，就可能明显改变整段回答。</p>
+<hr>
+<h1 id="Part-I：Pre-training"><a href="#Part-I：Pre-training" class="headerlink" title="Part I：Pre-training"></a>Part I：Pre-training</h1><h2 id="4-Pre-training-的目标"><a href="#4-Pre-training-的目标" class="headerlink" title="4. Pre-training 的目标"></a>4. Pre-training 的目标</h2><p>Pre-training 是整个训练流程的起点，主要让模型获得两类能力。</p>
+<p><img src="/img/posts/83d3d343/2026-07-05-20-12-58.png"></p>
+<h3 id="4-1-语言知识"><a href="#4-1-语言知识" class="headerlink" title="4.1 语言知识"></a>4.1 语言知识</h3><p>模型需要学习：</p>
+<ul>
+<li>语法结构；</li>
+<li>常见搭配；</li>
+<li>不同词形和句型；</li>
+<li>哪些 Token 序列符合自然语言规律。</li>
+</ul>
+<p>语言知识相对容易饱和。如图片的实验显示，当语料达到一定规模后，句法知识的提升会逐渐趋缓。</p>
+<h3 id="4-2-世界知识"><a href="#4-2-世界知识" class="headerlink" title="4.2 世界知识"></a>4.2 世界知识</h3><p>模型还需要学习可以从文字中获得的世界知识，例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">水的沸点是摄氏一百度。</span><br></pre></td></tr></table></figure>
+
+<p>但正确答案依赖上下文：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">在低压下，水的沸点低于摄氏一百度。</span><br></pre></td></tr></table></figure>
+
+<p>世界知识近乎无穷，并且事实、条件与语境相互关联，所以比单纯语法需要更多、更丰富的训练数据。</p>
+<hr>
+<h2 id="5-为什么-Pre-training-属于-Self-supervised-Learning"><a href="#5-为什么-Pre-training-属于-Self-supervised-Learning" class="headerlink" title="5. 为什么 Pre-training 属于 Self-supervised Learning"></a>5. 为什么 Pre-training 属于 Self-supervised Learning</h2><p>假设网络中有一句话：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">人工智能真神奇</span><br></pre></td></tr></table></figure>
+
+<p>它可以自动产生多条训练样本：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">输入：人          输出：工</span><br><span class="line">输入：人工        输出：智</span><br><span class="line">输入：人工智      输出：能</span><br><span class="line">输入：人工智能    输出：真</span><br></pre></td></tr></table></figure>
+
+<p>正确答案直接来自原始文本本身，不需要人类逐条写标签。因此它属于：</p>
+<p><strong>Self-supervised Learning（自监督学习，课件称自督导式学习）</strong>。</p>
+<p>注意：Self-supervised 不代表完全没有人工参与。数据爬取、过滤、去重、版权与隐私处理仍需要大量工程设计，只是 Token 标签可以从文本自动构造。</p>
+<hr>
+<h2 id="6-预训练数据从哪里来"><a href="#6-预训练数据从哪里来" class="headerlink" title="6. 预训练数据从哪里来"></a>6. 预训练数据从哪里来</h2><h3 id="6-1-数据规模"><a href="#6-1-数据规模" class="headerlink" title="6.1 数据规模"></a>6.1 数据规模</h3><p>课件以 LLaMA 3、DeepSeek-V3 和 FineWeb 为例，展示了约 15T tokens 的训练规模。</p>
+<h3 id="6-2-从原始网页到训练语料：生产级数据处理流水线"><a href="#6-2-从原始网页到训练语料：生产级数据处理流水线" class="headerlink" title="6.2 从原始网页到训练语料：生产级数据处理流水线"></a>6.2 从原始网页到训练语料：生产级数据处理流水线</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-15-37.png"></p>
+<p>原始网页不能直接用于训练。以 Common Crawl &#x2F; FineWeb 类流程为例，常见步骤包括：</p>
+<ol>
+<li><strong>URL Filtering</strong>：删除恶意网站、垃圾站、成人内容、低质量营销站等；</li>
+<li><strong>Text Extraction</strong>：从 HTML 中提取正文，去掉导航栏、CSS、脚本和模板文本；</li>
+<li><strong>Language Filtering</strong>：识别语言，并根据模型目标确定各语言的比例；</li>
+<li><strong>Heuristic Filtering</strong>：根据长度、字符比例、重复符号、可读性等规则过滤；</li>
+<li><strong>Deduplication</strong>：去除完全重复或近似重复的数据；</li>
+<li><strong>Model-based Filtering</strong>：用分类模型判断文本质量；</li>
+<li><strong>PII Removal</strong>：删除地址、证件号等 Personally Identifiable Information；</li>
+<li><strong>Mixture Design</strong>：控制网页、书籍、代码、论文、对话和不同语言之间的比例。</li>
+</ol>
+<p>数据组成会直接塑造模型能力。例如某种语言占比过低，模型在该语言上的能力通常也会较弱。</p>
+<p>所以“Self-supervised”只表示下一个 Token 的标签由文本自动产生，并不表示数据无需人工工程。真正昂贵的环节常常是决定抓取什么、删除什么、如何去重，以及各种来源应按什么比例混合。</p>
+<hr>
+<h2 id="7-模型不是“把互联网逐字背下来”"><a href="#7-模型不是“把互联网逐字背下来”" class="headerlink" title="7. 模型不是“把互联网逐字背下来”"></a>7. 模型不是“把互联网逐字背下来”</h2><p>Pre-training 的目标是通过文本学习预测规律，而不是建立一个可以逐字检索的数据库。</p>
+<p>因此模型可能：</p>
+<ul>
+<li>知道一篇小说的主要人物和情节；</li>
+<li>能写出风格相似、内容大致合理的续写；</li>
+<li>却不能准确复述原文。</li>
+</ul>
+<p>更合适的理解是：模型把文本中的统计规律和知识压缩进参数。压缩与生成过程可能产生信息损失，因此会出现：</p>
+<ul>
+<li>细节遗漏；</li>
+<li>原文混写；</li>
+<li>看似合理但并非真实原文的内容；</li>
+<li>Hallucination。</li>
+</ul>
+<p><strong>会概括、会续写，不等于能够忠实检索。</strong></p>
+<p>模型参数中的知识更像经过压缩后的长期记忆：高频、反复出现的内容通常更牢固，罕见细节则可能只留下模糊印象。若把原始资料直接放入 Context Window，模型可以依据当前上下文作答，这更接近临时的 Working Memory。因此，对精确事实而言，“从参数中回忆”和“根据上下文读取”是两种可靠性不同的方式。</p>
+<hr>
+<h2 id="8-数据越多越好吗：模型、数据与算力的平衡"><a href="#8-数据越多越好吗：模型、数据与算力的平衡" class="headerlink" title="8. 数据越多越好吗：模型、数据与算力的平衡"></a>8. 数据越多越好吗：模型、数据与算力的平衡</h2><h3 id="8-1-两种资源的作用"><a href="#8-1-两种资源的作用" class="headerlink" title="8.1 两种资源的作用"></a>8.1 两种资源的作用</h3><ul>
+<li>更多数据：相当于读过更多教材，可降低过拟合并增加知识覆盖；</li>
+<li>更大模型：相当于函数搜索空间更大，表达能力更强；</li>
+<li>更多训练计算：才能让大模型充分读取和消化更多数据。</li>
+</ul>
+<p>算力有限时，不能无限增大模型和数据，必须进行配置。</p>
+<h3 id="8-2-Chinchilla-Scaling-Law"><a href="#8-2-Chinchilla-Scaling-Law" class="headerlink" title="8.2 Chinchilla Scaling Law"></a>8.2 Chinchilla Scaling Law</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-21-42.png"></p>
+<blockquote>
+<p>在固定训练计算量下，模型参数量与训练 Token 数存在较优配比。</p>
+</blockquote>
+<p>模型过大但数据不足，参数没有得到充分训练；模型过小但数据过多，模型容量不足。二者都不能充分利用计算预算。</p>
+<p>可以用一个粗略的计算量关系理解：</p>
+<p>$$
+C \propto N\times D
+$$</p>
+<p>其中：</p>
+<ul>
+<li>$C$：训练计算量；</li>
+<li>$N$：模型参数量；</li>
+<li>$D$：训练 Token 数。</li>
+</ul>
+<p>实际比例和常数取决于架构及训练设置，但核心思想是：<strong>在固定算力下，需要共同配置模型规模和数据规模。</strong></p>
+<hr>
+<h2 id="9-数据质量往往比单纯增加数据更重要"><a href="#9-数据质量往往比单纯增加数据更重要" class="headerlink" title="9. 数据质量往往比单纯增加数据更重要"></a>9. 数据质量往往比单纯增加数据更重要</h2><h3 id="9-1-低质量数据可能破坏训练"><a href="#9-1-低质量数据可能破坏训练" class="headerlink" title="9.1 低质量数据可能破坏训练"></a>9.1 低质量数据可能破坏训练</h3><p>课件用包含大量重复字母的异常 Reddit 文本举例：某些极端、无意义的序列可能导致 Loss 突然升高或训练不稳定。</p>
+<p>因此网络语料通常经过层层过滤。课件引用 DataComp 的流程说明：</p>
+<ul>
+<li>Heuristic Filtering 会首先删除大量原始数据；</li>
+<li>Deduplication 继续去除重复内容；</li>
+<li>Model-based Filtering 只保留被判断为高质量的部分；</li>
+<li>最终保留比例可能很低，但绝对规模仍然很大。</li>
+</ul>
+<h3 id="9-2-高质量数据的价值"><a href="#9-2-高质量数据的价值" class="headerlink" title="9.2 高质量数据的价值"></a>9.2 高质量数据的价值</h3><p>在相同算力下，高质量语料通常可以取得更好效果；达到相同效果时，也可能使用更少数据和算力。</p>
+<p>因此 Pre-training 数据设计要同时考虑：</p>
+<p>Quantity；Quality；Diversity；Coverage；Safety；Privacy；Duplication；Language Balance。</p>
+<h3 id="9-3-Rephrasing-the-Web"><a href="#9-3-Rephrasing-the-Web" class="headerlink" title="9.3 Rephrasing the Web"></a>9.3 Rephrasing the Web</h3><p>课件介绍了一种思路：先让已有 LLM 把网页内容重新表述，使文本更有组织、更易读，再用改写后的数据训练新模型。</p>
+<p>它说明“数据清洗”不一定只是删除数据，也可以进行：</p>
+<ul>
+<li>重写；</li>
+<li>结构化；</li>
+<li>降噪；</li>
+<li>统一表达风格。</li>
+</ul>
+<p>不过这种方法也可能把已有模型的偏差、风格和错误传播给新模型。</p>
+<hr>
+<h2 id="10-为什么-Base-Model-往往不会好好回答问题"><a href="#10-为什么-Base-Model-往往不会好好回答问题" class="headerlink" title="10. 为什么 Base Model 往往不会好好回答问题"></a>10. 为什么 Base Model 往往不会好好回答问题</h2><p>Pre-training 只要求模型模仿互联网文本分布。此时的 Base Model 更像一个 <strong>Internet Document Simulator</strong>：给它一段开头，它会继续生成网络上可能出现的后文，而不是天然把自己当作正在服务用户的助手。因此，互联网中“问题”后面不一定紧跟正确答案，可能是：</p>
+<ul>
+<li>选择题选项；</li>
+<li>网友讨论；</li>
+<li>“知道的人请留言”；</li>
+<li>另一个问题；</li>
+<li>不完整或错误的答案。</li>
+</ul>
+<p>所以 Base Model 即使拥有相关知识，也未必知道：</p>
+<ul>
+<li>用户是在向它提问；</li>
+<li>它应该直接给出答案；</li>
+<li>什么时候应该停止；</li>
+<li>什么语气和格式更有帮助。</li>
+</ul>
+<h3 id="10-1-Base-Model-是“璞玉”"><a href="#10-1-Base-Model-是“璞玉”" class="headerlink" title="10.1 Base Model 是“璞玉”"></a>10.1 Base Model 是“璞玉”</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-23-27.png"></p>
+<p>Pre-trained Model 可能已经给正确答案分配了一定概率，只是该概率未必最高。SFT 和 RLHF 的重要作用，是改变输出分布，让有用、正确、符合人类期待的回答更容易被选中。</p>
+<hr>
+<h1 id="Part-II：SFT"><a href="#Part-II：SFT" class="headerlink" title="Part II：SFT"></a>Part II：SFT</h1><h2 id="11-SFT-如何构造训练数据"><a href="#11-SFT-如何构造训练数据" class="headerlink" title="11. SFT 如何构造训练数据"></a>11. SFT 如何构造训练数据</h2><p>SFT 使用人类准备或筛选的“问题—标准回答”数据，例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">User：台湾最高的山是哪座？</span><br><span class="line">Assistant：玉山。</span><br></pre></td></tr></table></figure>
+
+<p>通过 Chat Template 转换后，模型仍然进行逐 Token 预测：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">输入：User: 台湾最高的山是哪座？ Assistant:</span><br><span class="line">输出：玉</span><br><span class="line"></span><br><span class="line">输入：User: 台湾最高的山是哪座？ Assistant: 玉</span><br><span class="line">输出：山</span><br><span class="line"></span><br><span class="line">输入：User: 台湾最高的山是哪座？ Assistant: 玉山</span><br><span class="line">输出：[END]</span><br></pre></td></tr></table></figure>
+
+<p>因此 SFT 也叫 <strong>Instruction Fine-Tuning</strong>：模型根据 Instruction 学习如何产生合适 Response。</p>
+<p>从计算形式看，SFT 并没有换掉“预测下一个 Token”的核心算法；真正变化的是教材从一般网络文本变成了经过设计的对话示范。模型通过模仿这些示范，逐渐学会 Chat Template、回答边界、助手语气和结束位置。</p>
+<h3 id="11-1-SFT-Loss"><a href="#11-1-SFT-Loss" class="headerlink" title="11.1 SFT Loss"></a>11.1 SFT Loss</h3><p>设第 $i$ 条样本的问题为 $x_i$，回答为 $y_i$，只在 Assistant 回答部分计算损失：</p>
+<p>$$
+L_{\mathrm{SFT}}
+=
+-\sum_i\sum_{t\in\mathcal A_i}
+\log P_\theta(y_{i,t}\mid x_i,y_{i,&lt;t})
+$$</p>
+<p>其中 $A_i$ 表示第 $i$ 条数据中属于 Assistant 回答的 Token 位置。</p>
+<p>很多训练实现会 Mask 掉 User Prompt 的 Loss，因为目标是学习“如何回答”，而不是让模型复述用户问题。</p>
+<hr>
+<h2 id="12-SFT-为什么能让模型“脱胎换骨”"><a href="#12-SFT-为什么能让模型“脱胎换骨”" class="headerlink" title="12. SFT 为什么能让模型“脱胎换骨”"></a>12. SFT 为什么能让模型“脱胎换骨”</h2><p>SFT 学到的重点包括：</p>
+<ul>
+<li>识别问题和指令；</li>
+<li>使用助手式语气；</li>
+<li>输出正确的格式；</li>
+<li>直接回答，而不是继续模仿网页；</li>
+<li>在适当位置生成结束符；</li>
+<li>遵守部分安全和行为规范。</li>
+</ul>
+<p>课件强调：SFT 的成功建立在 Pre-training 之上。没有充分预训练，只靠少量问答数据，模型容易过拟合成表面规则。</p>
+<p>例如仅用一条样本：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">台湾最高的山是哪座？ → 玉山</span><br></pre></td></tr></table></figure>
+
+<p>模型可能错误学成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">只要问题里出现“山”，就回答“玉山”。</span><br></pre></td></tr></table></figure>
+
+<p>这说明 SFT 数据数量有限时，Pre-training 中形成的知识结构和表示非常重要。</p>
+<hr>
+<h2 id="13-Pre-training-如何帮助-SFT-举一反三"><a href="#13-Pre-training-如何帮助-SFT-举一反三" class="headerlink" title="13. Pre-training 如何帮助 SFT 举一反三"></a>13. Pre-training 如何帮助 SFT 举一反三</h2><p>课件引用 Physics of Language Models 的实验说明：</p>
+<ul>
+<li>若某个事实在 Pre-training 中只以一种固定顺序出现一次，模型可能只学到局部 Token 邻接关系；</li>
+<li>如果同一知识从多个角度、不同措辞反复出现，模型更容易把人物、属性和关系连接起来；</li>
+<li>SFT 再教模型“看到某类问题应该如何调用关系”，它才能迁移到未在 SFT 中出现的实体。</li>
+</ul>
+<p>核心结论：</p>
+<blockquote>
+<p>同一个知识以多种表达反复出现，比单次机械出现更有利于形成可调用、可泛化的内部表示。</p>
+</blockquote>
+<p>因此 Pre-training 的“大量”不仅表示事实数量多，也表示同一知识在不同上下文中的多样化表达多。</p>
+<hr>
+<h2 id="14-SFT-通常更像激活与规范，而不是灌入大量新知识"><a href="#14-SFT-通常更像激活与规范，而不是灌入大量新知识" class="headerlink" title="14. SFT 通常更像激活与规范，而不是灌入大量新知识"></a>14. SFT 通常更像激活与规范，而不是灌入大量新知识</h2><p>课件把问题分为：</p>
+<ul>
+<li><strong>Highly Known</strong>：模型用 Greedy Decoding 就能回答；</li>
+<li><strong>Maybe Known</strong>：换一种问法后可以回答；</li>
+<li><strong>Weakly Known</strong>：采样多次时偶尔答对；</li>
+<li><strong>Unknown</strong>：无论如何采样都很难生成正确答案。</li>
+</ul>
+<p>实验结论是，SFT 对 Maybe Known 数据往往最有效，因为模型已有相关知识，只需要学习：</p>
+<ul>
+<li>如何理解问题；</li>
+<li>如何调用已有知识；</li>
+<li>如何以正确方式表达。</li>
+</ul>
+<p>对于完全 Unknown 的事实，少量 SFT 容易变成死记硬背，泛化较差，训练过久甚至可能损害整体表现。</p>
+<p>因此可以概括为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Pre-training 主要决定模型知道什么；</span><br><span class="line">SFT 主要决定模型怎样回答、何时回答和如何组织答案。</span><br></pre></td></tr></table></figure>
+
+<p>这不是绝对规律：SFT 仍可能注入某些知识，但它通常不是大规模知识获取的高效阶段。</p>
+<hr>
+<h2 id="15-Alignment-往往只需改变少量关键概率"><a href="#15-Alignment-往往只需改变少量关键概率" class="headerlink" title="15. Alignment 往往只需改变少量关键概率"></a>15. Alignment 往往只需改变少量关键概率</h2><p>课件介绍的研究把 Alignment 前后的 Token 分成：</p>
+<ul>
+<li><strong>Unshift</strong>：Alignment 前后都是概率第一；</li>
+<li><strong>Marginal</strong>：原来排名第二或第三，之后升到第一；</li>
+<li><strong>Shifted</strong>：原来排名较后，之后升到第一。</li>
+</ul>
+<p><img src="/img/posts/83d3d343/2026-07-05-20-26-12.png"></p>
+<p>结果显示，许多 Token 的相对排序并未发生巨大变化，显著变化的常常包括：</p>
+<ul>
+<li>连接和表达风格相关 Token；</li>
+<li>结束符 $\texttt{[END]}$。</li>
+</ul>
+<p>这可以解释为什么参数概率只发生局部变化，生成结果却可能天差地别：自回归生成具有路径依赖，只要早期一个 Token 改变，后续上下文和整段输出都会改变。</p>
+<hr>
+<h2 id="16-Pre-training-会留下长期影响"><a href="#16-Pre-training-会留下长期影响" class="headerlink" title="16. Pre-training 会留下长期影响"></a>16. Pre-training 会留下长期影响</h2><p>即使经过 SFT 和 RLHF，模型仍可能保留 Pre-training 数据分布留下的“灰烬”。</p>
+<p>课件以 ROT Cipher 为例：模型对训练资料中更常出现的 ROT13 表现更好，却不一定能迁移到同等难度、但在语料中较少出现的其他位移。</p>
+<p>这说明：</p>
+<ul>
+<li>模型表现不只由任务抽象难度决定；</li>
+<li>训练语料中的出现频率和表达方式会留下强烈偏置；</li>
+<li>“在一个例子上会做”不一定表示已经掌握通用算法。</li>
+</ul>
+<hr>
+<h2 id="17-SFT-的两条路线：专才与通才"><a href="#17-SFT-的两条路线：专才与通才" class="headerlink" title="17. SFT 的两条路线：专才与通才"></a>17. SFT 的两条路线：专才与通才</h2><h3 id="17-1-路线一：打造专才"><a href="#17-1-路线一：打造专才" class="headerlink" title="17.1 路线一：打造专才"></a>17.1 路线一：打造专才</h3><p>给模型单一任务的数据，例如：</p>
+<ul>
+<li>翻译；</li>
+<li>摘要；</li>
+<li>分类；</li>
+<li>文本修订。</li>
+</ul>
+<p>模型在特定任务上表现好，但不一定能处理其他任务。BERT 时代的任务微调是典型思路。</p>
+<h3 id="17-2-路线二：打造通才"><a href="#17-2-路线二：打造通才" class="headerlink" title="17.2 路线二：打造通才"></a>17.2 路线二：打造通才</h3><p>混合大量不同任务的数据，让模型学习一般性的 Instruction Following，并期待迁移到未见任务。</p>
+<p>FLAN 是早期代表性工作之一，使用大量任务进行 Instruction Fine-Tuning，目标是让单一模型处理多类任务。</p>
+<p>现代 Chat Assistant 主要采用通才路线，但内部也可能加入代码、数学、安全等领域的专门数据。</p>
+<hr>
+<h2 id="18-SFT-数据：质量、长度、复杂度与多样性"><a href="#18-SFT-数据：质量、长度、复杂度与多样性" class="headerlink" title="18. SFT 数据：质量、长度、复杂度与多样性"></a>18. SFT 数据：质量、长度、复杂度与多样性</h2><p>SFT 通常不需要达到 Pre-training 那样的数量级。课件列举：</p>
+<ul>
+<li>InstructGPT 使用的 SFT 数据只有一万多条量级；</li>
+<li>LLaMA 2 报告数万条高质量 SFT 数据；</li>
+<li>LIMA 仅使用约 1000 条精挑细选的数据，也能形成可用模型。</li>
+</ul>
+<p>核心并不是“数据越少越好”，而是：</p>
+<blockquote>
+<p>SFT 的边际收益很快受数据质量制约，百万条低质量样本未必优于数万条高质量样本。</p>
+</blockquote>
+<h3 id="18-1-数据选择仍是开放问题"><a href="#18-1-数据选择仍是开放问题" class="headerlink" title="18.1 数据选择仍是开放问题"></a>18.1 数据选择仍是开放问题</h3><p>课件展示了多种现象：</p>
+<ul>
+<li>某些看似奇怪的问题数据也可能有效；</li>
+<li>只选较长样本有时优于使用全部数据；</li>
+<li>但答案长度不是唯一解释；</li>
+<li>可以训练 Complexity Scorer 和 Quality Scorer；</li>
+<li>还需要 Diversity Selection，避免样本高度相似。</li>
+</ul>
+<p>一个系统化选择流程可以写成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">候选 SFT 数据</span><br><span class="line">  → 质量评分</span><br><span class="line">  → 复杂度评分</span><br><span class="line">  → 去重与多样性选择</span><br><span class="line">  → 人工抽检</span><br><span class="line">  → 训练与消融实验</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="19-Knowledge-Distillation-与合成-SFT-数据"><a href="#19-Knowledge-Distillation-与合成-SFT-数据" class="headerlink" title="19. Knowledge Distillation 与合成 SFT 数据"></a>19. Knowledge Distillation 与合成 SFT 数据</h2><p>人工写高质量长答案成本很高，因此可以让更强模型担任 Teacher：</p>
+<p><img src="/img/posts/83d3d343/2026-07-05-20-31-12.png"></p>
+<p>这种做法叫 <strong>Knowledge Distillation</strong>。Alpaca、Vicuna 等早期工作都采用了类似思路。</p>
+<h3 id="19-1-优势"><a href="#19-1-优势" class="headerlink" title="19.1 优势"></a>19.1 优势</h3><ul>
+<li>降低人工写答案成本；</li>
+<li>快速生成多领域数据；</li>
+<li>可以把大模型的回答风格迁移给小模型；</li>
+<li>结合筛选后，可以获得高质量小数据集。</li>
+</ul>
+<h3 id="19-2-局限"><a href="#19-2-局限" class="headerlink" title="19.2 局限"></a>19.2 局限</h3><ul>
+<li>Teacher 的错误会被 Student 学到；</li>
+<li>数据生成、清洗和 API 调用本身仍有成本；</li>
+<li>模型可能只学到 Teacher 的风格，而非真正提高基础知识；</li>
+<li>可能造成模型之间输出趋同。</li>
+</ul>
+<h3 id="19-3-Non-instructional-Fine-Tuning-与-Response-Tuning"><a href="#19-3-Non-instructional-Fine-Tuning-与-Response-Tuning" class="headerlink" title="19.3 Non-instructional Fine-Tuning 与 Response Tuning"></a>19.3 Non-instructional Fine-Tuning 与 Response Tuning</h3><p>课件进一步介绍了一些反直觉现象：</p>
+<ul>
+<li>不一定需要人工准备标准问题，可以截取普通文本前半句，让强模型续写，再用续写数据训练；</li>
+<li>Response Tuning 甚至只训练 Assistant 风格的“回答”，不提供对应问题，也能激活部分 Instruction Following 能力；</li>
+<li>提高结束符概率、降低重复等简单解码调整，也能让 Base Model 的行为更像对齐模型。</li>
+</ul>
+<p>这些结果支持一个观点：</p>
+<blockquote>
+<p>Base Model 已包含大量潜在能力，SFT 有时更像施加一种“解锁咒语”，把模型推向助手式输出分布。</p>
+</blockquote>
+<p>但这些方法通常不能完全取代标准、高质量的 Instruction Tuning。</p>
+<hr>
+<h1 id="Part-III：RLHF"><a href="#Part-III：RLHF" class="headerlink" title="Part III：RLHF"></a>Part III：RLHF</h1><h2 id="20-RLHF-与-SFT-的人类参与方式不同"><a href="#20-RLHF-与-SFT-的人类参与方式不同" class="headerlink" title="20. RLHF 与 SFT 的人类参与方式不同"></a>20. RLHF 与 SFT 的人类参与方式不同</h2><h3 id="20-1-SFT：人类负责生成标准答案"><a href="#20-1-SFT：人类负责生成标准答案" class="headerlink" title="20.1 SFT：人类负责生成标准答案"></a>20.1 SFT：人类负责生成标准答案</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">问题 → 人类写出理想回答 → 模型模仿</span><br></pre></td></tr></table></figure>
+
+<p>人类负担较重，特别是在数学证明、诗歌、复杂写作等任务中，写出理想答案可能非常困难。</p>
+<h3 id="20-2-RLHF：模型先回答，人类只判断好坏"><a href="#20-2-RLHF：模型先回答，人类只判断好坏" class="headerlink" title="20.2 RLHF：模型先回答，人类只判断好坏"></a>20.2 RLHF：模型先回答，人类只判断好坏</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">问题 → 模型生成多个回答 → 人类点赞、点踩、打分或排序</span><br></pre></td></tr></table></figure>
+
+<p>通常“判断几个答案哪个更好”比“从零写出最佳答案”容易，这体现了 <strong>Discriminator–Generator Gap</strong>：辨别一个答案的质量，往往比从零生成同等质量的答案更容易。</p>
+<hr>
+<h2 id="21-前两阶段与第三阶段的核心差别：Token-Loss-与-Sequence-Reward"><a href="#21-前两阶段与第三阶段的核心差别：Token-Loss-与-Sequence-Reward" class="headerlink" title="21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward"></a>21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward</h2><h3 id="21-1-Pre-training-SFT：每个-Token-都有标准答案"><a href="#21-1-Pre-training-SFT：每个-Token-都有标准答案" class="headerlink" title="21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案"></a>21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案</h3><p>损失是每个 Token Cross Entropy 的总和：</p>
+<p>$$
+L_{\mathrm{sup}}
+=
+\sum_{i=1}^{N}\ell_i
+$$</p>
+<p>这里每个 $ℓ_i$ 对应一个 Token 的预测误差。</p>
+<h3 id="21-2-RLHF：评价整段回答"><a href="#21-2-RLHF：评价整段回答" class="headerlink" title="21.2 RLHF：评价整段回答"></a>21.2 RLHF：评价整段回答</h3><p>模型先生成完整回答 $y$，人类或 Reward Model 给出一个整体分数 $r(x,y)$。</p>
+<p>训练目标是最大化期望 Reward：</p>
+<p>$$
+J(\theta)
+=
+\mathbb E_{x\sim\mathcal D,\,y\sim\pi_\theta(\cdot\mid x)}
+\left[r(x,y)\right]
+$$</p>
+<p>若统一写成要最小化的 Loss：</p>
+<p>$$
+L_{\mathrm{RL}}
+=
+-\mathbb E\left[r(x,y)\right]
+$$</p>
+<h3 id="21-3-为什么-Sequence-level-Reward-更符合人类判断"><a href="#21-3-为什么-Sequence-level-Reward-更符合人类判断" class="headerlink" title="21.3 为什么 Sequence-level Reward 更符合人类判断"></a>21.3 为什么 Sequence-level Reward 更符合人类判断</h3><p>课件举例：标准回答是“我不可以教你”。</p>
+<p>候选回答：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A：我很可以教你</span><br><span class="line">B：不可以教你</span><br></pre></td></tr></table></figure>
+
+<p>若逐 Token 与标准答案机械对齐，A 可能只错一个字，而 B 的 Token 位置整体错位，Cross Entropy 反而更大；但人类明显认为 B 更好。</p>
+<p>因此：</p>
+<ul>
+<li>Token-level Loss 关注局部模仿；</li>
+<li>Sequence-level Reward 关注完整语义和最终效果。</li>
+</ul>
+<p>课件将其概括为：</p>
+<ul>
+<li>前两阶段：比较重视过程中的每个 Token 是否一致；</li>
+<li>第三阶段：只问完整结果好不好，不要求与某个标准答案逐字一致。</li>
+</ul>
+<hr>
+<h2 id="22-为什么-RL-比监督学习更难优化"><a href="#22-为什么-RL-比监督学习更难优化" class="headerlink" title="22. 为什么 RL 比监督学习更难优化"></a>22. 为什么 RL 比监督学习更难优化</h2><h3 id="22-1-Reward-不可直接微分"><a href="#22-1-Reward-不可直接微分" class="headerlink" title="22.1 Reward 不可直接微分"></a>22.1 Reward 不可直接微分</h3><p>前两阶段知道标准 Token，因此模型概率变化如何影响 Loss 可以通过 Backpropagation 精确计算。</p>
+<p>RL 中，人类只给一个离散反馈，例如 $+1$ 或 $-1$。模型参数稍微变化后，人类评分会怎样变化并不直接可知，且评分信号通常不连续。</p>
+<h3 id="22-2-Credit-Assignment-Problem"><a href="#22-2-Credit-Assignment-Problem" class="headerlink" title="22.2 Credit Assignment Problem"></a>22.2 Credit Assignment Problem</h3><p>一段回答可能有数百个 Token，但只得到一个总分。模型不知道：</p>
+<ul>
+<li>哪个 Token 导致低分；</li>
+<li>是事实错误、格式错误还是语气问题；</li>
+<li>哪一段推理值得保留；</li>
+<li>哪个局部选择应该改变。</li>
+</ul>
+<p>这就是 Credit Assignment：如何把最终 Reward 归因到生成过程中的动作。</p>
+<h3 id="22-3-Reward-稀疏且有噪声"><a href="#22-3-Reward-稀疏且有噪声" class="headerlink" title="22.3 Reward 稀疏且有噪声"></a>22.3 Reward 稀疏且有噪声</h3><ul>
+<li>人类评价可能不一致；</li>
+<li>同一回答在不同偏好下得分不同；</li>
+<li>二元赞&#x2F;踩信号信息量有限；</li>
+<li>很多中间 Token 没有即时 Reward。</li>
+</ul>
+<p>因此 RL 算法必须用采样和统计估计来获得更新方向。</p>
+<hr>
+<h2 id="23-RL-的优势：更贴近结果，也更能因材施教"><a href="#23-RL-的优势：更贴近结果，也更能因材施教" class="headerlink" title="23. RL 的优势：更贴近结果，也更能因材施教"></a>23. RL 的优势：更贴近结果，也更能因材施教</h2><h3 id="23-1-评价目标与真实需求更接近"><a href="#23-1-评价目标与真实需求更接近" class="headerlink" title="23.1 评价目标与真实需求更接近"></a>23.1 评价目标与真实需求更接近</h3><p>只要 Reward 设计得合理，优化 Reward 就直接对应：</p>
+<ul>
+<li>回答是否正确；</li>
+<li>是否有帮助；</li>
+<li>是否安全；</li>
+<li>是否符合格式；</li>
+<li>是否满足人类偏好。</li>
+</ul>
+<h3 id="23-2-训练样本由模型自己产生"><a href="#23-2-训练样本由模型自己产生" class="headerlink" title="23.2 训练样本由模型自己产生"></a>23.2 训练样本由模型自己产生</h3><p>SFT 的标准答案可能采用人类认为最佳、但模型很难模仿的解法。RL 则从模型自己能够生成的候选中选择较优路径，再提高这些路径的概率。</p>
+<p>所以课程把 RL 描述为“因材施教”：</p>
+<ul>
+<li>不同模型会生成不同错误；</li>
+<li>收到的反馈针对自身当前弱点；</li>
+<li>模型可以从自己可达到的解法逐步改进。</li>
+</ul>
+<p><img src="/img/posts/83d3d343/2026-07-05-22-27-12.png"></p>
+<p>可以把三阶段理解为：</p>
+<ul>
+<li>Pre-training：广泛阅读教材，形成语言与知识基础；</li>
+<li>SFT：模仿专家写好的示范答案，学会标准作答方式；</li>
+<li>RL：亲自做练习题，根据结果反复试错，找到模型自己更容易执行的解题路径。</li>
+</ul>
+<hr>
+<h2 id="24-RL-术语与语言模型的对应关系"><a href="#24-RL-术语与语言模型的对应关系" class="headerlink" title="24. RL 术语与语言模型的对应关系"></a>24. RL 术语与语言模型的对应关系</h2><table>
+<thead>
+<tr>
+<th>Reinforcement Learning</th>
+<th>语言模型中的含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent &#x2F; Actor</td>
+<td>语言模型</td>
+</tr>
+<tr>
+<td>Policy</td>
+<td>语言模型的生成概率分布</td>
+</tr>
+<tr>
+<td>Observation &#x2F; State</td>
+<td>当前 Prompt 与已生成的 Token</td>
+</tr>
+<tr>
+<td>Action</td>
+<td>选择下一个 Token</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>用户、工具、验证器或对话环境</td>
+</tr>
+<tr>
+<td>Reward</td>
+<td>对完整回答或中间行为的评分</td>
+</tr>
+<tr>
+<td>Trajectory &#x2F; Rollout</td>
+<td>一次完整生成过程</td>
+</tr>
+</tbody></table>
+<p>语言模型策略可以写成：</p>
+<p>$$
+\pi_\theta(y\mid x)
+=
+\prod_{t=1}^{T}P_\theta(y_t\mid x,y_{&lt;t})
+$$</p>
+<p>其对数概率为：</p>
+<p>$$
+\log\pi_\theta(y\mid x)
+=
+\sum_{t=1}^{T}\log P_\theta(y_t\mid x,y_{&lt;t})
+$$</p>
+<p>这与下围棋的类比是：</p>
+<ul>
+<li>棋盘状态对应当前上下文；</li>
+<li>下一手落子对应下一个 Token；</li>
+<li>一局棋对应一段完整回答；</li>
+<li>最终胜负对应回答 Reward。</li>
+</ul>
+<hr>
+<h2 id="25-Policy-Gradient-的核心精神"><a href="#25-Policy-Gradient-的核心精神" class="headerlink" title="25. Policy Gradient 的核心精神"></a>25. Policy Gradient 的核心精神</h2><p>Policy Gradient 的基本形式是：</p>
+<p>$$
+\nabla_\theta J(\theta)
+=
+\mathbb E
+\left[
+R\,\nabla_\theta\log\pi_\theta(y\mid x)
+\right]
+$$</p>
+<p>直觉：</p>
+<ul>
+<li>若回答得到 Positive Reward，提高这段回答的生成概率；</li>
+<li>若回答得到 Negative Reward，降低这段回答的生成概率。</li>
+</ul>
+<p>课件用“拉近 &#x2F; 拉远”解释：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">好答案：像监督学习一样，提高其 Token 序列概率；</span><br><span class="line">坏答案：反方向更新，降低其 Token 序列概率。</span><br></pre></td></tr></table></figure>
+
+<p>实际算法会加入 Baseline、Advantage、Clipping、KL 约束等机制，以减少方差并避免策略更新过猛。课程提到的相关方法包括：</p>
+<ul>
+<li>Policy Gradient；</li>
+<li>PPO；</li>
+<li>DPO；</li>
+<li>KTO；</li>
+<li>GRPO。</li>
+</ul>
+<p>这些方法实现细节不同，但共同目标都是：利用偏好或 Reward 调整模型的输出概率。</p>
+<hr>
+<h2 id="26-Reward-Model：把有限人类反馈扩展成大量评分"><a href="#26-Reward-Model：把有限人类反馈扩展成大量评分" class="headerlink" title="26. Reward Model：把有限人类反馈扩展成大量评分"></a>26. Reward Model：把有限人类反馈扩展成大量评分</h2><p><img src="/img/posts/83d3d343/2026-07-05-22-31-04.png"></p>
+<p>直接让人类评价每一次模型生成不现实，所以经典 RLHF 往往先训练一个 Reward Model。这里利用的仍是“批评通常比创作容易”：人类先提供少量比较结果，模型再学习近似这种判断。</p>
+<p>流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">同一 Prompt 下生成多个回答</span><br><span class="line">   ↓</span><br><span class="line">人类对回答进行排序</span><br><span class="line">   ↓</span><br><span class="line">训练 Reward Model 模拟人类偏好</span><br><span class="line">   ↓</span><br><span class="line">使用 Reward Model 给大量新回答打分</span><br><span class="line">   ↓</span><br><span class="line">对语言模型执行 RL</span><br></pre></td></tr></table></figure>
+
+<p>Reward Model 的输入是 Prompt 与候选回答，输出一个标量分数：</p>
+<p>$$
+r_\phi(x,y)\in\mathbb R
+$$</p>
+<p>若人类更喜欢 $y+$ 而不是 $y-$，一种常见的偏好损失是：</p>
+<p>$$
+L_{\mathrm{RM}}
+=
+-\log\sigma
+\left(
+ r_\phi(x,y^+)-r_\phi(x,y^-)
+\right)
+$$</p>
+<p>它要求 Reward Model 给较优回答更高的分数。</p>
+<hr>
+<h2 id="27-RLHF、RLAIF-与-Self-Rewarding"><a href="#27-RLHF、RLAIF-与-Self-Rewarding" class="headerlink" title="27. RLHF、RLAIF 与 Self-Rewarding"></a>27. RLHF、RLAIF 与 Self-Rewarding</h2><h3 id="27-1-RLHF"><a href="#27-1-RLHF" class="headerlink" title="27.1 RLHF"></a>27.1 RLHF</h3><p>Human 提供偏好数据，Reward Model 学习模拟人类评分，再用于训练生成模型。</p>
+<h3 id="27-2-RLAIF"><a href="#27-2-RLAIF" class="headerlink" title="27.2 RLAIF"></a>27.2 RLAIF</h3><p>把 Human Feedback 的部分工作交给 AI：</p>
+<ul>
+<li>由强模型评价弱模型的答案；</li>
+<li>由 AI 根据原则或规则给出偏好；</li>
+<li>降低大规模人工评分成本。</li>
+</ul>
+<h3 id="27-3-Self-Rewarding"><a href="#27-3-Self-Rewarding" class="headerlink" title="27.3 Self-Rewarding"></a>27.3 Self-Rewarding</h3><p>生成与评价甚至可以由同一个模型或同系列模型完成。其可能有效的原因是：</p>
+<blockquote>
+<p>生成正确答案很难，但识别明显错误有时相对容易。</p>
+</blockquote>
+<p>不过它也可能导致自我确认偏差：模型看不出自己的系统性错误，或奖励自己偏好的风格。</p>
+<hr>
+<h2 id="28-Reward-的可验证性与-Reward-Hacking"><a href="#28-Reward-的可验证性与-Reward-Hacking" class="headerlink" title="28. Reward 的可验证性与 Reward Hacking"></a>28. Reward 的可验证性与 Reward Hacking</h2><h3 id="28-1-Verifiable-Domains"><a href="#28-1-Verifiable-Domains" class="headerlink" title="28.1 Verifiable Domains"></a>28.1 Verifiable Domains</h3><p>数学、代码等任务往往有自动验证器：</p>
+<ul>
+<li>最终数值是否正确；</li>
+<li>程序能否通过测试；</li>
+<li>证明是否满足形式检查。</li>
+</ul>
+<p>Reward 更可靠，模型可大量试错。RL 可以发现不同于人类示范、但确实有效的解题策略。</p>
+<h3 id="28-2-Unverifiable-Domains"><a href="#28-2-Unverifiable-Domains" class="headerlink" title="28.2 Unverifiable Domains"></a>28.2 Unverifiable Domains</h3><p>诗歌、摘要、幽默、写作风格等没有简单的客观判定函数，需要人类偏好或 Reward Model。</p>
+<p>RLHF 使这些领域也能进行 RL，但 Reward Model 只是人类偏好的有损模拟。</p>
+<h3 id="28-3-Reward-Hacking"><a href="#28-3-Reward-Hacking" class="headerlink" title="28.3 Reward Hacking"></a>28.3 Reward Hacking</h3><p>如果持续优化一个不完美 Reward Model，策略可能找到“骗高分”的输入，而不是产生真正更好的回答。</p>
+<p>这称为 Reward Hacking 或对 Reward Model 的 Gaming。可能表现为：</p>
+<ul>
+<li>无意义重复却获得高分；</li>
+<li>利用 Reward Model 没见过的异常模式；</li>
+<li>形式上符合评分器偏好，但内容质量下降。</li>
+</ul>
+<p>因此 RLHF 通常需要：</p>
+<ul>
+<li>限制更新幅度；</li>
+<li>监控真实人类评价；</li>
+<li>持续改进 Reward Model；</li>
+<li>防止策略偏离参考模型过远；</li>
+<li>在效果开始恶化前 Early Stop。</li>
+</ul>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/83d3d343/">https://wick-7.github.io/posts/83d3d343/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Pre-training/">Pre-training</a><a class="post-meta__tags" href="/tags/SFT/">SFT</a><a class="post-meta__tags" href="/tags/RLHF/">RLHF</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">训练神经网络的各种技巧1. 机器学习的三个步骤 训练模型可以分为三个步骤：  我要什么：定义目标与 Loss Function。 我有哪些选择：决定函数集合，也就是模型架构。 选择一个最好的：通过 Optimization 找到参数。  训练完成后，需要先在 Validation Set 上选择模型和超参数，最后才在 Test Set 上进行一次最终评估。 深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。  2. 先判断问题出在哪里 2.1 Optimization 问题现象：Training Loss 本身就降不下去。 例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。 此时应该考虑：  更好的 Optimizer； 调整 Learning Rate； Skip Connection； Normalization； 更好的 Initialization 或 Pre-training。  2.2 ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a><a class="pagination-related" href="/posts/f1d5593e/" title="《生成式AI时代下的机器学习 第四讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第四讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 每一种架构都有存在的理由任何网络架构都带有特定的归纳偏置（inductive bias）。 CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合； Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。 同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？  本节结论： 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。  2. Transformer（这里主要关注 Self-Attention）出现的理由在 Self-Attention 出现之前主流使用 RNNs 做序列建模：输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。  注意： $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。  广义 RNN ...</div></div></div></a><a class="pagination-related" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">训练神经网络的各种技巧1. 机器学习的三个步骤 训练模型可以分为三个步骤：  我要什么：定义目标与 Loss Function。 我有哪些选择：决定函数集合，也就是模型架构。 选择一个最好的：通过 Optimization 找到参数。  训练完成后，需要先在 Validation Set 上选择模型和超参数，最后才在 Test Set 上进行一次最终评估。 深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。  2. 先判断问题出在哪里 2.1 Optimization 问题现象：Training Loss 本身就降不下去。 例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。 此时应该考虑：  更好的 Optimizer； 调整 Learning Rate； Skip Connection； Normalization； 更好的 Initialization 或 Pre-training。  2.2 ...</div></div></div></a><a class="pagination-related" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">《加快语言模型生成速度》课堂笔记</div></div><div class="info-2"><div class="info-item-1">加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。 若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value： $$ q_i=W_Qx_i, \qquad k_i=W_Kx_i, \qquad v_i=W_Vx_i. $$ 对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为： $$ a_{t,i}=\frac{q_t^{\top}k_i}{...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">11</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AD%A6%E4%B9%A0%E5%8E%86%E7%A8%8B%EF%BC%9APre-training%E3%80%81SFT-%E4%B8%8E-RLHF"><span class="toc-number">1.</span> <span class="toc-text">大型语言模型的学习历程：Pre-training、SFT 与 RLHF</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%95%B4%E4%BD%93%E6%A1%86%E6%9E%B6%EF%BC%9A%E5%A4%A7%E5%9E%8B%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E4%B8%80%E6%AD%A5%E6%AD%A5%E5%8F%98%E6%88%90%E8%81%8A%E5%A4%A9%E5%8A%A9%E6%89%8B"><span class="toc-number">1.1.</span> <span class="toc-text">1. 整体框架：大型语言模型如何一步步变成聊天助手</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-Alignment-%E7%9A%84%E5%90%AB%E4%B9%89"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 Alignment 的含义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E4%B8%89%E9%98%B6%E6%AE%B5%E7%9A%84%E5%85%B3%E7%B3%BB%E4%B8%8D%E6%98%AF%E9%87%8D%E6%96%B0%E8%AE%AD%E7%BB%83%EF%BC%8C%E8%80%8C%E6%98%AF%E8%BF%9E%E7%BB%AD%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 三阶段的关系不是重新训练，而是连续初始化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E4%B8%89%E9%98%B6%E6%AE%B5%E7%9C%9F%E6%AD%A3%E6%94%B9%E5%8F%98%E7%9A%84%E4%B8%BB%E8%A6%81%E6%98%AF%E2%80%9C%E6%95%99%E6%9D%90%E2%80%9D"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.3 三阶段真正改变的主要是“教材”</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%89%E4%B8%AA%E9%98%B6%E6%AE%B5%E5%85%B1%E5%90%8C%E7%9A%84%E5%9F%BA%E7%A1%80%EF%BC%9A%E9%83%BD%E5%9C%A8%E8%BF%9B%E8%A1%8C%E6%96%87%E5%AD%97%E6%8E%A5%E9%BE%99"><span class="toc-number">1.2.</span> <span class="toc-text">2. 三个阶段共同的基础：都在进行文字接龙</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%96%87%E5%AD%97%E6%8E%A5%E9%BE%99%E6%9C%AC%E8%B4%A8%E4%B8%8A%E6%98%AF%E5%88%86%E7%B1%BB%E9%97%AE%E9%A2%98"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 文字接龙本质上是分类问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E8%87%AA%E5%9B%9E%E5%BD%92%E6%A6%82%E7%8E%87%E5%88%86%E8%A7%A3"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 自回归概率分解</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Softmax-%E8%BE%93%E5%87%BA"><span class="toc-number">1.2.3.</span> <span class="toc-text">2.3 Softmax 输出</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-Cross-Entropy-Negative-Log-Likelihood"><span class="toc-number">1.2.4.</span> <span class="toc-text">2.4 Cross Entropy &#x2F; Negative Log-Likelihood</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BB%8E%E6%96%87%E5%AD%97%E5%88%B0-Token%EF%BC%9A%E8%AE%AD%E7%BB%83%E4%B8%8E%E6%8E%A8%E7%90%86%E5%A6%82%E4%BD%95%E5%AE%8C%E6%88%90%E2%80%9C%E6%96%87%E5%AD%97%E6%8E%A5%E9%BE%99%E2%80%9D"><span class="toc-number">1.3.</span> <span class="toc-text">3. 从文字到 Token：训练与推理如何完成“文字接龙”</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-Tokenization"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 为什么需要 Tokenization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Byte-Pair-Encoding-%E7%9A%84%E7%9B%B4%E8%A7%89"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 Byte Pair Encoding 的直觉</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E8%AE%AD%E7%BB%83%E7%9A%84%E8%BE%93%E5%85%A5%E4%B8%8E%E8%BE%93%E5%87%BA"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 神经网络训练的输入与输出</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-Inference%EF%BC%9A%E6%A8%A1%E5%9E%8B%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90%E6%96%87%E6%9C%AC"><span class="toc-number">1.3.4.</span> <span class="toc-text">3.4 Inference：模型如何生成文本</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-I%EF%BC%9APre-training"><span class="toc-number">2.</span> <span class="toc-text">Part I：Pre-training</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Pre-training-%E7%9A%84%E7%9B%AE%E6%A0%87"><span class="toc-number">2.1.</span> <span class="toc-text">4. Pre-training 的目标</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E8%AF%AD%E8%A8%80%E7%9F%A5%E8%AF%86"><span class="toc-number">2.1.1.</span> <span class="toc-text">4.1 语言知识</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E4%B8%96%E7%95%8C%E7%9F%A5%E8%AF%86"><span class="toc-number">2.1.2.</span> <span class="toc-text">4.2 世界知识</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%BA%E4%BB%80%E4%B9%88-Pre-training-%E5%B1%9E%E4%BA%8E-Self-supervised-Learning"><span class="toc-number">2.2.</span> <span class="toc-text">5. 为什么 Pre-training 属于 Self-supervised Learning</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E9%A2%84%E8%AE%AD%E7%BB%83%E6%95%B0%E6%8D%AE%E4%BB%8E%E5%93%AA%E9%87%8C%E6%9D%A5"><span class="toc-number">2.3.</span> <span class="toc-text">6. 预训练数据从哪里来</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E6%95%B0%E6%8D%AE%E8%A7%84%E6%A8%A1"><span class="toc-number">2.3.1.</span> <span class="toc-text">6.1 数据规模</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E4%BB%8E%E5%8E%9F%E5%A7%8B%E7%BD%91%E9%A1%B5%E5%88%B0%E8%AE%AD%E7%BB%83%E8%AF%AD%E6%96%99%EF%BC%9A%E7%94%9F%E4%BA%A7%E7%BA%A7%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86%E6%B5%81%E6%B0%B4%E7%BA%BF"><span class="toc-number">2.3.2.</span> <span class="toc-text">6.2 从原始网页到训练语料：生产级数据处理流水线</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%A8%A1%E5%9E%8B%E4%B8%8D%E6%98%AF%E2%80%9C%E6%8A%8A%E4%BA%92%E8%81%94%E7%BD%91%E9%80%90%E5%AD%97%E8%83%8C%E4%B8%8B%E6%9D%A5%E2%80%9D"><span class="toc-number">2.4.</span> <span class="toc-text">7. 模型不是“把互联网逐字背下来”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%95%B0%E6%8D%AE%E8%B6%8A%E5%A4%9A%E8%B6%8A%E5%A5%BD%E5%90%97%EF%BC%9A%E6%A8%A1%E5%9E%8B%E3%80%81%E6%95%B0%E6%8D%AE%E4%B8%8E%E7%AE%97%E5%8A%9B%E7%9A%84%E5%B9%B3%E8%A1%A1"><span class="toc-number">2.5.</span> <span class="toc-text">8. 数据越多越好吗：模型、数据与算力的平衡</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E4%B8%A4%E7%A7%8D%E8%B5%84%E6%BA%90%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="toc-number">2.5.1.</span> <span class="toc-text">8.1 两种资源的作用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Chinchilla-Scaling-Law"><span class="toc-number">2.5.2.</span> <span class="toc-text">8.2 Chinchilla Scaling Law</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E6%95%B0%E6%8D%AE%E8%B4%A8%E9%87%8F%E5%BE%80%E5%BE%80%E6%AF%94%E5%8D%95%E7%BA%AF%E5%A2%9E%E5%8A%A0%E6%95%B0%E6%8D%AE%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="toc-number">2.6.</span> <span class="toc-text">9. 数据质量往往比单纯增加数据更重要</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E4%BD%8E%E8%B4%A8%E9%87%8F%E6%95%B0%E6%8D%AE%E5%8F%AF%E8%83%BD%E7%A0%B4%E5%9D%8F%E8%AE%AD%E7%BB%83"><span class="toc-number">2.6.1.</span> <span class="toc-text">9.1 低质量数据可能破坏训练</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E9%AB%98%E8%B4%A8%E9%87%8F%E6%95%B0%E6%8D%AE%E7%9A%84%E4%BB%B7%E5%80%BC"><span class="toc-number">2.6.2.</span> <span class="toc-text">9.2 高质量数据的价值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-Rephrasing-the-Web"><span class="toc-number">2.6.3.</span> <span class="toc-text">9.3 Rephrasing the Web</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E4%B8%BA%E4%BB%80%E4%B9%88-Base-Model-%E5%BE%80%E5%BE%80%E4%B8%8D%E4%BC%9A%E5%A5%BD%E5%A5%BD%E5%9B%9E%E7%AD%94%E9%97%AE%E9%A2%98"><span class="toc-number">2.7.</span> <span class="toc-text">10. 为什么 Base Model 往往不会好好回答问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-Base-Model-%E6%98%AF%E2%80%9C%E7%92%9E%E7%8E%89%E2%80%9D"><span class="toc-number">2.7.1.</span> <span class="toc-text">10.1 Base Model 是“璞玉”</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-II%EF%BC%9ASFT"><span class="toc-number">3.</span> <span class="toc-text">Part II：SFT</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#11-SFT-%E5%A6%82%E4%BD%95%E6%9E%84%E9%80%A0%E8%AE%AD%E7%BB%83%E6%95%B0%E6%8D%AE"><span class="toc-number">3.1.</span> <span class="toc-text">11. SFT 如何构造训练数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-SFT-Loss"><span class="toc-number">3.1.1.</span> <span class="toc-text">11.1 SFT Loss</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-SFT-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%83%BD%E8%AE%A9%E6%A8%A1%E5%9E%8B%E2%80%9C%E8%84%B1%E8%83%8E%E6%8D%A2%E9%AA%A8%E2%80%9D"><span class="toc-number">3.2.</span> <span class="toc-text">12. SFT 为什么能让模型“脱胎换骨”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-Pre-training-%E5%A6%82%E4%BD%95%E5%B8%AE%E5%8A%A9-SFT-%E4%B8%BE%E4%B8%80%E5%8F%8D%E4%B8%89"><span class="toc-number">3.3.</span> <span class="toc-text">13. Pre-training 如何帮助 SFT 举一反三</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-SFT-%E9%80%9A%E5%B8%B8%E6%9B%B4%E5%83%8F%E6%BF%80%E6%B4%BB%E4%B8%8E%E8%A7%84%E8%8C%83%EF%BC%8C%E8%80%8C%E4%B8%8D%E6%98%AF%E7%81%8C%E5%85%A5%E5%A4%A7%E9%87%8F%E6%96%B0%E7%9F%A5%E8%AF%86"><span class="toc-number">3.4.</span> <span class="toc-text">14. SFT 通常更像激活与规范，而不是灌入大量新知识</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-Alignment-%E5%BE%80%E5%BE%80%E5%8F%AA%E9%9C%80%E6%94%B9%E5%8F%98%E5%B0%91%E9%87%8F%E5%85%B3%E9%94%AE%E6%A6%82%E7%8E%87"><span class="toc-number">3.5.</span> <span class="toc-text">15. Alignment 往往只需改变少量关键概率</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Pre-training-%E4%BC%9A%E7%95%99%E4%B8%8B%E9%95%BF%E6%9C%9F%E5%BD%B1%E5%93%8D"><span class="toc-number">3.6.</span> <span class="toc-text">16. Pre-training 会留下长期影响</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-SFT-%E7%9A%84%E4%B8%A4%E6%9D%A1%E8%B7%AF%E7%BA%BF%EF%BC%9A%E4%B8%93%E6%89%8D%E4%B8%8E%E9%80%9A%E6%89%8D"><span class="toc-number">3.7.</span> <span class="toc-text">17. SFT 的两条路线：专才与通才</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#17-1-%E8%B7%AF%E7%BA%BF%E4%B8%80%EF%BC%9A%E6%89%93%E9%80%A0%E4%B8%93%E6%89%8D"><span class="toc-number">3.7.1.</span> <span class="toc-text">17.1 路线一：打造专才</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-2-%E8%B7%AF%E7%BA%BF%E4%BA%8C%EF%BC%9A%E6%89%93%E9%80%A0%E9%80%9A%E6%89%8D"><span class="toc-number">3.7.2.</span> <span class="toc-text">17.2 路线二：打造通才</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-SFT-%E6%95%B0%E6%8D%AE%EF%BC%9A%E8%B4%A8%E9%87%8F%E3%80%81%E9%95%BF%E5%BA%A6%E3%80%81%E5%A4%8D%E6%9D%82%E5%BA%A6%E4%B8%8E%E5%A4%9A%E6%A0%B7%E6%80%A7"><span class="toc-number">3.8.</span> <span class="toc-text">18. SFT 数据：质量、长度、复杂度与多样性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-%E6%95%B0%E6%8D%AE%E9%80%89%E6%8B%A9%E4%BB%8D%E6%98%AF%E5%BC%80%E6%94%BE%E9%97%AE%E9%A2%98"><span class="toc-number">3.8.1.</span> <span class="toc-text">18.1 数据选择仍是开放问题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-Knowledge-Distillation-%E4%B8%8E%E5%90%88%E6%88%90-SFT-%E6%95%B0%E6%8D%AE"><span class="toc-number">3.9.</span> <span class="toc-text">19. Knowledge Distillation 与合成 SFT 数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#19-1-%E4%BC%98%E5%8A%BF"><span class="toc-number">3.9.1.</span> <span class="toc-text">19.1 优势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-2-%E5%B1%80%E9%99%90"><span class="toc-number">3.9.2.</span> <span class="toc-text">19.2 局限</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-3-Non-instructional-Fine-Tuning-%E4%B8%8E-Response-Tuning"><span class="toc-number">3.9.3.</span> <span class="toc-text">19.3 Non-instructional Fine-Tuning 与 Response Tuning</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-III%EF%BC%9ARLHF"><span class="toc-number">4.</span> <span class="toc-text">Part III：RLHF</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#20-RLHF-%E4%B8%8E-SFT-%E7%9A%84%E4%BA%BA%E7%B1%BB%E5%8F%82%E4%B8%8E%E6%96%B9%E5%BC%8F%E4%B8%8D%E5%90%8C"><span class="toc-number">4.1.</span> <span class="toc-text">20. RLHF 与 SFT 的人类参与方式不同</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#20-1-SFT%EF%BC%9A%E4%BA%BA%E7%B1%BB%E8%B4%9F%E8%B4%A3%E7%94%9F%E6%88%90%E6%A0%87%E5%87%86%E7%AD%94%E6%A1%88"><span class="toc-number">4.1.1.</span> <span class="toc-text">20.1 SFT：人类负责生成标准答案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-2-RLHF%EF%BC%9A%E6%A8%A1%E5%9E%8B%E5%85%88%E5%9B%9E%E7%AD%94%EF%BC%8C%E4%BA%BA%E7%B1%BB%E5%8F%AA%E5%88%A4%E6%96%AD%E5%A5%BD%E5%9D%8F"><span class="toc-number">4.1.2.</span> <span class="toc-text">20.2 RLHF：模型先回答，人类只判断好坏</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#21-%E5%89%8D%E4%B8%A4%E9%98%B6%E6%AE%B5%E4%B8%8E%E7%AC%AC%E4%B8%89%E9%98%B6%E6%AE%B5%E7%9A%84%E6%A0%B8%E5%BF%83%E5%B7%AE%E5%88%AB%EF%BC%9AToken-Loss-%E4%B8%8E-Sequence-Reward"><span class="toc-number">4.2.</span> <span class="toc-text">21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#21-1-Pre-training-SFT%EF%BC%9A%E6%AF%8F%E4%B8%AA-Token-%E9%83%BD%E6%9C%89%E6%A0%87%E5%87%86%E7%AD%94%E6%A1%88"><span class="toc-number">4.2.1.</span> <span class="toc-text">21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#21-2-RLHF%EF%BC%9A%E8%AF%84%E4%BB%B7%E6%95%B4%E6%AE%B5%E5%9B%9E%E7%AD%94"><span class="toc-number">4.2.2.</span> <span class="toc-text">21.2 RLHF：评价整段回答</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#21-3-%E4%B8%BA%E4%BB%80%E4%B9%88-Sequence-level-Reward-%E6%9B%B4%E7%AC%A6%E5%90%88%E4%BA%BA%E7%B1%BB%E5%88%A4%E6%96%AD"><span class="toc-number">4.2.3.</span> <span class="toc-text">21.3 为什么 Sequence-level Reward 更符合人类判断</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#22-%E4%B8%BA%E4%BB%80%E4%B9%88-RL-%E6%AF%94%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E6%9B%B4%E9%9A%BE%E4%BC%98%E5%8C%96"><span class="toc-number">4.3.</span> <span class="toc-text">22. 为什么 RL 比监督学习更难优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#22-1-Reward-%E4%B8%8D%E5%8F%AF%E7%9B%B4%E6%8E%A5%E5%BE%AE%E5%88%86"><span class="toc-number">4.3.1.</span> <span class="toc-text">22.1 Reward 不可直接微分</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-2-Credit-Assignment-Problem"><span class="toc-number">4.3.2.</span> <span class="toc-text">22.2 Credit Assignment Problem</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-3-Reward-%E7%A8%80%E7%96%8F%E4%B8%94%E6%9C%89%E5%99%AA%E5%A3%B0"><span class="toc-number">4.3.3.</span> <span class="toc-text">22.3 Reward 稀疏且有噪声</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#23-RL-%E7%9A%84%E4%BC%98%E5%8A%BF%EF%BC%9A%E6%9B%B4%E8%B4%B4%E8%BF%91%E7%BB%93%E6%9E%9C%EF%BC%8C%E4%B9%9F%E6%9B%B4%E8%83%BD%E5%9B%A0%E6%9D%90%E6%96%BD%E6%95%99"><span class="toc-number">4.4.</span> <span class="toc-text">23. RL 的优势：更贴近结果，也更能因材施教</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#23-1-%E8%AF%84%E4%BB%B7%E7%9B%AE%E6%A0%87%E4%B8%8E%E7%9C%9F%E5%AE%9E%E9%9C%80%E6%B1%82%E6%9B%B4%E6%8E%A5%E8%BF%91"><span class="toc-number">4.4.1.</span> <span class="toc-text">23.1 评价目标与真实需求更接近</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#23-2-%E8%AE%AD%E7%BB%83%E6%A0%B7%E6%9C%AC%E7%94%B1%E6%A8%A1%E5%9E%8B%E8%87%AA%E5%B7%B1%E4%BA%A7%E7%94%9F"><span class="toc-number">4.4.2.</span> <span class="toc-text">23.2 训练样本由模型自己产生</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#24-RL-%E6%9C%AF%E8%AF%AD%E4%B8%8E%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%AF%B9%E5%BA%94%E5%85%B3%E7%B3%BB"><span class="toc-number">4.5.</span> <span class="toc-text">24. RL 术语与语言模型的对应关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#25-Policy-Gradient-%E7%9A%84%E6%A0%B8%E5%BF%83%E7%B2%BE%E7%A5%9E"><span class="toc-number">4.6.</span> <span class="toc-text">25. Policy Gradient 的核心精神</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#26-Reward-Model%EF%BC%9A%E6%8A%8A%E6%9C%89%E9%99%90%E4%BA%BA%E7%B1%BB%E5%8F%8D%E9%A6%88%E6%89%A9%E5%B1%95%E6%88%90%E5%A4%A7%E9%87%8F%E8%AF%84%E5%88%86"><span class="toc-number">4.7.</span> <span class="toc-text">26. Reward Model：把有限人类反馈扩展成大量评分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#27-RLHF%E3%80%81RLAIF-%E4%B8%8E-Self-Rewarding"><span class="toc-number">4.8.</span> <span class="toc-text">27. RLHF、RLAIF 与 Self-Rewarding</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#27-1-RLHF"><span class="toc-number">4.8.1.</span> <span class="toc-text">27.1 RLHF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-2-RLAIF"><span class="toc-number">4.8.2.</span> <span class="toc-text">27.2 RLAIF</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-3-Self-Rewarding"><span class="toc-number">4.8.3.</span> <span class="toc-text">27.3 Self-Rewarding</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#28-Reward-%E7%9A%84%E5%8F%AF%E9%AA%8C%E8%AF%81%E6%80%A7%E4%B8%8E-Reward-Hacking"><span class="toc-number">4.9.</span> <span class="toc-text">28. Reward 的可验证性与 Reward Hacking</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#28-1-Verifiable-Domains"><span class="toc-number">4.9.1.</span> <span class="toc-text">28.1 Verifiable Domains</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#28-2-Unverifiable-Domains"><span class="toc-number">4.9.2.</span> <span class="toc-text">28.2 Unverifiable Domains</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#28-3-Reward-Hacking"><span class="toc-number">4.9.3.</span> <span class="toc-text">28.3 Reward Hacking</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/83d3d343/" title="《生成式AI时代下的机器学习 第七讲》课堂笔记">《生成式AI时代下的机器学习 第七讲》课堂笔记</a><time datetime="2026-07-05T11:12:22.000Z" title="发表于 2026-07-05 19:12:22">2026-07-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</a><time datetime="2026-07-05T08:16:52.000Z" title="发表于 2026-07-05 16:16:52">2026-07-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记">《加快语言模型生成速度》课堂笔记</a><time datetime="2026-07-04T06:06:54.000Z" title="发表于 2026-07-04 14:06:54">2026-07-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记">《生成式AI时代下的机器学习 第二讲》课堂笔记</a><time datetime="2026-07-03T12:49:08.000Z" title="发表于 2026-07-03 20:49:08">2026-07-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/f1d5593e/" title="《生成式AI时代下的机器学习 第四讲》课堂笔记">《生成式AI时代下的机器学习 第四讲》课堂笔记</a><time datetime="2026-07-03T04:25:08.000Z" title="发表于 2026-07-03 12:25:08">2026-07-03</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
