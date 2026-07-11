@@ -1,0 +1,1078 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall LLM Agents Overview》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 re">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall LLM Agents Overview》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/c8d1d50a/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 re">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-10T15:26:02.000Z">
+<meta property="article:modified_time" content="2026-07-11T03:32:03.982Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Pre-training">
+<meta property="article:tag" content="RLHF">
+<meta property="article:tag" content="SFT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall LLM Agents Overview》课堂笔记",
+  "url": "https://wick-7.github.io/posts/c8d1d50a/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-10T15:26:02.000Z",
+  "dateModified": "2026-07-11T03:32:03.982Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/c8d1d50a/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall LLM Agents Overview》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">14</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall LLM Agents Overview》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall LLM Agents Overview》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-10T15:26:02.000Z" title="发表于 2026-07-10 23:26:02">2026-07-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-11T03:32:03.982Z" title="更新于 2026-07-11 11:32:03">2026-07-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Introduction-to-Training-LLMs-for-AI-Agents"><a href="#Introduction-to-Training-LLMs-for-AI-Agents" class="headerlink" title="Introduction to Training LLMs for AI Agents"></a>Introduction to Training LLMs for AI Agents</h1><h2 id="1-课程核心问题：一个-LLM-是怎样被训练出来的？"><a href="#1-课程核心问题：一个-LLM-是怎样被训练出来的？" class="headerlink" title="1. 课程核心问题：一个 LLM 是怎样被训练出来的？"></a>1. 课程核心问题：一个 LLM 是怎样被训练出来的？</h2><p>一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-10-23-30-12.png"></p>
+<ol>
+<li><strong>Pretraining &#x2F; 预训练</strong>：从海量文本中学习语言、知识和一般能力；</li>
+<li><strong>Reasoning RL &#x2F; 推理强化学习</strong>：在具有可验证答案的任务上学习推理，仅用于 reasoning model；</li>
+<li><strong>Classic Post-training &#x2F; 经典后训练</strong>：学习遵循指令、帮助用户并符合人类偏好；</li>
+<li>在模型发布后，还可以通过 <strong>Prompting</strong> 或 <strong>Finetuning</strong> 将模型适配到具体场景。</li>
+</ol>
+<h3 id="1-1-三个主要训练阶段"><a href="#1-1-三个主要训练阶段" class="headerlink" title="1.1 三个主要训练阶段"></a>1.1 三个主要训练阶段</h3><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>主要目标</th>
+<th align="right">数据规模</th>
+<th align="right">训练时间</th>
+<th align="right">计算成本</th>
+<th>主要瓶颈</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pretraining</td>
+<td>预测互联网文本的下一个 token，学习世界知识</td>
+<td align="right">$&gt;10$T tokens</td>
+<td align="right">数月</td>
+<td align="right">$&gt;\$10$M</td>
+<td>数据与算力</td>
+<td>LLaMA、DeepSeek-V3</td>
+</tr>
+<tr>
+<td>Reasoning RL</td>
+<td>在有客观答案的问题上学习推理</td>
+<td align="right">约 $1$M problems</td>
+<td align="right">数周</td>
+<td align="right">$&gt;\$1$M</td>
+<td>RL environment 与 reward hacking</td>
+<td>DeepSeek-R1</td>
+</tr>
+<tr>
+<td>Classic Post-training &#x2F; RLHF</td>
+<td>最大化用户效用并符合人类偏好</td>
+<td align="right">约 $100$K problems</td>
+<td align="right">数天</td>
+<td align="right">$&gt;\$100$K</td>
+<td>高质量数据与评测</td>
+<td>LLaMA-Instruct</td>
+</tr>
+</tbody></table>
+<p>其中 Reasoning RL 和 Classic Post-training 通常都被统称为 <strong>post-training</strong>。</p>
+<p>需要注意的是，Reasoning RL 并不是所有模型都必须经历的阶段。普通 instruction model 可以只经过预训练和经典后训练；reasoning model 则会额外使用可验证任务进行强化学习。</p>
+<h3 id="1-2-模型专业化：Prompting-与-Finetuning"><a href="#1-2-模型专业化：Prompting-与-Finetuning" class="headerlink" title="1.2 模型专业化：Prompting 与 Finetuning"></a>1.2 模型专业化：Prompting 与 Finetuning</h3><p>模型训练完成后，可以通过两种常见方法适配具体任务：</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-10-23-31-47.png"></p>
+<p>Prompting 的成本最低，但能否找到真正有效的 prompt，仍然取决于是否有可靠的评测集。Finetuning 则适用于医疗、法律、企业知识库等具有专门数据和格式要求的领域。</p>
+<hr>
+<h2 id="2-训练-LLM-时真正重要的五个组成部分"><a href="#2-训练-LLM-时真正重要的五个组成部分" class="headerlink" title="2. 训练 LLM 时真正重要的五个组成部分"></a>2. 训练 LLM 时真正重要的五个组成部分</h2><p>训练一个 LLM 需要同时考虑：</p>
+<ol>
+<li><strong>Architecture</strong>：例如 Transformer、Mixture of Experts；</li>
+<li><strong>Training algorithm &#x2F; loss</strong>：训练算法和优化目标；</li>
+<li><strong>Data &amp; RL environment</strong>：训练数据以及智能体所处的交互环境；</li>
+<li><strong>Evaluation</strong>：如何判断模型是否真的进步；</li>
+<li><strong>Systems and infrastructure</strong>：如何高效使用大规模计算资源。</li>
+</ol>
+<p>过去学术研究更关注 architecture、algorithm 和 loss，但在实际训练前沿模型时，真正决定结果的往往是：</p>
+<ul>
+<li>数据的数量、质量与配比；</li>
+<li>是否有可信、稳定的 evaluation；</li>
+<li>系统是否能把训练扩展到足够大的规模。</li>
+</ul>
+<hr>
+<h1 id="Part-I：Pretraining-预训练"><a href="#Part-I：Pretraining-预训练" class="headerlink" title="Part I：Pretraining &#x2F; 预训练"></a>Part I：Pretraining &#x2F; 预训练</h1><h2 id="3-预训练的基本目标"><a href="#3-预训练的基本目标" class="headerlink" title="3. 预训练的基本目标"></a>3. 预训练的基本目标</h2><p>预训练的目标可以概括为：</p>
+<blockquote>
+<p>使用尽可能多的高质量文本训练模型预测下一个 token，从而让模型学习语言结构、知识和一般模式。</p>
+</blockquote>
+<p>对于一个 token 序列：</p>
+<p>$$
+x_{1:T}=(x_1,x_2,\dots,x_T),
+$$</p>
+<p>自回归语言模型将其概率分解为：</p>
+<p>$$
+p_\theta(x_{1:T})
+=
+\prod_{t=1}^{T}p_\theta(x_t\mid x_{&lt;t}).
+$$</p>
+<p>训练时最小化 next-token prediction 的负对数似然，也就是交叉熵损失：</p>
+<p>$$
+\mathcal{L}_{\text{LM}}(\theta)
+=
+-\sum_{t=1}^{T}\log p_\theta(x_t\mid x_{&lt;t}).
+$$</p>
+<p>直观上，如果模型能够在各个领域中准确预测下一个 token，它就必须学到一定程度的语法、语义、事实知识以及代码和推理模式。</p>
+<h3 id="3-1-自回归语言模型的处理流程"><a href="#3-1-自回归语言模型的处理流程" class="headerlink" title="3.1 自回归语言模型的处理流程"></a>3.1 自回归语言模型的处理流程</h3><p>给定文本 <code>She likely prefers</code>，模型生成下一个 token 的过程为：</p>
+<ol>
+<li><strong>Tokenize</strong>：将文本转换成 token ID；</li>
+<li><strong>Forward pass</strong>：输入模型并计算 hidden representations；</li>
+<li><strong>Predict distribution</strong>：输出词表中各 token 的概率；</li>
+<li><strong>Sample &#x2F; Decode</strong>：从概率分布中选择下一个 token；</li>
+<li><strong>Detokenize</strong>：将 token ID 转换回文本。</li>
+</ol>
+<p>其中第 4、5 步主要发生在推理阶段。训练时通常直接使用真实的下一个 token 计算交叉熵，不需要先采样生成结果。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-10-23-35-10.png"></p>
+<p>若模型输出 logits $z_v$，则 token $v$ 的概率由 Softmax 给出：</p>
+<p>$$
+p_\theta(x_t=v\mid x_{&lt;t})
+=
+\frac{\exp(z_v)}{\sum_{u\in V}\exp(z_u)}.
+$$</p>
+<h2 id="4-从-N-gram-到-Neural-Language-Model"><a href="#4-从-N-gram-到-Neural-Language-Model" class="headerlink" title="4. 从 N-gram 到 Neural Language Model"></a>4. 从 N-gram 到 Neural Language Model</h2><h3 id="4-1-N-gram-的统计思想"><a href="#4-1-N-gram-的统计思想" class="headerlink" title="4.1 N-gram 的统计思想"></a>4.1 N-gram 的统计思想</h3><p>假设要预测短语 <code>the grass is</code> 后面的词，可以统计语料中的出现次数：</p>
+<p>$$
+P(X\mid \text{the grass is})
+=
+\frac{\operatorname{Count}(\text{the grass is }X)}
+{\operatorname{Count}(\text{the grass is})}.
+$$</p>
+<p>例如在 1000 次出现中，有 500 次后面是 <code>green</code>，则：</p>
+<p>$$
+P(\text{green}\mid \text{the grass is})=0.5.
+$$</p>
+<p>这种方法对常见短语有效，但存在两个核心问题：</p>
+<ul>
+<li>必须存储几乎所有 n-gram 的统计量，内存需求极大；</li>
+<li>很多长上下文在训练集中只出现一次甚至从未出现，无法泛化到新句子。</li>
+</ul>
+<h3 id="4-2-神经语言模型"><a href="#4-2-神经语言模型" class="headerlink" title="4.2 神经语言模型"></a>4.2 神经语言模型</h3><p>神经网络用参数化函数代替逐个存储 n-gram 计数：</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-10-23-35-59.png"></p>
+<p>与 N-gram 相比，神经语言模型能够让语义和上下文相似的输入共享参数，从而对训练集中没有完整出现过的句子进行泛化。</p>
+<hr>
+<h2 id="5-Pretraining-Data：从互联网到可训练语料"><a href="#5-Pretraining-Data：从互联网到可训练语料" class="headerlink" title="5. Pretraining Data：从互联网到可训练语料"></a>5. Pretraining Data：从互联网到可训练语料</h2><p>预训练并不是简单地“下载整个互联网然后开始训练”。互联网包含大量广告、重复内容、模板页面、低质量文本、隐私信息以及不安全内容，因此数据处理本身是训练 LLM 的核心工作之一。</p>
+<h3 id="5-1-A-Typical-Data-Processing-Pipeline"><a href="#5-1-A-Typical-Data-Processing-Pipeline" class="headerlink" title="5.1 A Typical Data Processing Pipeline"></a>5.1 A Typical Data Processing Pipeline</h3><h4 id="Step-1-Web-Crawling"><a href="#Step-1-Web-Crawling" class="headerlink" title="Step 1: Web Crawling"></a>Step 1: Web Crawling</h4><p>从 Common Crawl 等来源抓取大规模网页数据。原始数据通常以 WARC 格式保存，规模可达到 PB 级。</p>
+<h4 id="Step-2-Text-Extraction"><a href="#Step-2-Text-Extraction" class="headerlink" title="Step 2: Text Extraction"></a>Step 2: Text Extraction</h4><p>从 HTML 中提取有效正文，并尽量移除：</p>
+<ul>
+<li>JavaScript、CSS；</li>
+<li>菜单、广告、导航栏；</li>
+<li>boilerplate（网页模板文本）；</li>
+<li>编码错误和异常排版。</li>
+</ul>
+<p>数学公式、表格和动态网页通常需要额外处理。由于数据规模巨大，文本提取本身也会消耗大量计算资源。</p>
+<h4 id="Step-3-Content-Filtering"><a href="#Step-3-Content-Filtering" class="headerlink" title="Step 3: Content Filtering"></a>Step 3: Content Filtering</h4><p>过滤不适合训练的内容，例如：NSFW content&#x2F; harmful content&#x2F; PII（个人身份信息）&#x2F; 垃圾广告和恶意文本</p>
+<h4 id="Step-4-Deduplication（去重）"><a href="#Step-4-Deduplication（去重）" class="headerlink" title="Step 4: Deduplication（去重）"></a>Step 4: Deduplication（去重）</h4><p>可在 URL、文档、段落或行等层级进行去重，也可检测 near-duplicate（近似重复）内容。</p>
+<p>例如论坛的 header、footer 和菜单会在大量网页中重复出现。若不去重，模型会浪费算力反复学习相同模板。</p>
+<h4 id="Step-5-Heuristic-Filtering（启发式过滤）"><a href="#Step-5-Heuristic-Filtering（启发式过滤）" class="headerlink" title="Step 5: Heuristic Filtering（启发式过滤）"></a>Step 5: Heuristic Filtering（启发式过滤）</h4><p>根据简单统计规则移除低质量文档，例如：</p>
+<ul>
+<li>文档过长或过短；</li>
+<li>重复率过高；</li>
+<li>乱码或异常 token 过多；</li>
+<li>单词长度分布异常；</li>
+<li>包含大量占位文本，如 <code>lorem ipsum</code>；</li>
+<li>文档结构明显不自然。</li>
+</ul>
+<h4 id="Step-6-Model-based-Filtering（基于模型的过滤）"><a href="#Step-6-Model-based-Filtering（基于模型的过滤）" class="headerlink" title="Step 6: Model-based Filtering（基于模型的过滤）"></a>Step 6: Model-based Filtering（基于模型的过滤）</h4><p>选取 Wikipedia 或被 Wikipedia 引用的网页作为高质量样本，训练分类器判断其他网页是否与其分布相似。</p>
+<p>核心思想是：</p>
+<blockquote>
+<p>用少量高质量数据定义“好数据”，再从海量网页中筛选相似内容。</p>
+</blockquote>
+<h4 id="Step-7-Data-Mixture（数据配比）"><a href="#Step-7-Data-Mixture（数据配比）" class="headerlink" title="Step 7: Data Mixture（数据配比）"></a>Step 7: Data Mixture（数据配比）</h4><p>训练数据通常来自多个领域，例如：</p>
+<ul>
+<li>Web pages；</li>
+<li>books；</li>
+<li>scientific papers；</li>
+<li>code；</li>
+<li>mathematics；</li>
+<li>multilingual data；</li>
+<li>dialogues。</li>
+</ul>
+<p>原始互联网中的领域比例通常不是最优训练比例。例如训练 coding model 时，可以提高代码数据的采样权重。</p>
+<p>实践中通常先在小模型上测试不同数据配比，再结合 scaling laws 预测其在大规模训练中的效果。</p>
+<h3 id="5-2-FineWeb-的启示：数据变少，模型反而更好"><a href="#5-2-FineWeb-的启示：数据变少，模型反而更好" class="headerlink" title="5.2 FineWeb 的启示：数据变少，模型反而更好"></a>5.2 FineWeb 的启示：数据变少，模型反而更好</h3><p>FineWeb 的实验表明，对原始网页数据进行以下处理后，即使剩余 token 数量明显减少，模型性能仍会提升：</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-10-23-42-38.png"></p>
+<p>原因是训练计算预算有限。模型不应把算力浪费在重复、脏乱或无信息量的 token 上，而应尽可能看到更多独立、高质量的信息。</p>
+<h3 id="5-3-Mid-training-中期训练"><a href="#5-3-Mid-training-中期训练" class="headerlink" title="5.3 Mid-training &#x2F; 中期训练"></a>5.3 Mid-training &#x2F; 中期训练</h3><p>预训练结束后，通常还会进行规模较小的 continued pretraining，即 mid-training。其数据规模通常少于预训练数据，可能低于 $1$T tokens。</p>
+<p>Mid-training 可以实现：</p>
+<ul>
+<li>调整 data mixture，例如增加 science、code 和 multilingual data；</li>
+<li>在更高质量的数据上进行 learning-rate annealing；</li>
+<li>扩展 context length，例如从 $4$K 提升到 $128$K；</li>
+<li>学习聊天格式和初步 instruction following；</li>
+<li>加入更高质量 reasoning data；</li>
+<li>适配模型希望具备的特殊属性。</li>
+</ul>
+<p>长上下文训练往往放在这一阶段，是因为 attention 的计算和内存成本随上下文长度快速增加，若从预训练一开始就使用极长上下文，成本会非常高。</p>
+<h3 id="5-4-数据是前沿模型最保密的部分之一"><a href="#5-4-数据是前沿模型最保密的部分之一" class="headerlink" title="5.4 数据是前沿模型最保密的部分之一"></a>5.4 数据是前沿模型最保密的部分之一</h3><p>现实中的 LLM 训练在很大程度上是“数据工程问题”。许多模型会公开架构和训练算法，却不会完整公开：</p>
+<ul>
+<li>具体用了哪些网页；</li>
+<li>不同领域数据的权重；</li>
+<li>如何进行 deduplication；</li>
+<li>质量分类器如何训练；</li>
+<li>是否使用版权受限数据；</li>
+<li>synthetic data 与 multimodal data 的比例。</li>
+</ul>
+<p>一方面，数据处理方法是重要的竞争优势；另一方面，公开数据来源还可能带来版权和法律风险。</p>
+<p>常见公开数据集包括：C4&#x2F; The Pile&#x2F; Dolma&#x2F; FineWeb</p>
+<hr>
+<h2 id="6-Scaling-Laws：为什么“大规模”如此重要？"><a href="#6-Scaling-Laws：为什么“大规模”如此重要？" class="headerlink" title="6. Scaling Laws：为什么“大规模”如此重要？"></a>6. Scaling Laws：为什么“大规模”如此重要？</h2><h3 id="6-1-Compute、Model-Size-与-Data"><a href="#6-1-Compute、Model-Size-与-Data" class="headerlink" title="6.1 Compute、Model Size 与 Data"></a>6.1 Compute、Model Size 与 Data</h3><p><img src="/img/posts/c8d1d50a/2026-07-10-23-46-47.png"></p>
+<p>预训练性能通常与总训练计算量呈较稳定的幂律关系。可用一个简化形式表示：</p>
+<p>$$
+\mathcal{L}(C)
+\approx
+\mathcal{L}_{\infty}+aC^{-b},
+$$</p>
+<p>其中 $C$ 为训练计算量，$a,b&gt;0$。在 log-log 坐标下，这种关系接近直线。</p>
+<p>这意味着研究者可以：</p>
+<ol>
+<li>在多个较小模型上实验；</li>
+<li>拟合不同配置的 scaling curve；</li>
+<li>预测配置扩展到大模型后的表现；</li>
+<li>只对最有希望的配置进行一次昂贵的最终训练。</li>
+</ol>
+<h3 id="6-2-从“大模型调参”转向“小模型预测大模型”"><a href="#6-2-从“大模型调参”转向“小模型预测大模型”" class="headerlink" title="6.2 从“大模型调参”转向“小模型预测大模型”"></a>6.2 从“大模型调参”转向“小模型预测大模型”</h3><p>旧方法可能将计算资源平均分给 30 个大规模实验，最终每个模型都只训练很短时间。</p>
+<p>New pipeline：</p>
+<ol>
+<li>在多种小规模模型上快速搜索 learning rate、data mixture 等配置；</li>
+<li>找到随模型规模变化的 scaling recipe；</li>
+<li>用 scaling law 外推到目标规模；</li>
+<li>将绝大部分预算投入最终大模型的完整训练。</li>
+</ol>
+<p>这样可以让最终模型使用大部分计算预算，而不是把算力消耗在失败的大规模试验上。</p>
+<h3 id="6-3-比较架构时要关注-scaling-rate"><a href="#6-3-比较架构时要关注-scaling-rate" class="headerlink" title="6.3 比较架构时要关注 scaling rate"></a>6.3 比较架构时要关注 scaling rate</h3><p><img src="/img/posts/c8d1d50a/2026-07-10-23-48-36.png"></p>
+<p>当比较 Transformer 与 LSTM 时，不仅要比较小规模下谁的 loss 更低，还要比较随着参数和计算量增加，loss 下降得有多快。</p>
+<p>需要关注两个因素：</p>
+<ul>
+<li><strong>Constant</strong>：当前规模下的性能；</li>
+<li><strong>Scaling rate &#x2F; slope</strong>：扩大规模后性能改善的速度。</li>
+</ul>
+<p>即使某个方法在小规模下表现较好，只要它的 scaling rate 较差，在前沿规模下也可能被另一种方法超过。</p>
+<h3 id="6-4-Chinchilla-Scaling-Law"><a href="#6-4-Chinchilla-Scaling-Law" class="headerlink" title="6.4 Chinchilla Scaling Law"></a>6.4 Chinchilla Scaling Law</h3><p><img src="/img/posts/c8d1d50a/2026-07-10-23-49-21.png"></p>
+<p>Chinchilla 研究的问题是：在固定训练 FLOPs 下，应该将预算分配给更多参数，还是更多训练 token？</p>
+<p>经典结论是，训练计算最优的配置大约满足：</p>
+<p>$$
+D\approx 20N,
+$$</p>
+<p>其中：</p>
+<ul>
+<li>$N$：模型参数量；</li>
+<li>$D$：训练 token 数。</li>
+</ul>
+<p>也就是每个参数对应约 20 个训练 token。</p>
+<p>但 Chinchilla 只优化<strong>训练成本</strong>，没有考虑推理成本。对于实际部署而言，使用更小模型并训练更多 token，虽然训练时可能不是最省 FLOPs，却能降低之后每次推理的成本。因此实践中的 token-to-parameter ratio 可能远高于 $20:1$。</p>
+<h3 id="6-5-The-Bitter-Lesson"><a href="#6-5-The-Bitter-Lesson" class="headerlink" title="6.5 The Bitter Lesson"></a>6.5 The Bitter Lesson</h3><p>Richard Sutton 的 Bitter Lesson 强调：</p>
+<blockquote>
+<p>从长期看，能够有效利用持续增长计算资源的方法，往往胜过依赖人工设计复杂规则的方法。</p>
+</blockquote>
+<p>其逻辑是：</p>
+<ol>
+<li>更多计算通常带来更好性能；</li>
+<li>硬件和可用计算资源长期持续增长；</li>
+<li>因此，最重要的是设计能够随计算规模扩展的方法。</li>
+</ol>
+<p>这并不意味着算法和数据质量不重要，而是说明：不要只针对当前规模反复添加复杂技巧，应优先选择简单、稳定并且能够 scale 的方案。</p>
+<hr>
+<h2 id="7-训练一个-SOTA-模型需要多少计算？"><a href="#7-训练一个-SOTA-模型需要多少计算？" class="headerlink" title="7. 训练一个 SOTA 模型需要多少计算？"></a>7. 训练一个 SOTA 模型需要多少计算？</h2><p><img src="/img/posts/c8d1d50a/2026-07-10-23-50-51.png"></p>
+<p>每一代前沿模型的训练计算量常以接近一个数量级增长，因此算力、能源、集群通信与系统优化越来越重要。</p>
+<hr>
+<h1 id="Part-II：Post-training-后训练"><a href="#Part-II：Post-training-后训练" class="headerlink" title="Part II：Post-training &#x2F; 后训练"></a>Part II：Post-training &#x2F; 后训练</h1><h2 id="8-为什么只做-Language-Modeling-不够？"><a href="#8-为什么只做-Language-Modeling-不够？" class="headerlink" title="8. 为什么只做 Language Modeling 不够？"></a>8. 为什么只做 Language Modeling 不够？</h2><p><img src="/img/posts/c8d1d50a/2026-07-11-11-03-53.png"></p>
+<p>纯语言模型可能继续生成一串类似问题，而不是回答这个问题，因为它只是在模仿互联网上常见的文本延续方式。</p>
+<p>因此需要 post-training，将一个“会续写文本的模型”转化为“会帮助用户的 assistant”。</p>
+<h2 id="9-两种后训练目标"><a href="#9-两种后训练目标" class="headerlink" title="9. 两种后训练目标"></a>9. 两种后训练目标</h2><h3 id="9-1-Classic-Post-training-Alignment-Instruction-Following"><a href="#9-1-Classic-Post-training-Alignment-Instruction-Following" class="headerlink" title="9.1 Classic Post-training &#x2F; Alignment &#x2F; Instruction Following"></a>9.1 Classic Post-training &#x2F; Alignment &#x2F; Instruction Following</h3><p>目标：</p>
+<ul>
+<li>遵循用户指令；</li>
+<li>输出有用、清晰、符合规范的答案；</li>
+<li>遵循产品设计者的安全和行为要求；</li>
+<li>最大化人类对回答的偏好。</li>
+</ul>
+<p>这是 ChatGPT 在 2022 年获得显著成功的重要原因。</p>
+<h3 id="9-2-Reasoning-Training"><a href="#9-2-Reasoning-Training" class="headerlink" title="9.2 Reasoning Training"></a>9.2 Reasoning Training</h3><p>Reasoning model 还会在具有可验证答案的困难问题上优化正确率，例如：</p>
+<ul>
+<li>数学竞赛题；</li>
+<li>代码测试用例；</li>
+<li>逻辑推理；</li>
+<li>可自动判定对错的任务。</li>
+</ul>
+<p>传统 scaling law 主要强调 <strong>train-time compute</strong>：训练时投入更多计算，模型更好。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-05-17.png"></p>
+<p>Reasoning model 引入了另一种维度：<strong>test-time compute</strong>。模型在回答时进行更长的搜索、思考或采样，也可能获得更高正确率。</p>
+<p>可以将其理解为：一个人被要求立刻回答，通常不如拥有更多思考时间时回答得好。</p>
+<hr>
+<h2 id="10-Supervised-Fine-Tuning-SFT"><a href="#10-Supervised-Fine-Tuning-SFT" class="headerlink" title="10. Supervised Fine-Tuning &#x2F; SFT"></a>10. Supervised Fine-Tuning &#x2F; SFT</h2><h3 id="10-1-基本思想"><a href="#10-1-基本思想" class="headerlink" title="10.1 基本思想"></a>10.1 基本思想</h3><p>SFT 仍然使用 next-token prediction，但训练数据不再是任意互联网文本，而是“理想的输入—输出对”。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-07-11.png"></p>
+<h3 id="10-2-SFT-数据从哪里来？"><a href="#10-2-SFT-数据从哪里来？" class="headerlink" title="10.2 SFT 数据从哪里来？"></a>10.2 SFT 数据从哪里来？</h3><h4 id="方法一：Human-Demonstrations"><a href="#方法一：Human-Demonstrations" class="headerlink" title="方法一：Human Demonstrations"></a>方法一：Human Demonstrations</h4><p>让人类直接为 instruction 编写高质量答案。这种方法质量可控，但速度慢、成本高，而且很难覆盖大量复杂任务。</p>
+<h4 id="方法二：LLM-generated-Data"><a href="#方法二：LLM-generated-Data" class="headerlink" title="方法二：LLM-generated Data"></a>方法二：LLM-generated Data</h4><p><img src="/img/posts/c8d1d50a/2026-07-11-11-07-36.png"></p>
+<p>Alpaca 的思路是使用更强的 LLM 生成 instruction-answer pairs，然后用这些数据微调开源模型。</p>
+<p>这种方法开启了大规模 synthetic data generation，但存在一个前提：通常需要一个比目标模型更强的 teacher model。</p>
+<h4 id="方法三：Rejection-Sampling-with-Verifiers"><a href="#方法三：Rejection-Sampling-with-Verifiers" class="headerlink" title="方法三：Rejection Sampling with Verifiers"></a>方法三：Rejection Sampling with Verifiers</h4><p><img src="/img/posts/c8d1d50a/2026-07-11-11-08-48.png"></p>
+<p>当没有更强 teacher model 时，可以：</p>
+<ol>
+<li>让当前模型对同一问题生成多个答案；</li>
+<li>使用测试用例、规则或 judge 判断答案是否正确；</li>
+<li>只保留通过验证的答案；</li>
+<li>用这些优质样本进行 SFT。</li>
+</ol>
+<p>这相当于让模型从自己的多个候选中筛选成功轨迹，再模仿这些成功轨迹。</p>
+<h3 id="10-3-SFT-可以教会模型什么？"><a href="#10-3-SFT-可以教会模型什么？" class="headerlink" title="10.3 SFT 可以教会模型什么？"></a>10.3 SFT 可以教会模型什么？</h3><ul>
+<li>Instruction following；</li>
+<li>特定格式、语气和风格；</li>
+<li>Bullet points、JSON、代码格式；</li>
+<li>Tool use；</li>
+<li>初步 reasoning pattern；</li>
+<li>任何能够构造高质量 input-output pairs 的行为。</li>
+</ul>
+<p>SFT 既可以作为最终训练阶段，也可以作为 RL 之前的 warm start，让模型先具备基本成功率，再进行强化学习。</p>
+<h3 id="10-4-Agent-Tool-Use-的-SFT-数据管线"><a href="#10-4-Agent-Tool-Use-的-SFT-数据管线" class="headerlink" title="10.4 Agent Tool Use 的 SFT 数据管线"></a>10.4 Agent Tool Use 的 SFT 数据管线</h3><p><img src="/img/posts/c8d1d50a/2026-07-11-11-09-16.png"></p>
+<p>对于工具调用，仅仅收集真实用户调用真实 API 的轨迹可能远远不够。Kimi K2 使用了更复杂的 synthetic pipeline：</p>
+<ul>
+<li>一个 LLM 模拟用户；</li>
+<li>一个 agent model 决定工具调用；</li>
+<li>一个 LLM 或环境模拟工具反馈；</li>
+<li>使用 rubric 和 verifier 对完整轨迹进行 rejection sampling。</li>
+</ul>
+<p>这说明 agent SFT 不只是收集问答对，而是需要构造：</p>
+<p>$$
+\text{User request}
+\rightarrow
+\text{Tool selection}
+\rightarrow
+\text{Tool arguments}
+\rightarrow
+\text{Environment response}
+\rightarrow
+\text{Final answer}.
+$$</p>
+<h3 id="10-5-SFT-需要多少数据？"><a href="#10-5-SFT-需要多少数据？" class="headerlink" title="10.5 SFT 需要多少数据？"></a>10.5 SFT 需要多少数据？</h3><p>SFT 对已经在预训练中学过的能力非常 sample-efficient。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-10-39.png"></p>
+<ul>
+<li>对 style、format 和 instruction following，约几千到一万条高质量样本可能已经有效；</li>
+<li>LIMA 表明，少量高质量数据就能显著改变模型回答风格；</li>
+<li>对 reasoning、tool use 等预训练中不充分的复杂能力，则需要更多样本；</li>
+<li>DeepSeek-R1 的推理 SFT 数据达到约 800K 量级。</li>
+</ul>
+<p>核心判断是：</p>
+<blockquote>
+<p>如果能力已经在预训练中存在，SFT 主要负责把它“调出来”；如果能力本身没有学会，则需要更多数据，甚至需要 RL。</p>
+</blockquote>
+<hr>
+<h2 id="11-Reinforcement-Learning-强化学习"><a href="#11-Reinforcement-Learning-强化学习" class="headerlink" title="11. Reinforcement Learning &#x2F; 强化学习"></a>11. Reinforcement Learning &#x2F; 强化学习</h2><h3 id="11-1-为什么-SFT-不够？"><a href="#11-1-为什么-SFT-不够？" class="headerlink" title="11.1 为什么 SFT 不够？"></a>11.1 为什么 SFT 不够？</h3><p>SFT 本质上是 behavior cloning，存在三个主要限制。</p>
+<h4 id="1-受到示范者能力上限约束"><a href="#1-受到示范者能力上限约束" class="headerlink" title="1. 受到示范者能力上限约束"></a>1. 受到示范者能力上限约束</h4><p>人类可能无法亲自写出最优答案，但仍然能够判断两个答案中哪个更好。若只模仿人类生成结果，就无法超越示范质量。</p>
+<h4 id="2-可能学习-Hallucination"><a href="#2-可能学习-Hallucination" class="headerlink" title="2. 可能学习 Hallucination"></a>2. 可能学习 Hallucination</h4><p>假设参考答案包含一个模型在预训练中并不知道的文献引用。SFT 会要求模型模仿这个引用形式，却无法让模型真正知道引用是否存在。</p>
+<p>结果可能是模型学会：</p>
+<blockquote>
+<p>当被要求给出引用时，即使不知道，也生成一个看起来合理的引用。</p>
+</blockquote>
+<h4 id="3-理想答案成本高"><a href="#3-理想答案成本高" class="headerlink" title="3. 理想答案成本高"></a>3. 理想答案成本高</h4><p>生成完整高质量答案通常比判断答案好坏更困难、更昂贵。</p>
+<p>因此 RL 的思想不是“复制理想行为”，而是“直接最大化目标行为”。</p>
+<h3 id="11-2-Reward-从哪里来？"><a href="#11-2-Reward-从哪里来？" class="headerlink" title="11.2 Reward 从哪里来？"></a>11.2 Reward 从哪里来？</h3><h4 id="Rule-based-Reward"><a href="#Rule-based-Reward" class="headerlink" title="Rule-based Reward"></a>Rule-based Reward</h4><p>适用于答案容易自动验证的任务：</p>
+<ul>
+<li>exact string match；</li>
+<li>数学最终答案；</li>
+<li>代码是否通过 test cases；</li>
+<li>输出是否满足 JSON schema；</li>
+<li>工具调用参数是否合法。</li>
+</ul>
+<h4 id="Reward-Model"><a href="#Reward-Model" class="headerlink" title="Reward Model"></a>Reward Model</h4><p>使用人类偏好数据训练一个 reward model，使其预测某个回答是否更符合人类偏好。</p>
+<h4 id="LLM-as-a-Judge"><a href="#LLM-as-a-Judge" class="headerlink" title="LLM as a Judge"></a>LLM as a Judge</h4><p>使用更强 LLM 评价答案的正确性、相关性、清晰度或安全性。</p>
+<p>这些 reward 都可能存在偏差，因此需要额外的 adversarial evaluation，避免模型只学会利用评分器漏洞。</p>
+<h3 id="11-3-Reward-Hacking"><a href="#11-3-Reward-Hacking" class="headerlink" title="11.3 Reward Hacking"></a>11.3 Reward Hacking</h3><p>模型会严格优化被写进 reward function 的目标，而不一定实现设计者真正想要的目标。</p>
+<p>例如，若目标只是“通过代码测试”，模型可能尝试：</p>
+<ul>
+<li>修改或绕过测试；</li>
+<li>删除检查逻辑；</li>
+<li>返回固定结果；</li>
+<li>利用环境漏洞。</li>
+</ul>
+<p>这类行为称为 reward hacking。对于 agent，reward hacking 更危险，因为 agent 可以修改文件、调用 API 或影响外部环境。</p>
+<p>因此 RL 环境不仅要能提供 reward，还要防止模型以非预期方式获得 reward。</p>
+<h3 id="11-4-DeepSeek-R1-的混合-Reward"><a href="#11-4-DeepSeek-R1-的混合-Reward" class="headerlink" title="11.4 DeepSeek-R1 的混合 Reward"></a>11.4 DeepSeek-R1 的混合 Reward</h3><p><img src="/img/posts/c8d1d50a/2026-07-11-11-14-09.png"></p>
+<p>对于不同任务，DeepSeek-R1 使用不同反馈：</p>
+<ul>
+<li>数学、代码和逻辑推理：rule-based verifier；</li>
+<li>写作、事实问答和翻译：helpfulness &#x2F; safety reward model。</li>
+</ul>
+<p>其流程可以理解为：</p>
+<p>$$
+\text{SFT checkpoint}
+\rightarrow
+\text{Generate rollouts}
+\rightarrow
+\text{Verifier / Reward model}
+\rightarrow
+\text{RL update}
+\rightarrow
+\text{Reasoning model}.
+$$</p>
+<hr>
+<h2 id="12-GRPO-的直观理解"><a href="#12-GRPO-的直观理解" class="headerlink" title="12. GRPO 的直观理解"></a>12. GRPO 的直观理解</h2><p><img src="/img/posts/c8d1d50a/2026-07-11-11-15-04.png"></p>
+<p>对于问题 $q$，policy model 生成一组回答：</p>
+<p>$$
+o_1,o_2,\dots,o_G.
+$$</p>
+<p>每个回答获得 reward：</p>
+<p>$$
+r_1,r_2,\dots,r_G.
+$$</p>
+<p>然后在组内进行标准化，得到相对 advantage。一个便于理解的简化形式为：</p>
+<p>$$
+A_i
+=
+\frac{r_i-\bar r}{s_r+\epsilon},
+$$</p>
+<p>其中 $\bar r$ 为组内平均 reward，$s_r$ 为标准差。</p>
+<p>直观上：</p>
+<ul>
+<li>比组内平均水平更好的回答得到正 advantage；</li>
+<li>比平均水平更差的回答得到负 advantage；</li>
+<li>policy 增加高 advantage 回答的概率，降低低 advantage 回答的概率。</li>
+</ul>
+<p>可将其近似理解为最大化：</p>
+<p>$$
+J(\theta)
+\approx
+\frac{1}{G}\sum_{i=1}^{G}
+A_i\log \pi_\theta(o_i\mid q)
+-
+\beta D_{\mathrm{KL}}
+\left(
+\pi_\theta\,\|\,\pi_{\mathrm{ref}}
+\right).
+$$</p>
+<p>这里的 KL regularization 用于限制训练后的 policy 不要偏离 reference model 过远，以降低训练崩溃和 reward hacking 的风险。</p>
+<blockquote>
+<p>上式用于帮助理解 GRPO 的核心结构，并非课件中完整的 clipped objective。</p>
+</blockquote>
+<hr>
+<h2 id="13-Agent-RL-的最大困难之一：Infrastructure"><a href="#13-Agent-RL-的最大困难之一：Infrastructure" class="headerlink" title="13. Agent RL 的最大困难之一：Infrastructure"></a>13. Agent RL 的最大困难之一：Infrastructure</h2><p><img src="/img/posts/c8d1d50a/2026-07-11-11-16-10.png"></p>
+<p>RL 与 SFT 的一个重大区别是：SFT 使用已经准备好的固定数据，而 RL 必须不断让模型在线生成新的 rollout。</p>
+<p>对于每个问题，可能需要：</p>
+<ul>
+<li>生成多个候选答案；</li>
+<li>执行很长的 reasoning trajectory；</li>
+<li>多次调用工具；</li>
+<li>等待外部 API 或 sandbox；</li>
+<li>执行 verifier；</li>
+<li>再根据结果更新模型。</li>
+</ul>
+<h3 id="13-1-Sampling-Bottleneck"><a href="#13-1-Sampling-Bottleneck" class="headerlink" title="13.1 Sampling Bottleneck"></a>13.1 Sampling Bottleneck</h3><p>GRPO 等算法要求每个 prompt 采样多个答案。若回答很长，大量 GPU 时间会用于 autoregressive decoding，而不是权重更新。</p>
+<h3 id="13-2-Long-tail-Rollouts"><a href="#13-2-Long-tail-Rollouts" class="headerlink" title="13.2 Long-tail Rollouts"></a>13.2 Long-tail Rollouts</h3><p>部分 agent trajectory 会异常长。如果训练系统等待最慢轨迹完成，所有 GPU 都可能被拖住。</p>
+<p>一种策略是暂停极长 rollout，先使用已经完成的样本更新模型，再在之后恢复未完成轨迹。</p>
+<h3 id="13-3-Environment-Latency"><a href="#13-3-Environment-Latency" class="headerlink" title="13.3 Environment Latency"></a>13.3 Environment Latency</h3><p>Agent 调用工具时，GPU 可能只是等待环境反馈。解决方法包括：</p>
+<ul>
+<li>大量 concurrent rollouts；</li>
+<li>独立的 environment services；</li>
+<li>异步调度；</li>
+<li>让其他 rollout 在某个 trajectory 等待 API 时继续运行。</li>
+</ul>
+<h3 id="13-4-Train、Checkpoint-与-Inference-Engine"><a href="#13-4-Train、Checkpoint-与-Inference-Engine" class="headerlink" title="13.4 Train、Checkpoint 与 Inference Engine"></a>13.4 Train、Checkpoint 与 Inference Engine</h3><p>大规模 RL 系统通常需要分离：</p>
+<ul>
+<li>Training engine；</li>
+<li>Checkpoint &#x2F; weight broadcasting engine；</li>
+<li>Inference &#x2F; sampling engine；</li>
+<li>Environment services。</li>
+</ul>
+<p>Kimi 的系统将相关 engine 尽量 colocate，以减少跨机器通信和权重同步开销。</p>
+<p>这也是 agent training 与普通问答模型训练的重要区别：<strong>环境和 rollout 系统本身就是训练算法的一部分。</strong></p>
+<hr>
+<h2 id="14-RLHF：从人类反馈中学习"><a href="#14-RLHF：从人类反馈中学习" class="headerlink" title="14. RLHF：从人类反馈中学习"></a>14. RLHF：从人类反馈中学习</h2><h3 id="14-1-基本思想"><a href="#14-1-基本思想" class="headerlink" title="14.1 基本思想"></a>14.1 基本思想</h3><p>RLHF 不要求人类亲自写出完美答案，而是让人类比较候选回答。</p>
+<p>典型流程：</p>
+<ol>
+<li>从一个较好的 SFT model 出发；</li>
+<li>对每个 instruction 生成两个或多个答案；</li>
+<li>让 annotator 选择更好的答案；</li>
+<li>用偏好数据训练 reward model，或直接使用 preference optimization；</li>
+<li>使用 PPO、DPO 等方法让模型更倾向于生成被偏好的答案。</li>
+</ol>
+<p>若人类偏好 $y^+$ 胜过 $y^-$，可以训练 reward model 满足：</p>
+<p>$$
+r_\phi(x,y^+)&gt;r_\phi(x,y^-).
+$$</p>
+<p>常见 pairwise preference loss 为：</p>
+<p>$$
+\mathcal{L}_{\text{RM}}(\phi)
+=
+-\log \sigma
+\left(
+r_\phi(x,y^+)-r_\phi(x,y^-)
+\right).
+$$</p>
+<h3 id="14-2-为什么-RLHF-能超过-SFT？"><a href="#14-2-为什么-RLHF-能超过-SFT？" class="headerlink" title="14.2 为什么 RLHF 能超过 SFT？"></a>14.2 为什么 RLHF 能超过 SFT？</h3><p>人类“判断哪个答案更好”通常比“从零写出最优答案”更容易。因此偏好优化能够利用人类的判断能力，而不受其生成能力完全限制。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-17-30.png"></p>
+<p>$$
+\text{Pretrained model}
+&lt;
+\text{SFT model}
+&lt;
+\text{RL-optimized model}.
+$$</p>
+<p>这里的“小于”表示在目标人类偏好或特定任务表现上通常逐步提高，并不意味着所有能力都单调提升。</p>
+<h3 id="14-3-Human-Preference-Data-的问题"><a href="#14-3-Human-Preference-Data-的问题" class="headerlink" title="14.3 Human Preference Data 的问题"></a>14.3 Human Preference Data 的问题</h3><ul>
+<li>收集速度慢；</li>
+<li>成本高；</li>
+<li>需要非常详细的 annotation guideline；</li>
+<li>标注者容易关注长度、排版等形式，而不是真正的正确性；</li>
+<li>标注者群体分布会影响模型价值偏好；</li>
+<li>存在 crowdsourcing ethics 问题。</li>
+</ul>
+<h3 id="14-4-使用-LLM-代替-Human-Annotator"><a href="#14-4-使用-LLM-代替-Human-Annotator" class="headerlink" title="14.4 使用 LLM 代替 Human Annotator"></a>14.4 使用 LLM 代替 Human Annotator</h3><p>可以让更强 LLM 比较回答，生成 synthetic preference data。实践中，LLM judge 往往比人类众包便宜一个数量级以上，而且一致性可能更高。</p>
+<p>但这种方法有明显边界：</p>
+<ul>
+<li>judge model 的偏差会被继承；</li>
+<li>当前沿模型已经接近最强模型时，难以找到可靠 teacher；</li>
+<li>judge 可能偏爱更长、更自信或特定风格的回答；</li>
+<li>需要额外验证 judge 是否真正关注正确性。</li>
+</ul>
+<hr>
+<h1 id="Part-III：Evaluation-评测"><a href="#Part-III：Evaluation-评测" class="headerlink" title="Part III：Evaluation &#x2F; 评测"></a>Part III：Evaluation &#x2F; 评测</h1><h2 id="15-为什么-Evaluation-是核心能力？"><a href="#15-为什么-Evaluation-是核心能力？" class="headerlink" title="15. 为什么 Evaluation 是核心能力？"></a>15. 为什么 Evaluation 是核心能力？</h2><p>Evaluation 主要用于回答三个问题：</p>
+<ol>
+<li><strong>Identify improvements</strong>：训练方法是否真的有效？</li>
+<li><strong>Select models</strong>：多个模型中应该使用哪一个？</li>
+<li><strong>Production readiness</strong>：模型是否已经足够可靠，可以投入实际应用？</li>
+</ol>
+<p>没有可靠评测，就无法知道：</p>
+<ul>
+<li>一个新的数据配比是否更好；</li>
+<li>RL reward 是否被模型利用；</li>
+<li>某项能力提升是否损害其他能力；</li>
+<li>模型在真实 agent environment 中是否稳定。</li>
+</ul>
+<hr>
+<h2 id="16-Close-ended-Evaluation"><a href="#16-Close-ended-Evaluation" class="headerlink" title="16. Close-ended Evaluation"></a>16. Close-ended Evaluation</h2><p>Close-ended task 只有少量可能答案，因此可以自动判定正确性，例如：</p>
+<ul>
+<li>Multiple Choice Questions；</li>
+<li>数学最终答案；</li>
+<li>代码测试；</li>
+<li>分类问题。</li>
+</ul>
+<p>若预测答案为 $\hat y_i$，真实答案为 $y_i$，最简单的 accuracy 为：</p>
+<p>$$
+\operatorname{Acc}
+=
+\frac{1}{n}\sum_{i=1}^{n}
+\mathbf{1}[\hat y_i=y_i].
+$$</p>
+<p>MMLU 是典型的 close-ended benchmark。</p>
+<h3 id="16-1-Close-ended-Evaluation-的问题"><a href="#16-1-Close-ended-Evaluation-的问题" class="headerlink" title="16.1 Close-ended Evaluation 的问题"></a>16.1 Close-ended Evaluation 的问题</h3><h4 id="Prompt-Sensitivity"><a href="#Prompt-Sensitivity" class="headerlink" title="Prompt Sensitivity"></a>Prompt Sensitivity</h4><p>同一个问题使用不同 prompt、few-shot examples、答案格式或选项顺序，可能得到不同结果。</p>
+<h4 id="Train-test-Contamination"><a href="#Train-test-Contamination" class="headerlink" title="Train-test Contamination"></a>Train-test Contamination</h4><p>公开 benchmark 很可能已经出现在互联网训练数据中。模型可能因为记住题目而获得高分，而不是具备真正的泛化能力。</p>
+<p>对于日常开发，固定 eval 仍然可以用于比较实验；但对外声称模型具有某种新能力时，contamination 会严重影响结论。</p>
+<hr>
+<h2 id="17-Open-ended-Evaluation"><a href="#17-Open-ended-Evaluation" class="headerlink" title="17. Open-ended Evaluation"></a>17. Open-ended Evaluation</h2><p>ChatGPT 类模型可以执行写作、总结、代码、对话和解释等大量开放任务。其答案：</p>
+<ul>
+<li>很长；</li>
+<li>不存在唯一标准答案；</li>
+<li>无法通过字符串匹配判断质量。</li>
+</ul>
+<p>因此通常采用 pairwise preference evaluation。</p>
+<h3 id="17-1-Human-Evaluation：Chatbot-Arena"><a href="#17-1-Human-Evaluation：Chatbot-Arena" class="headerlink" title="17.1 Human Evaluation：Chatbot Arena"></a>17.1 Human Evaluation：Chatbot Arena</h3><p>Chatbot Arena 的基本方法是：</p>
+<ol>
+<li>用户在不知道模型身份的情况下与两个模型交互；</li>
+<li>用户选择更好的回答；</li>
+<li>聚合大量 pairwise comparison，得到相对排名。</li>
+</ol>
+<p>优点是接近真实用户偏好，缺点是成本高、反馈慢，而且用户群体本身也可能存在分布偏差。</p>
+<h3 id="17-2-LLM-as-a-Judge：AlpacaEval"><a href="#17-2-LLM-as-a-Judge：AlpacaEval" class="headerlink" title="17.2 LLM-as-a-Judge：AlpacaEval"></a>17.2 LLM-as-a-Judge：AlpacaEval</h3><p>对每个 instruction：</p>
+<ol>
+<li>baseline model 生成回答；</li>
+<li>candidate model 生成回答；</li>
+<li>judge LLM 比较两个回答；</li>
+<li>统计 candidate 获胜的概率。</li>
+</ol>
+<p>$$
+\operatorname{WinRate}
+=
+\frac{1}{n}
+\sum_{i=1}^{n}
+\mathbf{1}
+[
+\text{candidate wins on }i
+].
+$$</p>
+<p>这种方法比大规模人工评测快得多、便宜得多，并且可以与 Chatbot Arena 排名保持较高相关性。</p>
+<h3 id="17-3-Spurious-Correlation"><a href="#17-3-Spurious-Correlation" class="headerlink" title="17.3 Spurious Correlation"></a>17.3 Spurious Correlation</h3><p>LLM judge 可能偏爱：</p>
+<ul>
+<li>更长的回答；</li>
+<li>更复杂的格式；</li>
+<li>更自信的语气；</li>
+<li>重复问题内容的回答。</li>
+</ul>
+<p>因此，模型可能通过增加长度提高 win rate，却没有真正提高内容质量。</p>
+<p>一种处理方法是使用 regression 或 causal adjustment 控制回答长度，例如 length-controlled win rate。</p>
+<p>对于 agent evaluation，还应进一步测量：</p>
+<ul>
+<li>task success；</li>
+<li>tool-call correctness；</li>
+<li>trajectory length；</li>
+<li>latency；</li>
+<li>token &#x2F; API cost；</li>
+<li>error recovery；</li>
+<li>robustness to environment changes；</li>
+<li>是否出现 reward hacking。</li>
+</ul>
+<hr>
+<h1 id="Part-IV：Systems-and-Infrastructure"><a href="#Part-IV：Systems-and-Infrastructure" class="headerlink" title="Part IV：Systems and Infrastructure"></a>Part IV：Systems and Infrastructure</h1><h2 id="18-为什么不能简单地“多买-GPU”？"><a href="#18-为什么不能简单地“多买-GPU”？" class="headerlink" title="18. 为什么不能简单地“多买 GPU”？"></a>18. 为什么不能简单地“多买 GPU”？</h2><p>GPU 不仅昂贵，而且稀缺。即使拥有大量 GPU，也会遇到：</p>
+<ul>
+<li>模型无法放入单卡；</li>
+<li>GPU 之间通信速度有限；</li>
+<li>内存带宽成为瓶颈；</li>
+<li>大规模同步导致空闲等待；</li>
+<li>rollout 和 environment 延迟使 GPU 利用率下降。</li>
+</ul>
+<p>因此训练前沿模型不仅是 ML 问题，也是一项大型分布式系统工程。</p>
+<hr>
+<h2 id="19-GPU-的三个关键特点"><a href="#19-GPU-的三个关键特点" class="headerlink" title="19. GPU 的三个关键特点"></a>19. GPU 的三个关键特点</h2><h3 id="19-1-Massively-Parallel"><a href="#19-1-Massively-Parallel" class="headerlink" title="19.1 Massively Parallel"></a>19.1 Massively Parallel</h3><p>GPU 在大量线程上执行相同指令、处理不同数据，更适合 throughput-oriented workload，而不是 CPU 式的复杂串行控制流。</p>
+<h3 id="19-2-Fast-Matrix-Multiplication"><a href="#19-2-Fast-Matrix-Multiplication" class="headerlink" title="19.2 Fast Matrix Multiplication"></a>19.2 Fast Matrix Multiplication</h3><p>现代 GPU 包含专门的 Tensor Cores，矩阵乘法吞吐量可以远高于普通 floating-point operation。</p>
+<p>因此高效模型通常会尽量将计算组织为大型矩阵乘法。</p>
+<h3 id="19-3-Compute-比-Memory-与-Communication-增长更快"><a href="#19-3-Compute-比-Memory-与-Communication-增长更快" class="headerlink" title="19.3 Compute 比 Memory 与 Communication 增长更快"></a>19.3 Compute 比 Memory 与 Communication 增长更快</h3><p>现代 GPU 的算术能力提升速度远快于内存带宽和通信速度。因此多数训练并不是“算不动”，而是“来不及把数据送到计算单元”。</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-21-22.png"></p>
+<p>即：Bottleneck是Data movement，而不一定是 FLOPs 本身。</p>
+<h3 id="19-4-Memory-Hierarchy"><a href="#19-4-Memory-Hierarchy" class="headerlink" title="19.4 Memory Hierarchy"></a>19.4 Memory Hierarchy</h3><p>越靠近计算核心的存储：</p>
+<ul>
+<li>容量越小；</li>
+<li>速度越快。</li>
+</ul>
+<p>越远的全局内存：</p>
+<ul>
+<li>容量更大；</li>
+<li>访问延迟更高。</li>
+</ul>
+<p>因此优化目标之一，是尽量重复使用已经加载到高速存储中的数据。</p>
+<h3 id="19-5-Model-FLOP-Utilization-MFU"><a href="#19-5-Model-FLOP-Utilization-MFU" class="headerlink" title="19.5 Model FLOP Utilization &#x2F; MFU"></a>19.5 Model FLOP Utilization &#x2F; MFU</h3><p>$$
+\operatorname{MFU}
+=
+\frac{\text{Observed FLOP/s}}
+{\text{Theoretical peak FLOP/s}}.
+$$</p>
+<p>在大规模训练中，达到约 50% 的 MFU 已经可能是很好的结果，因为通信、内存访问和非矩阵操作都会消耗时间。</p>
+<hr>
+<h2 id="20-Low-Precision-与-Automatic-Mixed-Precision"><a href="#20-Low-Precision-与-Automatic-Mixed-Precision" class="headerlink" title="20. Low Precision 与 Automatic Mixed Precision"></a>20. Low Precision 与 Automatic Mixed Precision</h2><p>使用更少 bit 可以：</p>
+<ul>
+<li>降低显存占用；</li>
+<li>减少通信量；</li>
+<li>提高矩阵乘法速度。</li>
+</ul>
+<p>深度学习对许多中间计算并不需要 FP32 的完整精度，因此常使用 BF16。</p>
+<p>Automatic Mixed Precision 的典型做法是：</p>
+<ul>
+<li>Master weights 保持 FP32；</li>
+<li>前向和矩阵乘法使用 BF16；</li>
+<li>Activations 使用 BF16，减少显存；</li>
+<li>Gradients 可使用 BF16；</li>
+<li>参数更新等对精度敏感的步骤使用 FP32。</li>
+</ul>
+<p>其思想不是所有计算都降低精度，而是在速度、内存和数值稳定性之间分配不同精度。</p>
+<hr>
+<h2 id="21-Operator-Fusion、Tiling-与-FlashAttention"><a href="#21-Operator-Fusion、Tiling-与-FlashAttention" class="headerlink" title="21. Operator Fusion、Tiling 与 FlashAttention"></a>21. Operator Fusion、Tiling 与 FlashAttention</h2><h3 id="21-1-Operator-Fusion"><a href="#21-1-Operator-Fusion" class="headerlink" title="21.1 Operator Fusion"></a>21.1 Operator Fusion</h3><p><img src="/img/posts/c8d1d50a/2026-07-11-11-23-39.png"></p>
+<p>普通 PyTorch 程序中，每个算子可能都需要反复读取，若将多个算子融合到一个 kernel 中，可以只读取一次数据，在片上完成多个操作后再写回。</p>
+<p><code>torch.compile</code> 等工具可以自动完成部分 operator fusion。</p>
+<h3 id="21-2-Tiling"><a href="#21-2-Tiling" class="headerlink" title="21.2 Tiling"></a>21.2 Tiling</h3><p>Tiling 将矩阵切分成小块，并改变运算顺序，使已经加载到高速缓存中的 tile 被重复使用。</p>
+<p>以矩阵乘法 $P=MN$ 为例，不再每次从 DRAM 读取完整行列，而是：</p>
+<ol>
+<li>加载 $M_{ij}$ 与 $N_{jk}$ 的小块；</li>
+<li>在 shared memory &#x2F; SRAM 中计算多个 partial sums；</li>
+<li>重复利用这些 tile；</li>
+<li>最后写回结果。</li>
+</ol>
+<p>这可以显著减少 global memory reads。</p>
+<h3 id="21-3-FlashAttention"><a href="#21-3-FlashAttention" class="headerlink" title="21.3 FlashAttention"></a>21.3 FlashAttention</h3><p><img src="/img/posts/c8d1d50a/2026-07-11-11-24-46.png"></p>
+<p>FlashAttention 通过：</p>
+<ul>
+<li>Kernel fusion；</li>
+<li>Tiling；</li>
+<li>避免将完整 attention matrix 写入显存；</li>
+<li>在需要时 recomputation；</li>
+</ul>
+<p>降低 attention 的 IO 成本。它没有改变 attention 的数学结果，却能获得显著端到端加速。</p>
+<p>这个例子说明：许多大型模型性能提升并不来自新的 ML 算法，而来自更合理的算子执行顺序和内存访问设计。</p>
+<hr>
+<h2 id="22-Parallelization-并行化"><a href="#22-Parallelization-并行化" class="headerlink" title="22. Parallelization &#x2F; 并行化"></a>22. Parallelization &#x2F; 并行化</h2><h3 id="22-1-训练内存估算"><a href="#22-1-训练内存估算" class="headerlink" title="22.1 训练内存估算"></a>22.1 训练内存估算</h3><p>对于 $P$ 个参数，若参数和梯度使用 FP32，Adam 保存两个 FP32 moment，基础内存约为每个参数 16 bytes：</p>
+<p>$$
+\text{Memory}
+\approx
+4P_{\text{weights}}
++
+4P_{\text{gradients}}
++
+8P_{\text{optimizer}}
+=
+16P\ \text{bytes}.
+$$</p>
+<p>若 $P$ 以 billion parameters 为单位，则约为：</p>
+<p>$$
+16P\ \text{GB}.
+$$</p>
+<p>因此一个 7B 模型仅这些状态就大约需要：</p>
+<p>$$
+16\times 7=112\ \text{GB}.
+$$</p>
+<p>这还没有包含 activations 等额外显存。</p>
+<h3 id="22-2-Naive-Data-Parallelism"><a href="#22-2-Naive-Data-Parallelism" class="headerlink" title="22.2 Naive Data Parallelism"></a>22.2 Naive Data Parallelism</h3><p>流程：</p>
+<ol>
+<li>每张 GPU 保存完整 model 与 optimizer；</li>
+<li>将 batch 分给不同 GPU；</li>
+<li>各 GPU 独立计算 gradient；</li>
+<li>通过 all-reduce 汇总 gradient；</li>
+<li>所有 GPU 执行相同更新。</li>
+</ol>
+<p>优点：提高吞吐量。<br>缺点：每张卡仍保存完整模型，不能解决模型放不进单卡的问题。</p>
+<h3 id="22-3-ZeRO-Sharding"><a href="#22-3-ZeRO-Sharding" class="headerlink" title="22.3 ZeRO &#x2F; Sharding"></a>22.3 ZeRO &#x2F; Sharding</h3><p>ZeRO 将训练状态拆分到不同 GPU：</p>
+<ul>
+<li>shard optimizer states；</li>
+<li>shard gradients；</li>
+<li>shard parameters。</li>
+</ul>
+<p>每张 GPU 只保存自己负责的部分，并在需要时通信，从而显著减少单卡显存占用。</p>
+<h3 id="22-4-Pipeline-Parallelism"><a href="#22-4-Pipeline-Parallelism" class="headerlink" title="22.4 Pipeline Parallelism"></a>22.4 Pipeline Parallelism</h3><p>将不同层放在不同 GPU：</p>
+<p>$$
+\text{GPU}_1: \text{layers }1\!:\!k,
+\quad
+\text{GPU}_2: \text{layers }k+1\!:\!m,
+\quad \dots
+$$</p>
+<p>输入依次通过各 GPU。为了降低 pipeline bubble，通常会将 batch 划分为 micro-batches。</p>
+<h3 id="22-5-Tensor-Parallelism"><a href="#22-5-Tensor-Parallelism" class="headerlink" title="22.5 Tensor Parallelism"></a>22.5 Tensor Parallelism</h3><p>将单个矩阵或单层内部的计算拆到多张 GPU，例如：</p>
+<p>$$
+W=
+\begin{bmatrix}
+W_1\\
+W_2
+\end{bmatrix},
+$$</p>
+<p>不同 GPU 分别计算部分矩阵乘法，再通过通信聚合结果。</p>
+<p>Pipeline parallelism 是“按层切分”，tensor parallelism 是“在一层内部切分”。</p>
+<h3 id="22-6-Mixture-of-Experts-Architecture-Sparsity"><a href="#22-6-Mixture-of-Experts-Architecture-Sparsity" class="headerlink" title="22.6 Mixture of Experts &#x2F; Architecture Sparsity"></a>22.6 Mixture of Experts &#x2F; Architecture Sparsity</h3><p>MoE 不要求每个 token 都经过全部参数。Router 根据 token 表示选择少量 expert：</p>
+<p>$$
+h'
+=
+\sum_{e\in\operatorname{TopK}(h)}
+\alpha_e(h)f_e(h).
+$$</p>
+<p>因此可以在相近 active FLOPs 下增加总参数量，并将不同 expert 部署在不同 GPU 上。</p>
+<p>代价包括：</p>
+<ul>
+<li>routing imbalance；</li>
+<li>all-to-all communication；</li>
+<li>expert capacity 管理；</li>
+<li>训练和部署系统更复杂。</li>
+</ul>
+<hr>
+<h2 id="23-面向-Agent-的完整训练路径"><a href="#23-面向-Agent-的完整训练路径" class="headerlink" title="23. 面向 Agent 的完整训练路径"></a>23. 面向 Agent 的完整训练路径</h2><p>可以将本节课内容整理为以下流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">大规模网页、代码、书籍、论文等数据</span><br><span class="line">                ↓</span><br><span class="line">         Pretraining</span><br><span class="line">学习语言、知识、代码模式和潜在工具使用模式</span><br><span class="line">                ↓</span><br><span class="line">          Mid-training</span><br><span class="line">提高数据质量、调整领域配比、扩展上下文</span><br><span class="line">                ↓</span><br><span class="line">              SFT</span><br><span class="line">学习指令格式、工具协议和成功轨迹</span><br><span class="line">                ↓</span><br><span class="line">     Reasoning RL / Agent RL</span><br><span class="line">通过 verifier 或 environment reward 优化任务成功率</span><br><span class="line">                ↓</span><br><span class="line">       RLHF / Preference Optimization</span><br><span class="line">提高帮助性、可用性、安全性和用户偏好</span><br><span class="line">                ↓</span><br><span class="line">        Evaluation + Systems</span><br><span class="line">持续检查能力、成本、延迟、稳定性与安全性</span><br></pre></td></tr></table></figure>
+
+<p>其中 Evaluation 与 Systems 不是最后才做，而是贯穿整个流程：</p>
+<ul>
+<li>没有 eval，就无法正确选择数据和 reward；</li>
+<li>没有 systems，就无法生成足够多的 agent rollout；</li>
+<li>没有可靠 environment，就无法训练和评测 agent；</li>
+<li>没有防作弊设计，RL 可能只会优化 benchmark，而不会真正完成任务。</li>
+</ul>
+<hr>
+<h1 id="Appendix-A：Perplexity"><a href="#Appendix-A：Perplexity" class="headerlink" title="Appendix A：Perplexity"></a>Appendix A：Perplexity</h1><p>Perplexity 是语言模型验证损失的一种更直观表达。</p>
+<p>对于序列 $x_{1:L}$：</p>
+<p>$$
+\operatorname{PPL}(x_{1:L})
+=
+\exp
+\left(
+-\frac{1}{L}
+\sum_{i=1}^{L}
+\log p(x_i\mid x_{&lt;i})
+\right).
+$$</p>
+<p>也可以写为：</p>
+<p>$$
+\operatorname{PPL}(x_{1:L})
+=
+\left(
+\prod_{i=1}^{L}
+\frac{1}{p(x_i\mid x_{&lt;i})}
+\right)^{1/L}.
+$$</p>
+<p><img src="/img/posts/c8d1d50a/2026-07-11-11-28-05.png"></p>
+<p>直观上，PPL 可以近似理解为模型在每一步平均“犹豫于多少个 token 之间”。</p>
+<ul>
+<li>最小值接近 1；</li>
+<li>越低表示 next-token prediction 越准确；</li>
+<li>由于 tokenizer 和数据集不同，不同模型的 PPL 不一定能直接横向比较；</li>
+<li>现代模型通常不再只用 PPL 作为最终能力 benchmark，但它仍是预训练开发中的重要指标。</li>
+</ul>
+<hr>
+<h1 id="Appendix-B：Tokenizer-与-BPE"><a href="#Appendix-B：Tokenizer-与-BPE" class="headerlink" title="Appendix B：Tokenizer 与 BPE"></a>Appendix B：Tokenizer 与 BPE</h1><p>Tokenizer 的作用是将文本转换为模型可处理的离散 token ID。</p>
+<p>若只使用 word-level tokenizer：</p>
+<ul>
+<li>无法处理拼写错误和新词；</li>
+<li>词表会非常大；</li>
+<li>罕见词问题严重。</li>
+</ul>
+<p>若只使用 character-level tokenizer：</p>
+<ul>
+<li>通用性强；</li>
+<li>但序列过长，训练与推理成本高。</li>
+</ul>
+<p>因此现代 LLM 多使用 subword token，让常见词或词片段成为一个 token。</p>
+<h3 id="Byte-Pair-Encoding-BPE"><a href="#Byte-Pair-Encoding-BPE" class="headerlink" title="Byte Pair Encoding &#x2F; BPE"></a>Byte Pair Encoding &#x2F; BPE</h3><p>BPE 的简化训练流程：</p>
+<ol>
+<li>收集大规模文本；</li>
+<li>从字符或 byte 级 token 开始；</li>
+<li>统计相邻 token pair 的频率；</li>
+<li>将出现频率最高的 pair 合并为新 token；</li>
+<li>重复合并，直到达到目标 vocabulary size。</li>
+</ol>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">l o w e r</span><br><span class="line">l o w e s t</span><br></pre></td></tr></table></figure>
+
+<p>若 <code>l</code> 与 <code>o</code> 经常连续出现，可先合并为 <code>lo</code>；之后可能继续合并为 <code>low</code>。</p>
+<p>Tokenizer 会影响：</p>
+<ul>
+<li>相同文本需要多少 token；</li>
+<li>多语言之间是否公平；</li>
+<li>数字、代码和特殊符号的表示效率；</li>
+<li>context window 能容纳的实际文本量；</li>
+<li>模型训练和推理成本。</li>
+</ul>
+<h2 id="推荐进一步阅读"><a href="#推荐进一步阅读" class="headerlink" title="推荐进一步阅读"></a>推荐进一步阅读</h2><ul>
+<li>Kaplan et al., <em>Scaling Laws for Neural Language Models</em></li>
+<li>Hoffmann et al., <em>Training Compute-Optimal Large Language Models &#x2F; Chinchilla</em></li>
+<li>Richard Sutton, <em>The Bitter Lesson</em></li>
+<li>FineWeb dataset and report</li>
+<li>Taori et al., <em>Alpaca</em></li>
+<li>Zhou et al., <em>LIMA: Less Is More for Alignment</em></li>
+<li>DeepSeek-AI, <em>DeepSeek-R1</em></li>
+<li>Kimi Team, <em>Kimi K2</em></li>
+<li>Ouyang et al., <em>InstructGPT</em></li>
+<li>Dubois et al., <em>AlpacaFarm &#x2F; AlpacaEval</em></li>
+<li>Dao et al., <em>FlashAttention</em></li>
+<li>Rajbhandari et al., <em>ZeRO</em></li>
+<li>Shoeybi et al., <em>Megatron-LM</em></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/c8d1d50a/">https://wick-7.github.io/posts/c8d1d50a/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/Pre-training/">Pre-training</a><a class="post-meta__tags" href="/tags/RLHF/">RLHF</a><a class="post-meta__tags" href="/tags/SFT/">SFT</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">语言模型内部运作 第一部分：从 Prompt 到下一个 Token2. Tokenization 与 Embedding 输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。 12今  天  天  气  真  好  ！540 123 123 729 938 432 0  Embedding Table 将 Token ID 转成向量： $$ E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i] $$ 其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。 初始 Token Embedding 的特点：  相同 Token 的向量完全相同； 语义相关的 Token 通常更接近； 多义词还没有结合上下文，因此会混合不同含义。  例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。  3. Layer by Layer To...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/83d3d343/" title="《生成式AI时代下的机器学习 第七讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">《生成式AI时代下的机器学习 第七讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">大型语言模型的学习历程：Pre-training、SFT 与 RLHF 以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT   1. 整体框架：大型语言模型如何一步步变成聊天助手 大型语言模型的训练分为三个阶段：    阶段 全称 主要目标 人类提供什么 形象比喻    Pre-training Pre-training 熟悉语言、吸收世界知识，学会基本的文字接龙 大量原始文本，人类直接标注较少 学龄前：看到什么学什么   SFT Supervised Fine-Tuning 学会按照指令回答，形成有用的助手行为 问题与标准答案 上学校：老师给标准答案   RLHF Reinforcement Learning with Human Feedback 根据人类偏好改善完整回答 对答案的偏好、排序或分数 出社会：别人只告诉你好不好   1.1 Alignment 的含义Alignment（对齐） 是让模型的行为符合人类的需求、偏好和价值观。 狭义文献中，Alignment 有时主要指 RLHF；但从课程的...</div></div></div></a><a class="pagination-related" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">训练神经网络的各种技巧1. 机器学习的三个步骤 训练模型可以分为三个步骤：  我要什么：定义目标与 Loss Function。 我有哪些选择：决定函数集合，也就是模型架构。 选择一个最好的：通过 Optimization 找到参数。  训练完成后，需要先在 Validation Set 上选择模型和超参数，最后才在 Test Set 上进行一次最终评估。 深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。  2. 先判断问题出在哪里 2.1 Optimization 问题现象：Training Loss 本身就降不下去。 例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。 此时应该考虑：  更好的 Optimizer； 调整 Learning Rate； Skip Connection； Normalization； 更好的 Initialization 或 Pre-training。  2.2 ...</div></div></div></a><a class="pagination-related" href="/posts/f1d5593e/" title="《生成式AI时代下的机器学习 第四讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第四讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 每一种架构都有存在的理由任何网络架构都带有特定的归纳偏置（inductive bias）。 CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合； Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。 同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？  本节结论： 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。  2. Transformer（这里主要关注 Self-Attention）出现的理由在 Self-Attention 出现之前主流使用 RNNs 做序列建模：输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。  注意： $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。  广义 RNN ...</div></div></div></a><a class="pagination-related" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a><a class="pagination-related" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">《加快语言模型生成速度》课堂笔记</div></div><div class="info-2"><div class="info-item-1">加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。 若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value： $$ q_i=W_Qx_i, \qquad k_i=W_Kx_i, \qquad v_i=W_Vx_i. $$ 对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为： $$ a_{t,i}=\frac{q_t^{\top}k_i}{...</div></div></div></a><a class="pagination-related" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-06</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">语言模型内部运作 第一部分：从 Prompt 到下一个 Token2. Tokenization 与 Embedding 输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。 12今  天  天  气  真  好  ！540 123 123 729 938 432 0  Embedding Table 将 Token ID 转成向量： $$ E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i] $$ 其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。 初始 Token Embedding 的特点：  相同 Token 的向量完全相同； 语义相关的 Token 通常更接近； 多义词还没有结合上下文，因此会混合不同含义。  例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。  3. Layer by Layer To...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">14</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Introduction-to-Training-LLMs-for-AI-Agents"><span class="toc-number">1.</span> <span class="toc-text">Introduction to Training LLMs for AI Agents</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%AF%BE%E7%A8%8B%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98%EF%BC%9A%E4%B8%80%E4%B8%AA-LLM-%E6%98%AF%E6%80%8E%E6%A0%B7%E8%A2%AB%E8%AE%AD%E7%BB%83%E5%87%BA%E6%9D%A5%E7%9A%84%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">1. 课程核心问题：一个 LLM 是怎样被训练出来的？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E4%B8%89%E4%B8%AA%E4%B8%BB%E8%A6%81%E8%AE%AD%E7%BB%83%E9%98%B6%E6%AE%B5"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 三个主要训练阶段</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E6%A8%A1%E5%9E%8B%E4%B8%93%E4%B8%9A%E5%8C%96%EF%BC%9APrompting-%E4%B8%8E-Finetuning"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 模型专业化：Prompting 与 Finetuning</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%AE%AD%E7%BB%83-LLM-%E6%97%B6%E7%9C%9F%E6%AD%A3%E9%87%8D%E8%A6%81%E7%9A%84%E4%BA%94%E4%B8%AA%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86"><span class="toc-number">1.2.</span> <span class="toc-text">2. 训练 LLM 时真正重要的五个组成部分</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-I%EF%BC%9APretraining-%E9%A2%84%E8%AE%AD%E7%BB%83"><span class="toc-number">2.</span> <span class="toc-text">Part I：Pretraining &#x2F; 预训练</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E9%A2%84%E8%AE%AD%E7%BB%83%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%9B%AE%E6%A0%87"><span class="toc-number">2.1.</span> <span class="toc-text">3. 预训练的基本目标</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E8%87%AA%E5%9B%9E%E5%BD%92%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B"><span class="toc-number">2.1.1.</span> <span class="toc-text">3.1 自回归语言模型的处理流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E4%BB%8E-N-gram-%E5%88%B0-Neural-Language-Model"><span class="toc-number">2.2.</span> <span class="toc-text">4. 从 N-gram 到 Neural Language Model</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-N-gram-%E7%9A%84%E7%BB%9F%E8%AE%A1%E6%80%9D%E6%83%B3"><span class="toc-number">2.2.1.</span> <span class="toc-text">4.1 N-gram 的统计思想</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E7%A5%9E%E7%BB%8F%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B"><span class="toc-number">2.2.2.</span> <span class="toc-text">4.2 神经语言模型</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Pretraining-Data%EF%BC%9A%E4%BB%8E%E4%BA%92%E8%81%94%E7%BD%91%E5%88%B0%E5%8F%AF%E8%AE%AD%E7%BB%83%E8%AF%AD%E6%96%99"><span class="toc-number">2.3.</span> <span class="toc-text">5. Pretraining Data：从互联网到可训练语料</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-A-Typical-Data-Processing-Pipeline"><span class="toc-number">2.3.1.</span> <span class="toc-text">5.1 A Typical Data Processing Pipeline</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-1-Web-Crawling"><span class="toc-number">2.3.1.1.</span> <span class="toc-text">Step 1: Web Crawling</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-2-Text-Extraction"><span class="toc-number">2.3.1.2.</span> <span class="toc-text">Step 2: Text Extraction</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-3-Content-Filtering"><span class="toc-number">2.3.1.3.</span> <span class="toc-text">Step 3: Content Filtering</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-4-Deduplication%EF%BC%88%E5%8E%BB%E9%87%8D%EF%BC%89"><span class="toc-number">2.3.1.4.</span> <span class="toc-text">Step 4: Deduplication（去重）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-5-Heuristic-Filtering%EF%BC%88%E5%90%AF%E5%8F%91%E5%BC%8F%E8%BF%87%E6%BB%A4%EF%BC%89"><span class="toc-number">2.3.1.5.</span> <span class="toc-text">Step 5: Heuristic Filtering（启发式过滤）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-6-Model-based-Filtering%EF%BC%88%E5%9F%BA%E4%BA%8E%E6%A8%A1%E5%9E%8B%E7%9A%84%E8%BF%87%E6%BB%A4%EF%BC%89"><span class="toc-number">2.3.1.6.</span> <span class="toc-text">Step 6: Model-based Filtering（基于模型的过滤）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Step-7-Data-Mixture%EF%BC%88%E6%95%B0%E6%8D%AE%E9%85%8D%E6%AF%94%EF%BC%89"><span class="toc-number">2.3.1.7.</span> <span class="toc-text">Step 7: Data Mixture（数据配比）</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-FineWeb-%E7%9A%84%E5%90%AF%E7%A4%BA%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%8F%98%E5%B0%91%EF%BC%8C%E6%A8%A1%E5%9E%8B%E5%8F%8D%E8%80%8C%E6%9B%B4%E5%A5%BD"><span class="toc-number">2.3.2.</span> <span class="toc-text">5.2 FineWeb 的启示：数据变少，模型反而更好</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Mid-training-%E4%B8%AD%E6%9C%9F%E8%AE%AD%E7%BB%83"><span class="toc-number">2.3.3.</span> <span class="toc-text">5.3 Mid-training &#x2F; 中期训练</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E6%95%B0%E6%8D%AE%E6%98%AF%E5%89%8D%E6%B2%BF%E6%A8%A1%E5%9E%8B%E6%9C%80%E4%BF%9D%E5%AF%86%E7%9A%84%E9%83%A8%E5%88%86%E4%B9%8B%E4%B8%80"><span class="toc-number">2.3.4.</span> <span class="toc-text">5.4 数据是前沿模型最保密的部分之一</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Scaling-Laws%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E2%80%9C%E5%A4%A7%E8%A7%84%E6%A8%A1%E2%80%9D%E5%A6%82%E6%AD%A4%E9%87%8D%E8%A6%81%EF%BC%9F"><span class="toc-number">2.4.</span> <span class="toc-text">6. Scaling Laws：为什么“大规模”如此重要？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-Compute%E3%80%81Model-Size-%E4%B8%8E-Data"><span class="toc-number">2.4.1.</span> <span class="toc-text">6.1 Compute、Model Size 与 Data</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E4%BB%8E%E2%80%9C%E5%A4%A7%E6%A8%A1%E5%9E%8B%E8%B0%83%E5%8F%82%E2%80%9D%E8%BD%AC%E5%90%91%E2%80%9C%E5%B0%8F%E6%A8%A1%E5%9E%8B%E9%A2%84%E6%B5%8B%E5%A4%A7%E6%A8%A1%E5%9E%8B%E2%80%9D"><span class="toc-number">2.4.2.</span> <span class="toc-text">6.2 从“大模型调参”转向“小模型预测大模型”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E6%AF%94%E8%BE%83%E6%9E%B6%E6%9E%84%E6%97%B6%E8%A6%81%E5%85%B3%E6%B3%A8-scaling-rate"><span class="toc-number">2.4.3.</span> <span class="toc-text">6.3 比较架构时要关注 scaling rate</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-Chinchilla-Scaling-Law"><span class="toc-number">2.4.4.</span> <span class="toc-text">6.4 Chinchilla Scaling Law</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-5-The-Bitter-Lesson"><span class="toc-number">2.4.5.</span> <span class="toc-text">6.5 The Bitter Lesson</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E8%AE%AD%E7%BB%83%E4%B8%80%E4%B8%AA-SOTA-%E6%A8%A1%E5%9E%8B%E9%9C%80%E8%A6%81%E5%A4%9A%E5%B0%91%E8%AE%A1%E7%AE%97%EF%BC%9F"><span class="toc-number">2.5.</span> <span class="toc-text">7. 训练一个 SOTA 模型需要多少计算？</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-II%EF%BC%9APost-training-%E5%90%8E%E8%AE%AD%E7%BB%83"><span class="toc-number">3.</span> <span class="toc-text">Part II：Post-training &#x2F; 后训练</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AA%E5%81%9A-Language-Modeling-%E4%B8%8D%E5%A4%9F%EF%BC%9F"><span class="toc-number">3.1.</span> <span class="toc-text">8. 为什么只做 Language Modeling 不够？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E4%B8%A4%E7%A7%8D%E5%90%8E%E8%AE%AD%E7%BB%83%E7%9B%AE%E6%A0%87"><span class="toc-number">3.2.</span> <span class="toc-text">9. 两种后训练目标</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-Classic-Post-training-Alignment-Instruction-Following"><span class="toc-number">3.2.1.</span> <span class="toc-text">9.1 Classic Post-training &#x2F; Alignment &#x2F; Instruction Following</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-Reasoning-Training"><span class="toc-number">3.2.2.</span> <span class="toc-text">9.2 Reasoning Training</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-Supervised-Fine-Tuning-SFT"><span class="toc-number">3.3.</span> <span class="toc-text">10. Supervised Fine-Tuning &#x2F; SFT</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E5%9F%BA%E6%9C%AC%E6%80%9D%E6%83%B3"><span class="toc-number">3.3.1.</span> <span class="toc-text">10.1 基本思想</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-SFT-%E6%95%B0%E6%8D%AE%E4%BB%8E%E5%93%AA%E9%87%8C%E6%9D%A5%EF%BC%9F"><span class="toc-number">3.3.2.</span> <span class="toc-text">10.2 SFT 数据从哪里来？</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%B9%E6%B3%95%E4%B8%80%EF%BC%9AHuman-Demonstrations"><span class="toc-number">3.3.2.1.</span> <span class="toc-text">方法一：Human Demonstrations</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%B9%E6%B3%95%E4%BA%8C%EF%BC%9ALLM-generated-Data"><span class="toc-number">3.3.2.2.</span> <span class="toc-text">方法二：LLM-generated Data</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%96%B9%E6%B3%95%E4%B8%89%EF%BC%9ARejection-Sampling-with-Verifiers"><span class="toc-number">3.3.2.3.</span> <span class="toc-text">方法三：Rejection Sampling with Verifiers</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-SFT-%E5%8F%AF%E4%BB%A5%E6%95%99%E4%BC%9A%E6%A8%A1%E5%9E%8B%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">3.3.3.</span> <span class="toc-text">10.3 SFT 可以教会模型什么？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-Agent-Tool-Use-%E7%9A%84-SFT-%E6%95%B0%E6%8D%AE%E7%AE%A1%E7%BA%BF"><span class="toc-number">3.3.4.</span> <span class="toc-text">10.4 Agent Tool Use 的 SFT 数据管线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-5-SFT-%E9%9C%80%E8%A6%81%E5%A4%9A%E5%B0%91%E6%95%B0%E6%8D%AE%EF%BC%9F"><span class="toc-number">3.3.5.</span> <span class="toc-text">10.5 SFT 需要多少数据？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-Reinforcement-Learning-%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0"><span class="toc-number">3.4.</span> <span class="toc-text">11. Reinforcement Learning &#x2F; 强化学习</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E4%B8%BA%E4%BB%80%E4%B9%88-SFT-%E4%B8%8D%E5%A4%9F%EF%BC%9F"><span class="toc-number">3.4.1.</span> <span class="toc-text">11.1 为什么 SFT 不够？</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-%E5%8F%97%E5%88%B0%E7%A4%BA%E8%8C%83%E8%80%85%E8%83%BD%E5%8A%9B%E4%B8%8A%E9%99%90%E7%BA%A6%E6%9D%9F"><span class="toc-number">3.4.1.1.</span> <span class="toc-text">1. 受到示范者能力上限约束</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-%E5%8F%AF%E8%83%BD%E5%AD%A6%E4%B9%A0-Hallucination"><span class="toc-number">3.4.1.2.</span> <span class="toc-text">2. 可能学习 Hallucination</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-%E7%90%86%E6%83%B3%E7%AD%94%E6%A1%88%E6%88%90%E6%9C%AC%E9%AB%98"><span class="toc-number">3.4.1.3.</span> <span class="toc-text">3. 理想答案成本高</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-Reward-%E4%BB%8E%E5%93%AA%E9%87%8C%E6%9D%A5%EF%BC%9F"><span class="toc-number">3.4.2.</span> <span class="toc-text">11.2 Reward 从哪里来？</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Rule-based-Reward"><span class="toc-number">3.4.2.1.</span> <span class="toc-text">Rule-based Reward</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Reward-Model"><span class="toc-number">3.4.2.2.</span> <span class="toc-text">Reward Model</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#LLM-as-a-Judge"><span class="toc-number">3.4.2.3.</span> <span class="toc-text">LLM as a Judge</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-Reward-Hacking"><span class="toc-number">3.4.3.</span> <span class="toc-text">11.3 Reward Hacking</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-DeepSeek-R1-%E7%9A%84%E6%B7%B7%E5%90%88-Reward"><span class="toc-number">3.4.4.</span> <span class="toc-text">11.4 DeepSeek-R1 的混合 Reward</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-GRPO-%E7%9A%84%E7%9B%B4%E8%A7%82%E7%90%86%E8%A7%A3"><span class="toc-number">3.5.</span> <span class="toc-text">12. GRPO 的直观理解</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-Agent-RL-%E7%9A%84%E6%9C%80%E5%A4%A7%E5%9B%B0%E9%9A%BE%E4%B9%8B%E4%B8%80%EF%BC%9AInfrastructure"><span class="toc-number">3.6.</span> <span class="toc-text">13. Agent RL 的最大困难之一：Infrastructure</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#13-1-Sampling-Bottleneck"><span class="toc-number">3.6.1.</span> <span class="toc-text">13.1 Sampling Bottleneck</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-2-Long-tail-Rollouts"><span class="toc-number">3.6.2.</span> <span class="toc-text">13.2 Long-tail Rollouts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-3-Environment-Latency"><span class="toc-number">3.6.3.</span> <span class="toc-text">13.3 Environment Latency</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#13-4-Train%E3%80%81Checkpoint-%E4%B8%8E-Inference-Engine"><span class="toc-number">3.6.4.</span> <span class="toc-text">13.4 Train、Checkpoint 与 Inference Engine</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-RLHF%EF%BC%9A%E4%BB%8E%E4%BA%BA%E7%B1%BB%E5%8F%8D%E9%A6%88%E4%B8%AD%E5%AD%A6%E4%B9%A0"><span class="toc-number">3.7.</span> <span class="toc-text">14. RLHF：从人类反馈中学习</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#14-1-%E5%9F%BA%E6%9C%AC%E6%80%9D%E6%83%B3"><span class="toc-number">3.7.1.</span> <span class="toc-text">14.1 基本思想</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-2-%E4%B8%BA%E4%BB%80%E4%B9%88-RLHF-%E8%83%BD%E8%B6%85%E8%BF%87-SFT%EF%BC%9F"><span class="toc-number">3.7.2.</span> <span class="toc-text">14.2 为什么 RLHF 能超过 SFT？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-3-Human-Preference-Data-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">3.7.3.</span> <span class="toc-text">14.3 Human Preference Data 的问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-4-%E4%BD%BF%E7%94%A8-LLM-%E4%BB%A3%E6%9B%BF-Human-Annotator"><span class="toc-number">3.7.4.</span> <span class="toc-text">14.4 使用 LLM 代替 Human Annotator</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-III%EF%BC%9AEvaluation-%E8%AF%84%E6%B5%8B"><span class="toc-number">4.</span> <span class="toc-text">Part III：Evaluation &#x2F; 评测</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#15-%E4%B8%BA%E4%BB%80%E4%B9%88-Evaluation-%E6%98%AF%E6%A0%B8%E5%BF%83%E8%83%BD%E5%8A%9B%EF%BC%9F"><span class="toc-number">4.1.</span> <span class="toc-text">15. 为什么 Evaluation 是核心能力？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Close-ended-Evaluation"><span class="toc-number">4.2.</span> <span class="toc-text">16. Close-ended Evaluation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#16-1-Close-ended-Evaluation-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">4.2.1.</span> <span class="toc-text">16.1 Close-ended Evaluation 的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Prompt-Sensitivity"><span class="toc-number">4.2.1.1.</span> <span class="toc-text">Prompt Sensitivity</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Train-test-Contamination"><span class="toc-number">4.2.1.2.</span> <span class="toc-text">Train-test Contamination</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-Open-ended-Evaluation"><span class="toc-number">4.3.</span> <span class="toc-text">17. Open-ended Evaluation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#17-1-Human-Evaluation%EF%BC%9AChatbot-Arena"><span class="toc-number">4.3.1.</span> <span class="toc-text">17.1 Human Evaluation：Chatbot Arena</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-2-LLM-as-a-Judge%EF%BC%9AAlpacaEval"><span class="toc-number">4.3.2.</span> <span class="toc-text">17.2 LLM-as-a-Judge：AlpacaEval</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-3-Spurious-Correlation"><span class="toc-number">4.3.3.</span> <span class="toc-text">17.3 Spurious Correlation</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-IV%EF%BC%9ASystems-and-Infrastructure"><span class="toc-number">5.</span> <span class="toc-text">Part IV：Systems and Infrastructure</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%AE%80%E5%8D%95%E5%9C%B0%E2%80%9C%E5%A4%9A%E4%B9%B0-GPU%E2%80%9D%EF%BC%9F"><span class="toc-number">5.1.</span> <span class="toc-text">18. 为什么不能简单地“多买 GPU”？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-GPU-%E7%9A%84%E4%B8%89%E4%B8%AA%E5%85%B3%E9%94%AE%E7%89%B9%E7%82%B9"><span class="toc-number">5.2.</span> <span class="toc-text">19. GPU 的三个关键特点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#19-1-Massively-Parallel"><span class="toc-number">5.2.1.</span> <span class="toc-text">19.1 Massively Parallel</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-2-Fast-Matrix-Multiplication"><span class="toc-number">5.2.2.</span> <span class="toc-text">19.2 Fast Matrix Multiplication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-3-Compute-%E6%AF%94-Memory-%E4%B8%8E-Communication-%E5%A2%9E%E9%95%BF%E6%9B%B4%E5%BF%AB"><span class="toc-number">5.2.3.</span> <span class="toc-text">19.3 Compute 比 Memory 与 Communication 增长更快</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-4-Memory-Hierarchy"><span class="toc-number">5.2.4.</span> <span class="toc-text">19.4 Memory Hierarchy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-5-Model-FLOP-Utilization-MFU"><span class="toc-number">5.2.5.</span> <span class="toc-text">19.5 Model FLOP Utilization &#x2F; MFU</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#20-Low-Precision-%E4%B8%8E-Automatic-Mixed-Precision"><span class="toc-number">5.3.</span> <span class="toc-text">20. Low Precision 与 Automatic Mixed Precision</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#21-Operator-Fusion%E3%80%81Tiling-%E4%B8%8E-FlashAttention"><span class="toc-number">5.4.</span> <span class="toc-text">21. Operator Fusion、Tiling 与 FlashAttention</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#21-1-Operator-Fusion"><span class="toc-number">5.4.1.</span> <span class="toc-text">21.1 Operator Fusion</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#21-2-Tiling"><span class="toc-number">5.4.2.</span> <span class="toc-text">21.2 Tiling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#21-3-FlashAttention"><span class="toc-number">5.4.3.</span> <span class="toc-text">21.3 FlashAttention</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#22-Parallelization-%E5%B9%B6%E8%A1%8C%E5%8C%96"><span class="toc-number">5.5.</span> <span class="toc-text">22. Parallelization &#x2F; 并行化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#22-1-%E8%AE%AD%E7%BB%83%E5%86%85%E5%AD%98%E4%BC%B0%E7%AE%97"><span class="toc-number">5.5.1.</span> <span class="toc-text">22.1 训练内存估算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-2-Naive-Data-Parallelism"><span class="toc-number">5.5.2.</span> <span class="toc-text">22.2 Naive Data Parallelism</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-3-ZeRO-Sharding"><span class="toc-number">5.5.3.</span> <span class="toc-text">22.3 ZeRO &#x2F; Sharding</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-4-Pipeline-Parallelism"><span class="toc-number">5.5.4.</span> <span class="toc-text">22.4 Pipeline Parallelism</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-5-Tensor-Parallelism"><span class="toc-number">5.5.5.</span> <span class="toc-text">22.5 Tensor Parallelism</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-6-Mixture-of-Experts-Architecture-Sparsity"><span class="toc-number">5.5.6.</span> <span class="toc-text">22.6 Mixture of Experts &#x2F; Architecture Sparsity</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#23-%E9%9D%A2%E5%90%91-Agent-%E7%9A%84%E5%AE%8C%E6%95%B4%E8%AE%AD%E7%BB%83%E8%B7%AF%E5%BE%84"><span class="toc-number">5.6.</span> <span class="toc-text">23. 面向 Agent 的完整训练路径</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Appendix-A%EF%BC%9APerplexity"><span class="toc-number">6.</span> <span class="toc-text">Appendix A：Perplexity</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Appendix-B%EF%BC%9ATokenizer-%E4%B8%8E-BPE"><span class="toc-number">7.</span> <span class="toc-text">Appendix B：Tokenizer 与 BPE</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Byte-Pair-Encoding-BPE"><span class="toc-number">7.1.</span> <span class="toc-text">Byte Pair Encoding &#x2F; BPE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8E%A8%E8%8D%90%E8%BF%9B%E4%B8%80%E6%AD%A5%E9%98%85%E8%AF%BB"><span class="toc-number">7.2.</span> <span class="toc-text">推荐进一步阅读</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/c8d1d50a/" title="《CS294-196 25fall LLM Agents Overview》课堂笔记">《CS294-196 25fall LLM Agents Overview》课堂笔记</a><time datetime="2026-07-10T15:26:02.000Z" title="发表于 2026-07-10 23:26:02">2026-07-10</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</a><time datetime="2026-07-06T05:18:54.000Z" title="发表于 2026-07-06 13:18:54">2026-07-06</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/83d3d343/" title="《生成式AI时代下的机器学习 第七讲》课堂笔记">《生成式AI时代下的机器学习 第七讲》课堂笔记</a><time datetime="2026-07-05T11:12:22.000Z" title="发表于 2026-07-05 19:12:22">2026-07-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</a><time datetime="2026-07-05T08:16:52.000Z" title="发表于 2026-07-05 16:16:52">2026-07-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记">《加快语言模型生成速度》课堂笔记</a><time datetime="2026-07-04T06:06:54.000Z" title="发表于 2026-07-04 14:06:54">2026-07-04</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>

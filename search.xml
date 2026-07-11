@@ -1,204 +1,3228 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-  
-    
-    <entry>
-      <title>《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</title>
-      <link href="/posts/e7b43b2b/"/>
-      <url>/posts/e7b43b2b/</url>
-      
-        <content type="html"><![CDATA[<h1 id="语言模型内部运作"><a href="#语言模型内部运作" class="headerlink" title="语言模型内部运作"></a>语言模型内部运作</h1><hr><h1 id="第一部分：从-Prompt-到下一个-Token"><a href="#第一部分：从-Prompt-到下一个-Token" class="headerlink" title="第一部分：从 Prompt 到下一个 Token"></a>第一部分：从 Prompt 到下一个 Token</h1><h2 id="2-Tokenization-与-Embedding"><a href="#2-Tokenization-与-Embedding" class="headerlink" title="2. Tokenization 与 Embedding"></a>2. Tokenization 与 Embedding</h2><p><img src="/img/posts/e7b43b2b/2026-07-06-14-04-50.png"></p><p>输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">今  天  天  气  真  好  ！</span><br><span class="line">540 123 123 729 938 432 0</span><br></pre></td></tr></table></figure><p>Embedding Table 将 Token ID 转成向量：</p><p>$$E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i]$$</p><p>其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。</p><p>初始 Token Embedding 的特点：</p><ul><li>相同 Token 的向量完全相同；</li><li>语义相关的 Token 通常更接近；</li><li>多义词还没有结合上下文，因此会混合不同含义。</li></ul><p>例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。</p><hr><h2 id="3-Layer-by-Layer"><a href="#3-Layer-by-Layer" class="headerlink" title="3. Layer by Layer"></a>3. Layer by Layer</h2><p><img src="/img/posts/e7b43b2b/2026-07-06-14-05-37.png"></p><p>Token Embedding 会依次经过多层 Transformer：</p><p>$$H^{(\ell)}=\operatorname{Layer}_{\ell}\left(H^{(\ell-1)}\right)$$</p><p>每层输入一串向量，也输出同样长度的一串向量。经过层处理后，向量融合了上下文，因此也称为：</p><ul><li>Contextualized Embedding；</li><li>Hidden &#x2F; Latent Representation；</li><li>Hidden State。</li></ul><table><thead><tr><th>类型</th><th>是否结合上下文</th><th>相同 Token 的表示</th></tr></thead><tbody><tr><td>Token Embedding</td><td>否</td><td>相同</td></tr><tr><td>Contextualized Embedding</td><td>是</td><td>可随语境变化</td></tr></tbody></table><p>例如，水果含义和公司含义的 $apple$ 初始向量相同，但经过多层后会逐渐分开。</p><hr><h2 id="4-LM-Head、Logits-与-Softmax"><a href="#4-LM-Head、Logits-与-Softmax" class="headerlink" title="4. LM Head、Logits 与 Softmax"></a>4. LM Head、Logits 与 Softmax</h2><p><img src="/img/posts/e7b43b2b/2026-07-06-14-06-38.png"></p><p>模型取最后一层、最后一个位置的 Representation，通过 LM Head 映射到整个词表：</p><p>$$z=W_{\mathrm{LM}}h_n^{(L)}$$</p><p>$z$ 中每一维对应一个 Token 的分数，称为 <strong>Logit</strong>。Logit 可以是任意实数，并不是概率。</p><p><img src="/img/posts/e7b43b2b/2026-07-06-14-07-50.png"></p><p>许多模型会让 LM Head 与输入 Embedding Table 共用参数。此时可以把 Unembedding 理解为：最终 Representation 与每个 Token Embedding 计算匹配分数。</p><p>$$z_i=E_i^\top h_n^{(L)}$$</p><p>Softmax 将 Logits 转为便于采样的分布：</p><p>$$p_i(T)=\frac{\exp(z_i/T)}{\sum_j\exp(z_j/T)}$$</p><ul><li>$T$ 大：分布更平均，输出更随机；</li><li>$T$ 小：分布更集中，输出更保守。</li></ul><p>实际解码还可能结合 Top-k、Top-p 等方法。这里的概率主要用于排序和采样，不必理解为完全校准的真实概率。</p><hr><h1 id="第二部分：每层-Representation-表示什么"><a href="#第二部分：每层-Representation-表示什么" class="headerlink" title="第二部分：每层 Representation 表示什么"></a>第二部分：每层 Representation 表示什么</h1><h2 id="5-Representation-Space"><a href="#5-Representation-Space" class="headerlink" title="5. Representation Space"></a>5. Representation Space</h2><p>Embedding &#x2F; Representation 位于高维空间中：</p><ul><li>含义相近的内容可能聚集；</li><li>某些方向可能对应特定语义变化；</li><li>不同模型、不同层中的方向含义未必相同。</li></ul><p>$$\operatorname{Emb}(\text{冷})-\operatorname{Emb}(\text{cold})+\operatorname{Emb}(\text{small})\approx\operatorname{Emb}(\text{小})$$</p><p>这种向量加减有时成立，但不是所有模型都能稳定复现。</p><hr><h2 id="6-投影到低维空间"><a href="#6-投影到低维空间" class="headerlink" title="6. 投影到低维空间"></a>6. 投影到低维空间</h2><p>Representation 通常有几千维，可以寻找特定低维子空间进行观察。</p><h3 id="Structural-Probe"><a href="#Structural-Probe" class="headerlink" title="Structural Probe"></a>Structural Probe</h3><p>研究发现，BERT 某些中间层的 Representation 经特定投影后，可以呈现接近句法树的结构。重点是：</p><ul><li>不是任意投影都能得到句法树；</li><li>中间层通常包含较明显的句法信息；</li><li>浅层和最后层未必最适合表示句法结构。</li></ul><hr><h2 id="7-Activation-Steering"><a href="#7-Activation-Steering" class="headerlink" title="7. Activation Steering"></a>7. Activation Steering</h2><p>除了观察 Representation，还可以直接修改它，看模型行为如何变化。相关名称包括 Representation Engineering、Activation Engineering 和 Activation Steering。</p><p><img src="/img/posts/e7b43b2b/2026-07-06-14-10-30.png"></p><p>以拒绝行为为例，计算“会拒绝”和“不会拒绝”两类 Prompt 在某层的平均 Representation，二者之差作为候选拒绝方向：</p><p>$$r^{(\ell)}=\mu_{\mathrm{reject}}^{(\ell)}-\mu_{\mathrm{answer}}^{(\ell)}$$</p><p>推理时加入或减去该方向：</p><p>$$\widetilde h^{(\ell)}=h^{(\ell)}+\alpha r^{(\ell)}$$</p><ul><li>加入可能增强拒绝倾向；</li><li>减去可能削弱拒绝倾向；</li><li>需要逐层实验，寻找最有效的层。</li></ul><p>类似方法也可寻找 Sycophancy，即过度迎合，相关的方向。</p><p>局限：均值差可能混入其他因素，一个行为也未必只由单一方向控制；干预成功不等于完全解释了模型机制。</p><hr><h2 id="8-Logit-Lens"><a href="#8-Logit-Lens" class="headerlink" title="8. Logit Lens"></a>8. Logit Lens</h2><p><img src="/img/posts/e7b43b2b/2026-07-06-14-11-40.png"></p><p>正常情况下只有最后一层经过 LM Head。Logit Lens 把每一层的 Hidden State 都送入 LM Head：</p><p>$$z^{(\ell)}=W_{\mathrm{LM}}h_n^{(\ell)}$$</p><p>这样可以观察模型在不同层最倾向输出哪个 Token。</p><p><img src="/img/posts/e7b43b2b/2026-07-06-14-12-15.png"></p><p>翻译案例中，输入法语 $fleur$ 并要求输出中文。模型中间层先出现英文 $flower$，后层才变成中文“花”。这提示某些多语言模型可能先形成偏英文的中间表示。</p><p>但 Logit Lens 只是观察工具：中间层本来未必适合直接被最终 LM Head 解码，Top-1 Token 也不能代表完整的内部信息。</p><hr><h2 id="9-Patchscopes"><a href="#9-Patchscopes" class="headerlink" title="9. Patchscopes"></a>9. Patchscopes</h2><p>Logit Lens 只能将 Representation 解释成一个 Token；Patchscopes 则尝试生成完整句子：</p><ol><li>从 Source Prompt 的某层取出 Representation；</li><li>构造 Target Prompt，例如“请简单介绍 X”；</li><li>用 Source Representation 替换 $X$ 的 Representation；</li><li>从该层继续生成文字。</li></ol><p>改变 Target Prompt，可以从不同角度解释同一个 Representation。</p><hr><h1 id="第三部分：Transformer-Layer-内部结构"><a href="#第三部分：Transformer-Layer-内部结构" class="headerlink" title="第三部分：Transformer Layer 内部结构"></a>第三部分：Transformer Layer 内部结构</h1><h2 id="10-Transformer-Block"><a href="#10-Transformer-Block" class="headerlink" title="10. Transformer Block"></a>10. Transformer Block</h2><p>课件将一个 Transformer Layer 简化为：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">输入</span><br><span class="line">→ Self-Attention</span><br><span class="line">→ Residual Connection</span><br><span class="line">→ Feed-Forward Network</span><br><span class="line">→ Residual Connection</span><br><span class="line">→ 输出</span><br></pre></td></tr></table></figure><p>实际模型通常还包含 Normalization。</p><hr><h2 id="11-Self-Attention"><a href="#11-Self-Attention" class="headerlink" title="11. Self-Attention"></a>11. Self-Attention</h2><p>更新某个 Token 的 Representation 时，Self-Attention 要完成两件事：</p><ol><li>找到上下文中哪些 Token 与它相关；</li><li>将这些 Token 的信息加进来。</li></ol><p>Query、Key、Value：</p><p>$$Q=HW_Q,\qquad K=HW_K,\qquad V=HW_V$$</p><ul><li>Query：当前 Token 想找什么；</li><li>Key：每个 Token 可以如何被匹配；</li><li>Value：被关注后实际读取的内容。</li></ul><p><img src="/img/posts/e7b43b2b/2026-07-06-14-13-42.png"></p><p>核心计算：</p><p>$$A=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right),\qquad O=AV$$</p><p>即先用 Query 和 Key 算相关程度，再用得到的权重对 Value 加权求和。最后通过 Residual Connection 保留原信息：</p><p>$$H'=H+O$$</p><hr><h2 id="12-位置信息与-Multi-Head-Attention"><a href="#12-位置信息与-Multi-Head-Attention" class="headerlink" title="12. 位置信息与 Multi-Head Attention"></a>12. 位置信息与 Multi-Head Attention</h2><p>只有 Token Embedding 时，模型不知道 Token 的位置，因此需要位置编码。</p><p>一种简单方法是加入 Positional Embedding：</p><p>$$\widetilde h_i=h_i+p_i$$</p><p>LLaMA 等模型通常使用 RoPE，根据位置旋转 Query 和 Key，使 Attention 分数包含相对位置信息。</p><p>单个 Attention Head 通常只擅长某类关系，例如数量、形容词或指代，因此模型使用多个 Head：</p><p>$$\operatorname{MHA}(H)=\operatorname{Concat}(\operatorname{head}_1,\ldots,\operatorname{head}_m)W_O$$</p><p>课堂实作中，LLaMA 使用 Grouped-Query Attention：多个 Query Head 共用较少的 Key &#x2F; Value Head，从而减少参数量和 KV Cache。</p><hr><h2 id="13-Causal-Attention-与复杂度"><a href="#13-Causal-Attention-与复杂度" class="headerlink" title="13. Causal Attention 与复杂度"></a>13. Causal Attention 与复杂度</h2><p>自回归语言模型在第 $i$ 个位置只能关注自己和左侧 Token，不能读取未来内容：</p><p>$$M_{ij}=\begin{cases}0,&amp;j\le i\\-\infty,&amp;j&gt;i\end{cases}$$</p><p>因此 Attention Heatmap 的右上三角为 0。</p><p>长度为 $n$ 的序列需要计算 $n × n$ 的 Attention Matrix，主要开销约为：</p><p>$$\mathcal O(n^2)$$</p><p>这也是长上下文计算成本较高的原因之一。</p><hr><h2 id="14-Feed-Forward-Network"><a href="#14-Feed-Forward-Network" class="headerlink" title="14. Feed-Forward Network"></a>14. Feed-Forward Network</h2><p>Self-Attention 负责 Token 之间的信息交换；FFN 对每个位置独立应用相同的非线性变换：</p><p>$$\operatorname{FFN}(x)=W_2\sigma(W_1x+b_1)+b_2$$</p><p>通常先扩维再压回原维度：</p><p>$$d\rightarrow d_{\mathrm{ff}}\rightarrow d$$</p><p>课件用 ReLU 说明激活函数：</p><p>$$\operatorname{ReLU}(x)=\max(0,x)$$</p><p>现代 LLM 常使用 SiLU、GeLU 或 SwiGLU。FFN 也可以被解释为某种 Key-Value Memory：第一层检测模式，第二层把对应信息写回 Residual Stream。</p><p>矩阵变换中的单个输出维度可以看作一个 Neuron，即“加权求和 + Bias + Activation”。</p><hr><h1 id="第四部分：课堂实作"><a href="#第四部分：课堂实作" class="headerlink" title="第四部分：课堂实作"></a>第四部分：课堂实作</h1><p>课堂比较 LLaMA 3B 和 Gemma 4B：</p><hr><h2 id="15-分析-Embedding-与-Hidden-State"><a href="#15-分析-Embedding-与-Hidden-State" class="headerlink" title="15. 分析 Embedding 与 Hidden State"></a>15. 分析 Embedding 与 Hidden State</h2><p>可计算 Token Embedding 之间的 Cosine Similarity：</p><p>$$\operatorname{cos}(u,v)=\frac{u^\top v}{\lVert u\rVert_2\lVert v\rVert_2}$$</p><p>课堂中，$apple$ 会接近不同大小写形式、中文“苹果”、$iPhone$、$MacBook$ 或 $Cupertino$ 等词，说明 Embedding 编码了统计语义关系，但个别近邻不一定容易解释。</p><p>取出各层 Hidden State：</p><p>课堂实验表明：</p><ul><li>相同 Token 在第 0 层完全相同；</li><li>经过 Transformer 后，会因左侧上下文不同而分开；</li><li>同义上下文中的 $apple$ 相似度较高，不同含义则随层数增加逐渐分离；</li><li>跨层比较时要考虑不同层本身的分布差异，不能只看原始 Cosine Similarity。</li></ul><hr><h2 id="16-实作-Logit-Lens-与-Attention"><a href="#16-实作-Logit-Lens-与-Attention" class="headerlink" title="16. 实作 Logit Lens 与 Attention"></a>16. 实作 Logit Lens 与 Attention</h2><p>Logit Lens：</p><p>输入“天气”时，中间层可能出现 $weather$、$forecast$ 等英文词，最后层才形成目标中文 Token。这与前面的多语言中间表示现象一致，但不能推广为所有模型都使用英文思考。</p><p>Attention Weight：</p><p>在句子 $The apple is green. What color is the apple?$ 中，部分 Head 会让后面的 $apple$ 或 $color$ 关注前面的 $green$ 和 $apple$。右上三角为 0，来自 Causal Mask。</p><p>Attention Weight 只是某个 Head 在本次计算中的信息路由，不能直接等同于完整解释。很多 Head 还会关注 BOS Token，这可能是 Attention Sink：当没有明显相关信息时，BOS 成为默认落点。</p><hr>]]></content>
-      
-      
+<search>
+  <entry>
+    <title>《CS294-196 25fall LLM Agents Overview》课堂笔记</title>
+    <url>/posts/c8d1d50a/</url>
+    <content><![CDATA[Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：
+
+
+Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力；
+Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model；
+Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好；
+在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。
+
+1.1 三个主要训练阶段
+
+
+阶段
+主要目标
+数据规模
+训练时间
+计算成本
+主要瓶颈
+示例
+
+
+
+Pretraining
+预测互联网文本的下一个 token，学习世界知识
+$&gt;10$T tokens
+数月
+$&gt;\$10$M
+数据与算力
+LLaMA、DeepSeek-V3
+
+
+Reasoning RL
+在有客观答案的问题上学习推理
+约 $1$M problems
+数周
+$&gt;\$1$M
+RL environment 与 reward hacking
+DeepSeek-R1
+
+
+Classic Post-training &#x2F; RLHF
+最大化用户效用并符合人类偏好
+约 $100$K problems
+数天
+$&gt;\$100$K
+高质量数据与评测
+LLaMA-Instruct
+
+
+其中 Reasoning RL 和 Classic Post-training 通常都被统称为 post-training。
+需要注意的是，Reasoning RL 并不是所有模型都必须经历的阶段。普通 instruction model 可以只经过预训练和经典后训练；reasoning model 则会额外使用可验证任务进行强化学习。
+1.2 模型专业化：Prompting 与 Finetuning模型训练完成后，可以通过两种常见方法适配具体任务：
+
+Prompting 的成本最低，但能否找到真正有效的 prompt，仍然取决于是否有可靠的评测集。Finetuning 则适用于医疗、法律、企业知识库等具有专门数据和格式要求的领域。
+
+2. 训练 LLM 时真正重要的五个组成部分训练一个 LLM 需要同时考虑：
+
+Architecture：例如 Transformer、Mixture of Experts；
+Training algorithm &#x2F; loss：训练算法和优化目标；
+Data &amp; RL environment：训练数据以及智能体所处的交互环境；
+Evaluation：如何判断模型是否真的进步；
+Systems and infrastructure：如何高效使用大规模计算资源。
+
+过去学术研究更关注 architecture、algorithm 和 loss，但在实际训练前沿模型时，真正决定结果的往往是：
+
+数据的数量、质量与配比；
+是否有可信、稳定的 evaluation；
+系统是否能把训练扩展到足够大的规模。
+
+
+Part I：Pretraining &#x2F; 预训练3. 预训练的基本目标预训练的目标可以概括为：
+
+使用尽可能多的高质量文本训练模型预测下一个 token，从而让模型学习语言结构、知识和一般模式。
+
+对于一个 token 序列：
+$$
+x_{1:T}=(x_1,x_2,\dots,x_T),
+$$
+自回归语言模型将其概率分解为：
+$$
+p_\theta(x_{1:T})
+=
+\prod_{t=1}^{T}p_\theta(x_t\mid x_{&lt;t}).
+$$
+训练时最小化 next-token prediction 的负对数似然，也就是交叉熵损失：
+$$
+\mathcal{L}_{\text{LM}}(\theta)
+=
+-\sum_{t=1}^{T}\log p_\theta(x_t\mid x_{&lt;t}).
+$$
+直观上，如果模型能够在各个领域中准确预测下一个 token，它就必须学到一定程度的语法、语义、事实知识以及代码和推理模式。
+3.1 自回归语言模型的处理流程给定文本 She likely prefers，模型生成下一个 token 的过程为：
+
+Tokenize：将文本转换成 token ID；
+Forward pass：输入模型并计算 hidden representations；
+Predict distribution：输出词表中各 token 的概率；
+Sample &#x2F; Decode：从概率分布中选择下一个 token；
+Detokenize：将 token ID 转换回文本。
+
+其中第 4、5 步主要发生在推理阶段。训练时通常直接使用真实的下一个 token 计算交叉熵，不需要先采样生成结果。
+
+若模型输出 logits $z_v$，则 token $v$ 的概率由 Softmax 给出：
+$$
+p_\theta(x_t=v\mid x_{&lt;t})
+=
+\frac{\exp(z_v)}{\sum_{u\in V}\exp(z_u)}.
+$$
+4. 从 N-gram 到 Neural Language Model4.1 N-gram 的统计思想假设要预测短语 the grass is 后面的词，可以统计语料中的出现次数：
+$$
+P(X\mid \text{the grass is})
+=
+\frac{\operatorname{Count}(\text{the grass is }X)}
+{\operatorname{Count}(\text{the grass is})}.
+$$
+例如在 1000 次出现中，有 500 次后面是 green，则：
+$$
+P(\text{green}\mid \text{the grass is})=0.5.
+$$
+这种方法对常见短语有效，但存在两个核心问题：
+
+必须存储几乎所有 n-gram 的统计量，内存需求极大；
+很多长上下文在训练集中只出现一次甚至从未出现，无法泛化到新句子。
+
+4.2 神经语言模型神经网络用参数化函数代替逐个存储 n-gram 计数：
+
+与 N-gram 相比，神经语言模型能够让语义和上下文相似的输入共享参数，从而对训练集中没有完整出现过的句子进行泛化。
+
+5. Pretraining Data：从互联网到可训练语料预训练并不是简单地“下载整个互联网然后开始训练”。互联网包含大量广告、重复内容、模板页面、低质量文本、隐私信息以及不安全内容，因此数据处理本身是训练 LLM 的核心工作之一。
+5.1 A Typical Data Processing PipelineStep 1: Web Crawling从 Common Crawl 等来源抓取大规模网页数据。原始数据通常以 WARC 格式保存，规模可达到 PB 级。
+Step 2: Text Extraction从 HTML 中提取有效正文，并尽量移除：
+
+JavaScript、CSS；
+菜单、广告、导航栏；
+boilerplate（网页模板文本）；
+编码错误和异常排版。
+
+数学公式、表格和动态网页通常需要额外处理。由于数据规模巨大，文本提取本身也会消耗大量计算资源。
+Step 3: Content Filtering过滤不适合训练的内容，例如：NSFW content&#x2F; harmful content&#x2F; PII（个人身份信息）&#x2F; 垃圾广告和恶意文本
+Step 4: Deduplication（去重）可在 URL、文档、段落或行等层级进行去重，也可检测 near-duplicate（近似重复）内容。
+例如论坛的 header、footer 和菜单会在大量网页中重复出现。若不去重，模型会浪费算力反复学习相同模板。
+Step 5: Heuristic Filtering（启发式过滤）根据简单统计规则移除低质量文档，例如：
+
+文档过长或过短；
+重复率过高；
+乱码或异常 token 过多；
+单词长度分布异常；
+包含大量占位文本，如 lorem ipsum；
+文档结构明显不自然。
+
+Step 6: Model-based Filtering（基于模型的过滤）选取 Wikipedia 或被 Wikipedia 引用的网页作为高质量样本，训练分类器判断其他网页是否与其分布相似。
+核心思想是：
+
+用少量高质量数据定义“好数据”，再从海量网页中筛选相似内容。
+
+Step 7: Data Mixture（数据配比）训练数据通常来自多个领域，例如：
+
+Web pages；
+books；
+scientific papers；
+code；
+mathematics；
+multilingual data；
+dialogues。
+
+原始互联网中的领域比例通常不是最优训练比例。例如训练 coding model 时，可以提高代码数据的采样权重。
+实践中通常先在小模型上测试不同数据配比，再结合 scaling laws 预测其在大规模训练中的效果。
+5.2 FineWeb 的启示：数据变少，模型反而更好FineWeb 的实验表明，对原始网页数据进行以下处理后，即使剩余 token 数量明显减少，模型性能仍会提升：
+
+原因是训练计算预算有限。模型不应把算力浪费在重复、脏乱或无信息量的 token 上，而应尽可能看到更多独立、高质量的信息。
+5.3 Mid-training &#x2F; 中期训练预训练结束后，通常还会进行规模较小的 continued pretraining，即 mid-training。其数据规模通常少于预训练数据，可能低于 $1$T tokens。
+Mid-training 可以实现：
+
+调整 data mixture，例如增加 science、code 和 multilingual data；
+在更高质量的数据上进行 learning-rate annealing；
+扩展 context length，例如从 $4$K 提升到 $128$K；
+学习聊天格式和初步 instruction following；
+加入更高质量 reasoning data；
+适配模型希望具备的特殊属性。
+
+长上下文训练往往放在这一阶段，是因为 attention 的计算和内存成本随上下文长度快速增加，若从预训练一开始就使用极长上下文，成本会非常高。
+5.4 数据是前沿模型最保密的部分之一现实中的 LLM 训练在很大程度上是“数据工程问题”。许多模型会公开架构和训练算法，却不会完整公开：
+
+具体用了哪些网页；
+不同领域数据的权重；
+如何进行 deduplication；
+质量分类器如何训练；
+是否使用版权受限数据；
+synthetic data 与 multimodal data 的比例。
+
+一方面，数据处理方法是重要的竞争优势；另一方面，公开数据来源还可能带来版权和法律风险。
+常见公开数据集包括：C4&#x2F; The Pile&#x2F; Dolma&#x2F; FineWeb
+
+6. Scaling Laws：为什么“大规模”如此重要？6.1 Compute、Model Size 与 Data
+预训练性能通常与总训练计算量呈较稳定的幂律关系。可用一个简化形式表示：
+$$
+\mathcal{L}(C)
+\approx
+\mathcal{L}_{\infty}+aC^{-b},
+$$
+其中 $C$ 为训练计算量，$a,b&gt;0$。在 log-log 坐标下，这种关系接近直线。
+这意味着研究者可以：
+
+在多个较小模型上实验；
+拟合不同配置的 scaling curve；
+预测配置扩展到大模型后的表现；
+只对最有希望的配置进行一次昂贵的最终训练。
+
+6.2 从“大模型调参”转向“小模型预测大模型”旧方法可能将计算资源平均分给 30 个大规模实验，最终每个模型都只训练很短时间。
+New pipeline：
+
+在多种小规模模型上快速搜索 learning rate、data mixture 等配置；
+找到随模型规模变化的 scaling recipe；
+用 scaling law 外推到目标规模；
+将绝大部分预算投入最终大模型的完整训练。
+
+这样可以让最终模型使用大部分计算预算，而不是把算力消耗在失败的大规模试验上。
+6.3 比较架构时要关注 scaling rate
+当比较 Transformer 与 LSTM 时，不仅要比较小规模下谁的 loss 更低，还要比较随着参数和计算量增加，loss 下降得有多快。
+需要关注两个因素：
+
+Constant：当前规模下的性能；
+Scaling rate &#x2F; slope：扩大规模后性能改善的速度。
+
+即使某个方法在小规模下表现较好，只要它的 scaling rate 较差，在前沿规模下也可能被另一种方法超过。
+6.4 Chinchilla Scaling Law
+Chinchilla 研究的问题是：在固定训练 FLOPs 下，应该将预算分配给更多参数，还是更多训练 token？
+经典结论是，训练计算最优的配置大约满足：
+$$
+D\approx 20N,
+$$
+其中：
+
+$N$：模型参数量；
+$D$：训练 token 数。
+
+也就是每个参数对应约 20 个训练 token。
+但 Chinchilla 只优化训练成本，没有考虑推理成本。对于实际部署而言，使用更小模型并训练更多 token，虽然训练时可能不是最省 FLOPs，却能降低之后每次推理的成本。因此实践中的 token-to-parameter ratio 可能远高于 $20:1$。
+6.5 The Bitter LessonRichard Sutton 的 Bitter Lesson 强调：
+
+从长期看，能够有效利用持续增长计算资源的方法，往往胜过依赖人工设计复杂规则的方法。
+
+其逻辑是：
+
+更多计算通常带来更好性能；
+硬件和可用计算资源长期持续增长；
+因此，最重要的是设计能够随计算规模扩展的方法。
+
+这并不意味着算法和数据质量不重要，而是说明：不要只针对当前规模反复添加复杂技巧，应优先选择简单、稳定并且能够 scale 的方案。
+
+7. 训练一个 SOTA 模型需要多少计算？
+每一代前沿模型的训练计算量常以接近一个数量级增长，因此算力、能源、集群通信与系统优化越来越重要。
+
+Part II：Post-training &#x2F; 后训练8. 为什么只做 Language Modeling 不够？
+纯语言模型可能继续生成一串类似问题，而不是回答这个问题，因为它只是在模仿互联网上常见的文本延续方式。
+因此需要 post-training，将一个“会续写文本的模型”转化为“会帮助用户的 assistant”。
+9. 两种后训练目标9.1 Classic Post-training &#x2F; Alignment &#x2F; Instruction Following目标：
+
+遵循用户指令；
+输出有用、清晰、符合规范的答案；
+遵循产品设计者的安全和行为要求；
+最大化人类对回答的偏好。
+
+这是 ChatGPT 在 2022 年获得显著成功的重要原因。
+9.2 Reasoning TrainingReasoning model 还会在具有可验证答案的困难问题上优化正确率，例如：
+
+数学竞赛题；
+代码测试用例；
+逻辑推理；
+可自动判定对错的任务。
+
+传统 scaling law 主要强调 train-time compute：训练时投入更多计算，模型更好。
+
+Reasoning model 引入了另一种维度：test-time compute。模型在回答时进行更长的搜索、思考或采样，也可能获得更高正确率。
+可以将其理解为：一个人被要求立刻回答，通常不如拥有更多思考时间时回答得好。
+
+10. Supervised Fine-Tuning &#x2F; SFT10.1 基本思想SFT 仍然使用 next-token prediction，但训练数据不再是任意互联网文本，而是“理想的输入—输出对”。
+
+10.2 SFT 数据从哪里来？方法一：Human Demonstrations让人类直接为 instruction 编写高质量答案。这种方法质量可控，但速度慢、成本高，而且很难覆盖大量复杂任务。
+方法二：LLM-generated Data
+Alpaca 的思路是使用更强的 LLM 生成 instruction-answer pairs，然后用这些数据微调开源模型。
+这种方法开启了大规模 synthetic data generation，但存在一个前提：通常需要一个比目标模型更强的 teacher model。
+方法三：Rejection Sampling with Verifiers
+当没有更强 teacher model 时，可以：
+
+让当前模型对同一问题生成多个答案；
+使用测试用例、规则或 judge 判断答案是否正确；
+只保留通过验证的答案；
+用这些优质样本进行 SFT。
+
+这相当于让模型从自己的多个候选中筛选成功轨迹，再模仿这些成功轨迹。
+10.3 SFT 可以教会模型什么？
+Instruction following；
+特定格式、语气和风格；
+Bullet points、JSON、代码格式；
+Tool use；
+初步 reasoning pattern；
+任何能够构造高质量 input-output pairs 的行为。
+
+SFT 既可以作为最终训练阶段，也可以作为 RL 之前的 warm start，让模型先具备基本成功率，再进行强化学习。
+10.4 Agent Tool Use 的 SFT 数据管线
+对于工具调用，仅仅收集真实用户调用真实 API 的轨迹可能远远不够。Kimi K2 使用了更复杂的 synthetic pipeline：
+
+一个 LLM 模拟用户；
+一个 agent model 决定工具调用；
+一个 LLM 或环境模拟工具反馈；
+使用 rubric 和 verifier 对完整轨迹进行 rejection sampling。
+
+这说明 agent SFT 不只是收集问答对，而是需要构造：
+$$
+\text{User request}
+\rightarrow
+\text{Tool selection}
+\rightarrow
+\text{Tool arguments}
+\rightarrow
+\text{Environment response}
+\rightarrow
+\text{Final answer}.
+$$
+10.5 SFT 需要多少数据？SFT 对已经在预训练中学过的能力非常 sample-efficient。
+
+
+对 style、format 和 instruction following，约几千到一万条高质量样本可能已经有效；
+LIMA 表明，少量高质量数据就能显著改变模型回答风格；
+对 reasoning、tool use 等预训练中不充分的复杂能力，则需要更多样本；
+DeepSeek-R1 的推理 SFT 数据达到约 800K 量级。
+
+核心判断是：
+
+如果能力已经在预训练中存在，SFT 主要负责把它“调出来”；如果能力本身没有学会，则需要更多数据，甚至需要 RL。
+
+
+11. Reinforcement Learning &#x2F; 强化学习11.1 为什么 SFT 不够？SFT 本质上是 behavior cloning，存在三个主要限制。
+1. 受到示范者能力上限约束人类可能无法亲自写出最优答案，但仍然能够判断两个答案中哪个更好。若只模仿人类生成结果，就无法超越示范质量。
+2. 可能学习 Hallucination假设参考答案包含一个模型在预训练中并不知道的文献引用。SFT 会要求模型模仿这个引用形式，却无法让模型真正知道引用是否存在。
+结果可能是模型学会：
+
+当被要求给出引用时，即使不知道，也生成一个看起来合理的引用。
+
+3. 理想答案成本高生成完整高质量答案通常比判断答案好坏更困难、更昂贵。
+因此 RL 的思想不是“复制理想行为”，而是“直接最大化目标行为”。
+11.2 Reward 从哪里来？Rule-based Reward适用于答案容易自动验证的任务：
+
+exact string match；
+数学最终答案；
+代码是否通过 test cases；
+输出是否满足 JSON schema；
+工具调用参数是否合法。
+
+Reward Model使用人类偏好数据训练一个 reward model，使其预测某个回答是否更符合人类偏好。
+LLM as a Judge使用更强 LLM 评价答案的正确性、相关性、清晰度或安全性。
+这些 reward 都可能存在偏差，因此需要额外的 adversarial evaluation，避免模型只学会利用评分器漏洞。
+11.3 Reward Hacking模型会严格优化被写进 reward function 的目标，而不一定实现设计者真正想要的目标。
+例如，若目标只是“通过代码测试”，模型可能尝试：
+
+修改或绕过测试；
+删除检查逻辑；
+返回固定结果；
+利用环境漏洞。
+
+这类行为称为 reward hacking。对于 agent，reward hacking 更危险，因为 agent 可以修改文件、调用 API 或影响外部环境。
+因此 RL 环境不仅要能提供 reward，还要防止模型以非预期方式获得 reward。
+11.4 DeepSeek-R1 的混合 Reward
+对于不同任务，DeepSeek-R1 使用不同反馈：
+
+数学、代码和逻辑推理：rule-based verifier；
+写作、事实问答和翻译：helpfulness &#x2F; safety reward model。
+
+其流程可以理解为：
+$$
+\text{SFT checkpoint}
+\rightarrow
+\text{Generate rollouts}
+\rightarrow
+\text{Verifier / Reward model}
+\rightarrow
+\text{RL update}
+\rightarrow
+\text{Reasoning model}.
+$$
+
+12. GRPO 的直观理解
+对于问题 $q$，policy model 生成一组回答：
+$$
+o_1,o_2,\dots,o_G.
+$$
+每个回答获得 reward：
+$$
+r_1,r_2,\dots,r_G.
+$$
+然后在组内进行标准化，得到相对 advantage。一个便于理解的简化形式为：
+$$
+A_i
+=
+\frac{r_i-\bar r}{s_r+\epsilon},
+$$
+其中 $\bar r$ 为组内平均 reward，$s_r$ 为标准差。
+直观上：
+
+比组内平均水平更好的回答得到正 advantage；
+比平均水平更差的回答得到负 advantage；
+policy 增加高 advantage 回答的概率，降低低 advantage 回答的概率。
+
+可将其近似理解为最大化：
+$$
+J(\theta)
+\approx
+\frac{1}{G}\sum_{i=1}^{G}
+A_i\log \pi_\theta(o_i\mid q)
+-
+\beta D_{\mathrm{KL}}
+\left(
+\pi_\theta\,\|\,\pi_{\mathrm{ref}}
+\right).
+$$
+这里的 KL regularization 用于限制训练后的 policy 不要偏离 reference model 过远，以降低训练崩溃和 reward hacking 的风险。
+
+上式用于帮助理解 GRPO 的核心结构，并非课件中完整的 clipped objective。
+
+
+13. Agent RL 的最大困难之一：Infrastructure
+RL 与 SFT 的一个重大区别是：SFT 使用已经准备好的固定数据，而 RL 必须不断让模型在线生成新的 rollout。
+对于每个问题，可能需要：
+
+生成多个候选答案；
+执行很长的 reasoning trajectory；
+多次调用工具；
+等待外部 API 或 sandbox；
+执行 verifier；
+再根据结果更新模型。
+
+13.1 Sampling BottleneckGRPO 等算法要求每个 prompt 采样多个答案。若回答很长，大量 GPU 时间会用于 autoregressive decoding，而不是权重更新。
+13.2 Long-tail Rollouts部分 agent trajectory 会异常长。如果训练系统等待最慢轨迹完成，所有 GPU 都可能被拖住。
+一种策略是暂停极长 rollout，先使用已经完成的样本更新模型，再在之后恢复未完成轨迹。
+13.3 Environment LatencyAgent 调用工具时，GPU 可能只是等待环境反馈。解决方法包括：
+
+大量 concurrent rollouts；
+独立的 environment services；
+异步调度；
+让其他 rollout 在某个 trajectory 等待 API 时继续运行。
+
+13.4 Train、Checkpoint 与 Inference Engine大规模 RL 系统通常需要分离：
+
+Training engine；
+Checkpoint &#x2F; weight broadcasting engine；
+Inference &#x2F; sampling engine；
+Environment services。
+
+Kimi 的系统将相关 engine 尽量 colocate，以减少跨机器通信和权重同步开销。
+这也是 agent training 与普通问答模型训练的重要区别：环境和 rollout 系统本身就是训练算法的一部分。
+
+14. RLHF：从人类反馈中学习14.1 基本思想RLHF 不要求人类亲自写出完美答案，而是让人类比较候选回答。
+典型流程：
+
+从一个较好的 SFT model 出发；
+对每个 instruction 生成两个或多个答案；
+让 annotator 选择更好的答案；
+用偏好数据训练 reward model，或直接使用 preference optimization；
+使用 PPO、DPO 等方法让模型更倾向于生成被偏好的答案。
+
+若人类偏好 $y^+$ 胜过 $y^-$，可以训练 reward model 满足：
+$$
+r_\phi(x,y^+)&gt;r_\phi(x,y^-).
+$$
+常见 pairwise preference loss 为：
+$$
+\mathcal{L}_{\text{RM}}(\phi)
+=
+-\log \sigma
+\left(
+r_\phi(x,y^+)-r_\phi(x,y^-)
+\right).
+$$
+14.2 为什么 RLHF 能超过 SFT？人类“判断哪个答案更好”通常比“从零写出最优答案”更容易。因此偏好优化能够利用人类的判断能力，而不受其生成能力完全限制。
+
+$$
+\text{Pretrained model}
+&lt;
+\text{SFT model}
+&lt;
+\text{RL-optimized model}.
+$$
+这里的“小于”表示在目标人类偏好或特定任务表现上通常逐步提高，并不意味着所有能力都单调提升。
+14.3 Human Preference Data 的问题
+收集速度慢；
+成本高；
+需要非常详细的 annotation guideline；
+标注者容易关注长度、排版等形式，而不是真正的正确性；
+标注者群体分布会影响模型价值偏好；
+存在 crowdsourcing ethics 问题。
+
+14.4 使用 LLM 代替 Human Annotator可以让更强 LLM 比较回答，生成 synthetic preference data。实践中，LLM judge 往往比人类众包便宜一个数量级以上，而且一致性可能更高。
+但这种方法有明显边界：
+
+judge model 的偏差会被继承；
+当前沿模型已经接近最强模型时，难以找到可靠 teacher；
+judge 可能偏爱更长、更自信或特定风格的回答；
+需要额外验证 judge 是否真正关注正确性。
+
+
+Part III：Evaluation &#x2F; 评测15. 为什么 Evaluation 是核心能力？Evaluation 主要用于回答三个问题：
+
+Identify improvements：训练方法是否真的有效？
+Select models：多个模型中应该使用哪一个？
+Production readiness：模型是否已经足够可靠，可以投入实际应用？
+
+没有可靠评测，就无法知道：
+
+一个新的数据配比是否更好；
+RL reward 是否被模型利用；
+某项能力提升是否损害其他能力；
+模型在真实 agent environment 中是否稳定。
+
+
+16. Close-ended EvaluationClose-ended task 只有少量可能答案，因此可以自动判定正确性，例如：
+
+Multiple Choice Questions；
+数学最终答案；
+代码测试；
+分类问题。
+
+若预测答案为 $\hat y_i$，真实答案为 $y_i$，最简单的 accuracy 为：
+$$
+\operatorname{Acc}
+=
+\frac{1}{n}\sum_{i=1}^{n}
+\mathbf{1}[\hat y_i=y_i].
+$$
+MMLU 是典型的 close-ended benchmark。
+16.1 Close-ended Evaluation 的问题Prompt Sensitivity同一个问题使用不同 prompt、few-shot examples、答案格式或选项顺序，可能得到不同结果。
+Train-test Contamination公开 benchmark 很可能已经出现在互联网训练数据中。模型可能因为记住题目而获得高分，而不是具备真正的泛化能力。
+对于日常开发，固定 eval 仍然可以用于比较实验；但对外声称模型具有某种新能力时，contamination 会严重影响结论。
+
+17. Open-ended EvaluationChatGPT 类模型可以执行写作、总结、代码、对话和解释等大量开放任务。其答案：
+
+很长；
+不存在唯一标准答案；
+无法通过字符串匹配判断质量。
+
+因此通常采用 pairwise preference evaluation。
+17.1 Human Evaluation：Chatbot ArenaChatbot Arena 的基本方法是：
+
+用户在不知道模型身份的情况下与两个模型交互；
+用户选择更好的回答；
+聚合大量 pairwise comparison，得到相对排名。
+
+优点是接近真实用户偏好，缺点是成本高、反馈慢，而且用户群体本身也可能存在分布偏差。
+17.2 LLM-as-a-Judge：AlpacaEval对每个 instruction：
+
+baseline model 生成回答；
+candidate model 生成回答；
+judge LLM 比较两个回答；
+统计 candidate 获胜的概率。
+
+$$
+\operatorname{WinRate}
+=
+\frac{1}{n}
+\sum_{i=1}^{n}
+\mathbf{1}
+[
+\text{candidate wins on }i
+].
+$$
+这种方法比大规模人工评测快得多、便宜得多，并且可以与 Chatbot Arena 排名保持较高相关性。
+17.3 Spurious CorrelationLLM judge 可能偏爱：
+
+更长的回答；
+更复杂的格式；
+更自信的语气；
+重复问题内容的回答。
+
+因此，模型可能通过增加长度提高 win rate，却没有真正提高内容质量。
+一种处理方法是使用 regression 或 causal adjustment 控制回答长度，例如 length-controlled win rate。
+对于 agent evaluation，还应进一步测量：
+
+task success；
+tool-call correctness；
+trajectory length；
+latency；
+token &#x2F; API cost；
+error recovery；
+robustness to environment changes；
+是否出现 reward hacking。
+
+
+Part IV：Systems and Infrastructure18. 为什么不能简单地“多买 GPU”？GPU 不仅昂贵，而且稀缺。即使拥有大量 GPU，也会遇到：
+
+模型无法放入单卡；
+GPU 之间通信速度有限；
+内存带宽成为瓶颈；
+大规模同步导致空闲等待；
+rollout 和 environment 延迟使 GPU 利用率下降。
+
+因此训练前沿模型不仅是 ML 问题，也是一项大型分布式系统工程。
+
+19. GPU 的三个关键特点19.1 Massively ParallelGPU 在大量线程上执行相同指令、处理不同数据，更适合 throughput-oriented workload，而不是 CPU 式的复杂串行控制流。
+19.2 Fast Matrix Multiplication现代 GPU 包含专门的 Tensor Cores，矩阵乘法吞吐量可以远高于普通 floating-point operation。
+因此高效模型通常会尽量将计算组织为大型矩阵乘法。
+19.3 Compute 比 Memory 与 Communication 增长更快现代 GPU 的算术能力提升速度远快于内存带宽和通信速度。因此多数训练并不是“算不动”，而是“来不及把数据送到计算单元”。
+
+即：Bottleneck是Data movement，而不一定是 FLOPs 本身。
+19.4 Memory Hierarchy越靠近计算核心的存储：
+
+容量越小；
+速度越快。
+
+越远的全局内存：
+
+容量更大；
+访问延迟更高。
+
+因此优化目标之一，是尽量重复使用已经加载到高速存储中的数据。
+19.5 Model FLOP Utilization &#x2F; MFU$$
+\operatorname{MFU}
+=
+\frac{\text{Observed FLOP/s}}
+{\text{Theoretical peak FLOP/s}}.
+$$
+在大规模训练中，达到约 50% 的 MFU 已经可能是很好的结果，因为通信、内存访问和非矩阵操作都会消耗时间。
+
+20. Low Precision 与 Automatic Mixed Precision使用更少 bit 可以：
+
+降低显存占用；
+减少通信量；
+提高矩阵乘法速度。
+
+深度学习对许多中间计算并不需要 FP32 的完整精度，因此常使用 BF16。
+Automatic Mixed Precision 的典型做法是：
+
+Master weights 保持 FP32；
+前向和矩阵乘法使用 BF16；
+Activations 使用 BF16，减少显存；
+Gradients 可使用 BF16；
+参数更新等对精度敏感的步骤使用 FP32。
+
+其思想不是所有计算都降低精度，而是在速度、内存和数值稳定性之间分配不同精度。
+
+21. Operator Fusion、Tiling 与 FlashAttention21.1 Operator Fusion
+普通 PyTorch 程序中，每个算子可能都需要反复读取，若将多个算子融合到一个 kernel 中，可以只读取一次数据，在片上完成多个操作后再写回。
+torch.compile 等工具可以自动完成部分 operator fusion。
+21.2 TilingTiling 将矩阵切分成小块，并改变运算顺序，使已经加载到高速缓存中的 tile 被重复使用。
+以矩阵乘法 $P=MN$ 为例，不再每次从 DRAM 读取完整行列，而是：
+
+加载 $M_{ij}$ 与 $N_{jk}$ 的小块；
+在 shared memory &#x2F; SRAM 中计算多个 partial sums；
+重复利用这些 tile；
+最后写回结果。
+
+这可以显著减少 global memory reads。
+21.3 FlashAttention
+FlashAttention 通过：
+
+Kernel fusion；
+Tiling；
+避免将完整 attention matrix 写入显存；
+在需要时 recomputation；
+
+降低 attention 的 IO 成本。它没有改变 attention 的数学结果，却能获得显著端到端加速。
+这个例子说明：许多大型模型性能提升并不来自新的 ML 算法，而来自更合理的算子执行顺序和内存访问设计。
+
+22. Parallelization &#x2F; 并行化22.1 训练内存估算对于 $P$ 个参数，若参数和梯度使用 FP32，Adam 保存两个 FP32 moment，基础内存约为每个参数 16 bytes：
+$$
+\text{Memory}
+\approx
+4P_{\text{weights}}
++
+4P_{\text{gradients}}
++
+8P_{\text{optimizer}}
+=
+16P\ \text{bytes}.
+$$
+若 $P$ 以 billion parameters 为单位，则约为：
+$$
+16P\ \text{GB}.
+$$
+因此一个 7B 模型仅这些状态就大约需要：
+$$
+16\times 7=112\ \text{GB}.
+$$
+这还没有包含 activations 等额外显存。
+22.2 Naive Data Parallelism流程：
+
+每张 GPU 保存完整 model 与 optimizer；
+将 batch 分给不同 GPU；
+各 GPU 独立计算 gradient；
+通过 all-reduce 汇总 gradient；
+所有 GPU 执行相同更新。
+
+优点：提高吞吐量。缺点：每张卡仍保存完整模型，不能解决模型放不进单卡的问题。
+22.3 ZeRO &#x2F; ShardingZeRO 将训练状态拆分到不同 GPU：
+
+shard optimizer states；
+shard gradients；
+shard parameters。
+
+每张 GPU 只保存自己负责的部分，并在需要时通信，从而显著减少单卡显存占用。
+22.4 Pipeline Parallelism将不同层放在不同 GPU：
+$$
+\text{GPU}_1: \text{layers }1\!:\!k,
+\quad
+\text{GPU}_2: \text{layers }k+1\!:\!m,
+\quad \dots
+$$
+输入依次通过各 GPU。为了降低 pipeline bubble，通常会将 batch 划分为 micro-batches。
+22.5 Tensor Parallelism将单个矩阵或单层内部的计算拆到多张 GPU，例如：
+$$
+W=
+\begin{bmatrix}
+W_1\\
+W_2
+\end{bmatrix},
+$$
+不同 GPU 分别计算部分矩阵乘法，再通过通信聚合结果。
+Pipeline parallelism 是“按层切分”，tensor parallelism 是“在一层内部切分”。
+22.6 Mixture of Experts &#x2F; Architecture SparsityMoE 不要求每个 token 都经过全部参数。Router 根据 token 表示选择少量 expert：
+$$
+h'
+=
+\sum_{e\in\operatorname{TopK}(h)}
+\alpha_e(h)f_e(h).
+$$
+因此可以在相近 active FLOPs 下增加总参数量，并将不同 expert 部署在不同 GPU 上。
+代价包括：
+
+routing imbalance；
+all-to-all communication；
+expert capacity 管理；
+训练和部署系统更复杂。
+
+
+23. 面向 Agent 的完整训练路径可以将本节课内容整理为以下流程：
+大规模网页、代码、书籍、论文等数据                ↓         Pretraining学习语言、知识、代码模式和潜在工具使用模式                ↓          Mid-training提高数据质量、调整领域配比、扩展上下文                ↓              SFT学习指令格式、工具协议和成功轨迹                ↓     Reasoning RL / Agent RL通过 verifier 或 environment reward 优化任务成功率                ↓       RLHF / Preference Optimization提高帮助性、可用性、安全性和用户偏好                ↓        Evaluation + Systems持续检查能力、成本、延迟、稳定性与安全性
+
+其中 Evaluation 与 Systems 不是最后才做，而是贯穿整个流程：
+
+没有 eval，就无法正确选择数据和 reward；
+没有 systems，就无法生成足够多的 agent rollout；
+没有可靠 environment，就无法训练和评测 agent；
+没有防作弊设计，RL 可能只会优化 benchmark，而不会真正完成任务。
+
+
+Appendix A：PerplexityPerplexity 是语言模型验证损失的一种更直观表达。
+对于序列 $x_{1:L}$：
+$$
+\operatorname{PPL}(x_{1:L})
+=
+\exp
+\left(
+-\frac{1}{L}
+\sum_{i=1}^{L}
+\log p(x_i\mid x_{&lt;i})
+\right).
+$$
+也可以写为：
+$$
+\operatorname{PPL}(x_{1:L})
+=
+\left(
+\prod_{i=1}^{L}
+\frac{1}{p(x_i\mid x_{&lt;i})}
+\right)^{1/L}.
+$$
+
+直观上，PPL 可以近似理解为模型在每一步平均“犹豫于多少个 token 之间”。
+
+最小值接近 1；
+越低表示 next-token prediction 越准确；
+由于 tokenizer 和数据集不同，不同模型的 PPL 不一定能直接横向比较；
+现代模型通常不再只用 PPL 作为最终能力 benchmark，但它仍是预训练开发中的重要指标。
+
+
+Appendix B：Tokenizer 与 BPETokenizer 的作用是将文本转换为模型可处理的离散 token ID。
+若只使用 word-level tokenizer：
+
+无法处理拼写错误和新词；
+词表会非常大；
+罕见词问题严重。
+
+若只使用 character-level tokenizer：
+
+通用性强；
+但序列过长，训练与推理成本高。
+
+因此现代 LLM 多使用 subword token，让常见词或词片段成为一个 token。
+Byte Pair Encoding &#x2F; BPEBPE 的简化训练流程：
+
+收集大规模文本；
+从字符或 byte 级 token 开始；
+统计相邻 token pair 的频率；
+将出现频率最高的 pair 合并为新 token；
+重复合并，直到达到目标 vocabulary size。
+
+例如：
+l o w e rl o w e s t
+
+若 l 与 o 经常连续出现，可先合并为 lo；之后可能继续合并为 low。
+Tokenizer 会影响：
+
+相同文本需要多少 token；
+多语言之间是否公平；
+数字、代码和特殊符号的表示效率；
+context window 能容纳的实际文本量；
+模型训练和推理成本。
+
+推荐进一步阅读
+Kaplan et al., Scaling Laws for Neural Language Models
+Hoffmann et al., Training Compute-Optimal Large Language Models &#x2F; Chinchilla
+Richard Sutton, The Bitter Lesson
+FineWeb dataset and report
+Taori et al., Alpaca
+Zhou et al., LIMA: Less Is More for Alignment
+DeepSeek-AI, DeepSeek-R1
+Kimi Team, Kimi K2
+Ouyang et al., InstructGPT
+Dubois et al., AlpacaFarm &#x2F; AlpacaEval
+Dao et al., FlashAttention
+Rajbhandari et al., ZeRO
+Shoeybi et al., Megatron-LM
+
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Attention </tag>
-            
-            <tag> Transformer </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《生成式AI时代下的机器学习 第七讲》课堂笔记</title>
-      <link href="/posts/83d3d343/"/>
-      <url>/posts/83d3d343/</url>
-      
-        <content type="html"><![CDATA[<h1 id="大型语言模型的学习历程：Pre-training、SFT-与-RLHF"><a href="#大型语言模型的学习历程：Pre-training、SFT-与-RLHF" class="headerlink" title="大型语言模型的学习历程：Pre-training、SFT 与 RLHF"></a>大型语言模型的学习历程：Pre-training、SFT 与 RLHF</h1><blockquote><p>以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT</p></blockquote><hr><h2 id="1-整体框架：大型语言模型如何一步步变成聊天助手"><a href="#1-整体框架：大型语言模型如何一步步变成聊天助手" class="headerlink" title="1. 整体框架：大型语言模型如何一步步变成聊天助手"></a>1. 整体框架：大型语言模型如何一步步变成聊天助手</h2><p><img src="/img/posts/83d3d343/2026-07-05-19-58-28.png"></p><p>大型语言模型的训练分为三个阶段：</p><table><thead><tr><th>阶段</th><th>全称</th><th>主要目标</th><th>人类提供什么</th><th>形象比喻</th></tr></thead><tbody><tr><td>Pre-training</td><td>Pre-training</td><td>熟悉语言、吸收世界知识，学会基本的文字接龙</td><td>大量原始文本，人类直接标注较少</td><td>学龄前：看到什么学什么</td></tr><tr><td>SFT</td><td>Supervised Fine-Tuning</td><td>学会按照指令回答，形成有用的助手行为</td><td>问题与标准答案</td><td>上学校：老师给标准答案</td></tr><tr><td>RLHF</td><td>Reinforcement Learning with Human Feedback</td><td>根据人类偏好改善完整回答</td><td>对答案的偏好、排序或分数</td><td>出社会：别人只告诉你好不好</td></tr></tbody></table><h3 id="1-1-Alignment-的含义"><a href="#1-1-Alignment-的含义" class="headerlink" title="1.1 Alignment 的含义"></a>1.1 Alignment 的含义</h3><p><strong>Alignment（对齐）</strong> 是让模型的行为符合人类的需求、偏好和价值观。</p><p>狭义文献中，Alignment 有时主要指 RLHF；但从课程的定义看：</p><ul><li>SFT 用人类提供的标准答案进行对齐；</li><li>RLHF 用人类提供的反馈进行对齐；</li><li>因此，SFT 和 RLHF 都属于 Alignment。</li></ul><h3 id="1-2-三阶段的关系不是重新训练，而是连续初始化"><a href="#1-2-三阶段的关系不是重新训练，而是连续初始化" class="headerlink" title="1.2 三阶段的关系不是重新训练，而是连续初始化"></a>1.2 三阶段的关系不是重新训练，而是连续初始化</h3><p>每个阶段都继承前一阶段的参数：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">随机初始化</span><br><span class="line">   ↓</span><br><span class="line">Pre-trained Model</span><br><span class="line">   ↓ 作为初始化</span><br><span class="line">SFT Model</span><br><span class="line">   ↓ 作为初始化</span><br><span class="line">RLHF / RL Model</span><br></pre></td></tr></table></figure><p>这样做的原因是：前一阶段已经把参数带到一个较好的区域，后一阶段不需要从随机状态重新学习。</p><h3 id="1-3-三阶段真正改变的主要是“教材”"><a href="#1-3-三阶段真正改变的主要是“教材”" class="headerlink" title="1.3 三阶段真正改变的主要是“教材”"></a>1.3 三阶段真正改变的主要是“教材”</h3><p>从机器学习的三个步骤看：</p><ol><li>定义学习目标与训练数据；</li><li>确定模型的函数搜索范围，例如 Transformer；</li><li>使用优化器寻找较好的参数，例如 Adam。</li></ol><p>Pre-training、SFT 和 RLHF 通常沿用同一模型架构，参数也需要能够继承。因此三阶段最核心的差异是：<strong>训练数据和评价信号不同</strong>。</p><p>不过，严格来说第三阶段还改变了目标函数：前两阶段最小化 token-level Cross Entropy，第三阶段最大化整段回答的 Reward。</p><hr><h2 id="2-三个阶段共同的基础：都在进行文字接龙"><a href="#2-三个阶段共同的基础：都在进行文字接龙" class="headerlink" title="2. 三个阶段共同的基础：都在进行文字接龙"></a>2. 三个阶段共同的基础：都在进行文字接龙</h2><h3 id="2-1-文字接龙本质上是分类问题"><a href="#2-1-文字接龙本质上是分类问题" class="headerlink" title="2.1 文字接龙本质上是分类问题"></a>2.1 文字接龙本质上是分类问题</h3><p>在图像分类中，模型从若干类别中选择一类；在语言模型中，<strong>词表中的每一个 Token 都是一个类别</strong>。<br>给定前文，模型输出下一个 Token 的概率分布。</p><h3 id="2-2-自回归概率分解"><a href="#2-2-自回归概率分解" class="headerlink" title="2.2 自回归概率分解"></a>2.2 自回归概率分解</h3><p>一句话由多个 Token 构成。自回归语言模型把整段文本的概率分解为逐 Token 的条件概率：</p><p>$$P_\theta(x_1,x_2,\ldots,x_T)=\prod_{t=1}^{T}P_\theta(x_t\mid x_{&lt;t})$$</p><p>其中：</p><ul><li>$x_t$：第 $t$ 个 Token；</li><li>$x_{&lt;t}$：第 $t$ 个 Token 之前的全部上下文；</li><li>$θ$：语言模型的参数。</li></ul><h3 id="2-3-Softmax-输出"><a href="#2-3-Softmax-输出" class="headerlink" title="2.3 Softmax 输出"></a>2.3 Softmax 输出</h3><p>模型先对词表中的每个 Token 输出一个 logit，再通过 Softmax 变成概率：</p><p>$$p_\theta(v\mid x_{&lt;t})=\frac{\exp(z_v)}{\sum_{u\in\mathcal V}\exp(z_u)}$$</p><p>其中 $V$ 是词表，词表大小就是分类类别数，现代模型通常有数万到数十万个 Token 类别。</p><h3 id="2-4-Cross-Entropy-Negative-Log-Likelihood"><a href="#2-4-Cross-Entropy-Negative-Log-Likelihood" class="headerlink" title="2.4 Cross Entropy &#x2F; Negative Log-Likelihood"></a>2.4 Cross Entropy &#x2F; Negative Log-Likelihood</h3><p>若真实的下一个 Token 是 $x_t$，单个位置的损失为：</p><p>$$\ell_t=-\log P_\theta(x_t\mid x_{&lt;t})$$</p><p>整段训练文本的损失为：</p><p>$$L=-\sum_{t=1}^{T}\log P_\theta(x_t\mid x_{&lt;t})$$</p><p>模型使用 Gradient Descent 调整参数，使正确 Token 的概率增大，从而降低 Cross Entropy。</p><hr><h2 id="3-从文字到-Token：训练与推理如何完成“文字接龙”"><a href="#3-从文字到-Token：训练与推理如何完成“文字接龙”" class="headerlink" title="3. 从文字到 Token：训练与推理如何完成“文字接龙”"></a>3. 从文字到 Token：训练与推理如何完成“文字接龙”</h2><h3 id="3-1-为什么需要-Tokenization"><a href="#3-1-为什么需要-Tokenization" class="headerlink" title="3.1 为什么需要 Tokenization"></a>3.1 为什么需要 Tokenization</h3><p>课件把语言模型描述为一个拥有巨大类别数的分类器。要真正送入 Transformer，文字还需要先经过 Tokenization，被转换成有限符号集合中的一维 Token 序列。神经网络处理的是这些 Token ID，而不是人眼直接看到的字词。</p><p>一种极端做法是使用 bit：词表只有 $0$ 和 $1$，但序列会极长。另一种做法是使用更大的符号集合，换取更短的序列。因此 Tokenization 本质上在权衡：</p><ul><li>Vocabulary Size；</li><li>Sequence Length；</li><li>对不同语言和字符的表示效率。</li></ul><h3 id="3-2-Byte-Pair-Encoding-的直觉"><a href="#3-2-Byte-Pair-Encoding-的直觉" class="headerlink" title="3.2 Byte Pair Encoding 的直觉"></a>3.2 Byte Pair Encoding 的直觉</h3><p>常见 Tokenizer 会从 byte 出发，反复寻找最常出现的相邻符号对，把它们合并成新 Token。高频字符串会成为一个整体 Token，低频字符串则被拆成多个 Token。<br>因此：</p><ul><li>Token 不一定等于一个字或一个单词；</li><li>大小写、空格、标点都可能改变切分；</li><li>模型实际看到的是 Token ID，而不是人眼中的字符；</li><li>拼写、逐字符操作和罕见语言可能因此更困难。</li></ul><h3 id="3-3-神经网络训练的输入与输出"><a href="#3-3-神经网络训练的输入与输出" class="headerlink" title="3.3 神经网络训练的输入与输出"></a>3.3 神经网络训练的输入与输出</h3><p>输入是长度不超过 Context Window 的 Token 序列，输出是下一个 Token 的概率分布。</p><p>训练时不断从语料中截取窗口：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">上下文 Token → Transformer → 下一个 Token 的概率分布</span><br></pre></td></tr></table></figure><p>训练初期参数随机，输出近似随机；经过大量梯度更新后，概率分布逐渐符合训练语料中的统计规律。</p><h3 id="3-4-Inference：模型如何生成文本"><a href="#3-4-Inference：模型如何生成文本" class="headerlink" title="3.4 Inference：模型如何生成文本"></a>3.4 Inference：模型如何生成文本</h3><p>训练完成后，参数固定，进入 Inference 阶段：</p><ol><li>输入已有 Token；</li><li>模型预测下一个 Token 的概率；</li><li>从概率分布中选择或采样一个 Token；</li><li>将新 Token 加入上下文；</li><li>重复以上过程，直到生成结束符或达到长度限制。</li></ol><p>因此，一次完整回答是逐 Token 生成的。只要中间某个 Token 改变，之后的上下文就会随之改变，后续整条生成路径也可能不同。这正是为什么 SFT 或 RLHF 只需轻微调整少数关键 Token 的概率，就可能明显改变整段回答。</p><hr><h1 id="Part-I：Pre-training"><a href="#Part-I：Pre-training" class="headerlink" title="Part I：Pre-training"></a>Part I：Pre-training</h1><h2 id="4-Pre-training-的目标"><a href="#4-Pre-training-的目标" class="headerlink" title="4. Pre-training 的目标"></a>4. Pre-training 的目标</h2><p>Pre-training 是整个训练流程的起点，主要让模型获得两类能力。</p><p><img src="/img/posts/83d3d343/2026-07-05-20-12-58.png"></p><h3 id="4-1-语言知识"><a href="#4-1-语言知识" class="headerlink" title="4.1 语言知识"></a>4.1 语言知识</h3><p>模型需要学习：</p><ul><li>语法结构；</li><li>常见搭配；</li><li>不同词形和句型；</li><li>哪些 Token 序列符合自然语言规律。</li></ul><p>语言知识相对容易饱和。如图片的实验显示，当语料达到一定规模后，句法知识的提升会逐渐趋缓。</p><h3 id="4-2-世界知识"><a href="#4-2-世界知识" class="headerlink" title="4.2 世界知识"></a>4.2 世界知识</h3><p>模型还需要学习可以从文字中获得的世界知识，例如：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">水的沸点是摄氏一百度。</span><br></pre></td></tr></table></figure><p>但正确答案依赖上下文：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">在低压下，水的沸点低于摄氏一百度。</span><br></pre></td></tr></table></figure><p>世界知识近乎无穷，并且事实、条件与语境相互关联，所以比单纯语法需要更多、更丰富的训练数据。</p><hr><h2 id="5-为什么-Pre-training-属于-Self-supervised-Learning"><a href="#5-为什么-Pre-training-属于-Self-supervised-Learning" class="headerlink" title="5. 为什么 Pre-training 属于 Self-supervised Learning"></a>5. 为什么 Pre-training 属于 Self-supervised Learning</h2><p>假设网络中有一句话：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">人工智能真神奇</span><br></pre></td></tr></table></figure><p>它可以自动产生多条训练样本：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">输入：人          输出：工</span><br><span class="line">输入：人工        输出：智</span><br><span class="line">输入：人工智      输出：能</span><br><span class="line">输入：人工智能    输出：真</span><br></pre></td></tr></table></figure><p>正确答案直接来自原始文本本身，不需要人类逐条写标签。因此它属于：</p><p><strong>Self-supervised Learning（自监督学习，课件称自督导式学习）</strong>。</p><p>注意：Self-supervised 不代表完全没有人工参与。数据爬取、过滤、去重、版权与隐私处理仍需要大量工程设计，只是 Token 标签可以从文本自动构造。</p><hr><h2 id="6-预训练数据从哪里来"><a href="#6-预训练数据从哪里来" class="headerlink" title="6. 预训练数据从哪里来"></a>6. 预训练数据从哪里来</h2><h3 id="6-1-数据规模"><a href="#6-1-数据规模" class="headerlink" title="6.1 数据规模"></a>6.1 数据规模</h3><p>课件以 LLaMA 3、DeepSeek-V3 和 FineWeb 为例，展示了约 15T tokens 的训练规模。</p><h3 id="6-2-从原始网页到训练语料：生产级数据处理流水线"><a href="#6-2-从原始网页到训练语料：生产级数据处理流水线" class="headerlink" title="6.2 从原始网页到训练语料：生产级数据处理流水线"></a>6.2 从原始网页到训练语料：生产级数据处理流水线</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-15-37.png"></p><p>原始网页不能直接用于训练。以 Common Crawl &#x2F; FineWeb 类流程为例，常见步骤包括：</p><ol><li><strong>URL Filtering</strong>：删除恶意网站、垃圾站、成人内容、低质量营销站等；</li><li><strong>Text Extraction</strong>：从 HTML 中提取正文，去掉导航栏、CSS、脚本和模板文本；</li><li><strong>Language Filtering</strong>：识别语言，并根据模型目标确定各语言的比例；</li><li><strong>Heuristic Filtering</strong>：根据长度、字符比例、重复符号、可读性等规则过滤；</li><li><strong>Deduplication</strong>：去除完全重复或近似重复的数据；</li><li><strong>Model-based Filtering</strong>：用分类模型判断文本质量；</li><li><strong>PII Removal</strong>：删除地址、证件号等 Personally Identifiable Information；</li><li><strong>Mixture Design</strong>：控制网页、书籍、代码、论文、对话和不同语言之间的比例。</li></ol><p>数据组成会直接塑造模型能力。例如某种语言占比过低，模型在该语言上的能力通常也会较弱。</p><p>所以“Self-supervised”只表示下一个 Token 的标签由文本自动产生，并不表示数据无需人工工程。真正昂贵的环节常常是决定抓取什么、删除什么、如何去重，以及各种来源应按什么比例混合。</p><hr><h2 id="7-模型不是“把互联网逐字背下来”"><a href="#7-模型不是“把互联网逐字背下来”" class="headerlink" title="7. 模型不是“把互联网逐字背下来”"></a>7. 模型不是“把互联网逐字背下来”</h2><p>Pre-training 的目标是通过文本学习预测规律，而不是建立一个可以逐字检索的数据库。</p><p>因此模型可能：</p><ul><li>知道一篇小说的主要人物和情节；</li><li>能写出风格相似、内容大致合理的续写；</li><li>却不能准确复述原文。</li></ul><p>更合适的理解是：模型把文本中的统计规律和知识压缩进参数。压缩与生成过程可能产生信息损失，因此会出现：</p><ul><li>细节遗漏；</li><li>原文混写；</li><li>看似合理但并非真实原文的内容；</li><li>Hallucination。</li></ul><p><strong>会概括、会续写，不等于能够忠实检索。</strong></p><p>模型参数中的知识更像经过压缩后的长期记忆：高频、反复出现的内容通常更牢固，罕见细节则可能只留下模糊印象。若把原始资料直接放入 Context Window，模型可以依据当前上下文作答，这更接近临时的 Working Memory。因此，对精确事实而言，“从参数中回忆”和“根据上下文读取”是两种可靠性不同的方式。</p><hr><h2 id="8-数据越多越好吗：模型、数据与算力的平衡"><a href="#8-数据越多越好吗：模型、数据与算力的平衡" class="headerlink" title="8. 数据越多越好吗：模型、数据与算力的平衡"></a>8. 数据越多越好吗：模型、数据与算力的平衡</h2><h3 id="8-1-两种资源的作用"><a href="#8-1-两种资源的作用" class="headerlink" title="8.1 两种资源的作用"></a>8.1 两种资源的作用</h3><ul><li>更多数据：相当于读过更多教材，可降低过拟合并增加知识覆盖；</li><li>更大模型：相当于函数搜索空间更大，表达能力更强；</li><li>更多训练计算：才能让大模型充分读取和消化更多数据。</li></ul><p>算力有限时，不能无限增大模型和数据，必须进行配置。</p><h3 id="8-2-Chinchilla-Scaling-Law"><a href="#8-2-Chinchilla-Scaling-Law" class="headerlink" title="8.2 Chinchilla Scaling Law"></a>8.2 Chinchilla Scaling Law</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-21-42.png"></p><blockquote><p>在固定训练计算量下，模型参数量与训练 Token 数存在较优配比。</p></blockquote><p>模型过大但数据不足，参数没有得到充分训练；模型过小但数据过多，模型容量不足。二者都不能充分利用计算预算。</p><p>可以用一个粗略的计算量关系理解：</p><p>$$C \propto N\times D$$</p><p>其中：</p><ul><li>$C$：训练计算量；</li><li>$N$：模型参数量；</li><li>$D$：训练 Token 数。</li></ul><p>实际比例和常数取决于架构及训练设置，但核心思想是：<strong>在固定算力下，需要共同配置模型规模和数据规模。</strong></p><hr><h2 id="9-数据质量往往比单纯增加数据更重要"><a href="#9-数据质量往往比单纯增加数据更重要" class="headerlink" title="9. 数据质量往往比单纯增加数据更重要"></a>9. 数据质量往往比单纯增加数据更重要</h2><h3 id="9-1-低质量数据可能破坏训练"><a href="#9-1-低质量数据可能破坏训练" class="headerlink" title="9.1 低质量数据可能破坏训练"></a>9.1 低质量数据可能破坏训练</h3><p>课件用包含大量重复字母的异常 Reddit 文本举例：某些极端、无意义的序列可能导致 Loss 突然升高或训练不稳定。</p><p>因此网络语料通常经过层层过滤。课件引用 DataComp 的流程说明：</p><ul><li>Heuristic Filtering 会首先删除大量原始数据；</li><li>Deduplication 继续去除重复内容；</li><li>Model-based Filtering 只保留被判断为高质量的部分；</li><li>最终保留比例可能很低，但绝对规模仍然很大。</li></ul><h3 id="9-2-高质量数据的价值"><a href="#9-2-高质量数据的价值" class="headerlink" title="9.2 高质量数据的价值"></a>9.2 高质量数据的价值</h3><p>在相同算力下，高质量语料通常可以取得更好效果；达到相同效果时，也可能使用更少数据和算力。</p><p>因此 Pre-training 数据设计要同时考虑：</p><p>Quantity；Quality；Diversity；Coverage；Safety；Privacy；Duplication；Language Balance。</p><h3 id="9-3-Rephrasing-the-Web"><a href="#9-3-Rephrasing-the-Web" class="headerlink" title="9.3 Rephrasing the Web"></a>9.3 Rephrasing the Web</h3><p>课件介绍了一种思路：先让已有 LLM 把网页内容重新表述，使文本更有组织、更易读，再用改写后的数据训练新模型。</p><p>它说明“数据清洗”不一定只是删除数据，也可以进行：</p><ul><li>重写；</li><li>结构化；</li><li>降噪；</li><li>统一表达风格。</li></ul><p>不过这种方法也可能把已有模型的偏差、风格和错误传播给新模型。</p><hr><h2 id="10-为什么-Base-Model-往往不会好好回答问题"><a href="#10-为什么-Base-Model-往往不会好好回答问题" class="headerlink" title="10. 为什么 Base Model 往往不会好好回答问题"></a>10. 为什么 Base Model 往往不会好好回答问题</h2><p>Pre-training 只要求模型模仿互联网文本分布。此时的 Base Model 更像一个 <strong>Internet Document Simulator</strong>：给它一段开头，它会继续生成网络上可能出现的后文，而不是天然把自己当作正在服务用户的助手。因此，互联网中“问题”后面不一定紧跟正确答案，可能是：</p><ul><li>选择题选项；</li><li>网友讨论；</li><li>“知道的人请留言”；</li><li>另一个问题；</li><li>不完整或错误的答案。</li></ul><p>所以 Base Model 即使拥有相关知识，也未必知道：</p><ul><li>用户是在向它提问；</li><li>它应该直接给出答案；</li><li>什么时候应该停止；</li><li>什么语气和格式更有帮助。</li></ul><h3 id="10-1-Base-Model-是“璞玉”"><a href="#10-1-Base-Model-是“璞玉”" class="headerlink" title="10.1 Base Model 是“璞玉”"></a>10.1 Base Model 是“璞玉”</h3><p><img src="/img/posts/83d3d343/2026-07-05-20-23-27.png"></p><p>Pre-trained Model 可能已经给正确答案分配了一定概率，只是该概率未必最高。SFT 和 RLHF 的重要作用，是改变输出分布，让有用、正确、符合人类期待的回答更容易被选中。</p><hr><h1 id="Part-II：SFT"><a href="#Part-II：SFT" class="headerlink" title="Part II：SFT"></a>Part II：SFT</h1><h2 id="11-SFT-如何构造训练数据"><a href="#11-SFT-如何构造训练数据" class="headerlink" title="11. SFT 如何构造训练数据"></a>11. SFT 如何构造训练数据</h2><p>SFT 使用人类准备或筛选的“问题—标准回答”数据，例如：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">User：台湾最高的山是哪座？</span><br><span class="line">Assistant：玉山。</span><br></pre></td></tr></table></figure><p>通过 Chat Template 转换后，模型仍然进行逐 Token 预测：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">输入：User: 台湾最高的山是哪座？ Assistant:</span><br><span class="line">输出：玉</span><br><span class="line"></span><br><span class="line">输入：User: 台湾最高的山是哪座？ Assistant: 玉</span><br><span class="line">输出：山</span><br><span class="line"></span><br><span class="line">输入：User: 台湾最高的山是哪座？ Assistant: 玉山</span><br><span class="line">输出：[END]</span><br></pre></td></tr></table></figure><p>因此 SFT 也叫 <strong>Instruction Fine-Tuning</strong>：模型根据 Instruction 学习如何产生合适 Response。</p><p>从计算形式看，SFT 并没有换掉“预测下一个 Token”的核心算法；真正变化的是教材从一般网络文本变成了经过设计的对话示范。模型通过模仿这些示范，逐渐学会 Chat Template、回答边界、助手语气和结束位置。</p><h3 id="11-1-SFT-Loss"><a href="#11-1-SFT-Loss" class="headerlink" title="11.1 SFT Loss"></a>11.1 SFT Loss</h3><p>设第 $i$ 条样本的问题为 $x_i$，回答为 $y_i$，只在 Assistant 回答部分计算损失：</p><p>$$L_{\mathrm{SFT}}=-\sum_i\sum_{t\in\mathcal A_i}\log P_\theta(y_{i,t}\mid x_i,y_{i,&lt;t})$$</p><p>其中 $A_i$ 表示第 $i$ 条数据中属于 Assistant 回答的 Token 位置。</p><p>很多训练实现会 Mask 掉 User Prompt 的 Loss，因为目标是学习“如何回答”，而不是让模型复述用户问题。</p><hr><h2 id="12-SFT-为什么能让模型“脱胎换骨”"><a href="#12-SFT-为什么能让模型“脱胎换骨”" class="headerlink" title="12. SFT 为什么能让模型“脱胎换骨”"></a>12. SFT 为什么能让模型“脱胎换骨”</h2><p>SFT 学到的重点包括：</p><ul><li>识别问题和指令；</li><li>使用助手式语气；</li><li>输出正确的格式；</li><li>直接回答，而不是继续模仿网页；</li><li>在适当位置生成结束符；</li><li>遵守部分安全和行为规范。</li></ul><p>课件强调：SFT 的成功建立在 Pre-training 之上。没有充分预训练，只靠少量问答数据，模型容易过拟合成表面规则。</p><p>例如仅用一条样本：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">台湾最高的山是哪座？ → 玉山</span><br></pre></td></tr></table></figure><p>模型可能错误学成：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">只要问题里出现“山”，就回答“玉山”。</span><br></pre></td></tr></table></figure><p>这说明 SFT 数据数量有限时，Pre-training 中形成的知识结构和表示非常重要。</p><hr><h2 id="13-Pre-training-如何帮助-SFT-举一反三"><a href="#13-Pre-training-如何帮助-SFT-举一反三" class="headerlink" title="13. Pre-training 如何帮助 SFT 举一反三"></a>13. Pre-training 如何帮助 SFT 举一反三</h2><p>课件引用 Physics of Language Models 的实验说明：</p><ul><li>若某个事实在 Pre-training 中只以一种固定顺序出现一次，模型可能只学到局部 Token 邻接关系；</li><li>如果同一知识从多个角度、不同措辞反复出现，模型更容易把人物、属性和关系连接起来；</li><li>SFT 再教模型“看到某类问题应该如何调用关系”，它才能迁移到未在 SFT 中出现的实体。</li></ul><p>核心结论：</p><blockquote><p>同一个知识以多种表达反复出现，比单次机械出现更有利于形成可调用、可泛化的内部表示。</p></blockquote><p>因此 Pre-training 的“大量”不仅表示事实数量多，也表示同一知识在不同上下文中的多样化表达多。</p><hr><h2 id="14-SFT-通常更像激活与规范，而不是灌入大量新知识"><a href="#14-SFT-通常更像激活与规范，而不是灌入大量新知识" class="headerlink" title="14. SFT 通常更像激活与规范，而不是灌入大量新知识"></a>14. SFT 通常更像激活与规范，而不是灌入大量新知识</h2><p>课件把问题分为：</p><ul><li><strong>Highly Known</strong>：模型用 Greedy Decoding 就能回答；</li><li><strong>Maybe Known</strong>：换一种问法后可以回答；</li><li><strong>Weakly Known</strong>：采样多次时偶尔答对；</li><li><strong>Unknown</strong>：无论如何采样都很难生成正确答案。</li></ul><p>实验结论是，SFT 对 Maybe Known 数据往往最有效，因为模型已有相关知识，只需要学习：</p><ul><li>如何理解问题；</li><li>如何调用已有知识；</li><li>如何以正确方式表达。</li></ul><p>对于完全 Unknown 的事实，少量 SFT 容易变成死记硬背，泛化较差，训练过久甚至可能损害整体表现。</p><p>因此可以概括为：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Pre-training 主要决定模型知道什么；</span><br><span class="line">SFT 主要决定模型怎样回答、何时回答和如何组织答案。</span><br></pre></td></tr></table></figure><p>这不是绝对规律：SFT 仍可能注入某些知识，但它通常不是大规模知识获取的高效阶段。</p><hr><h2 id="15-Alignment-往往只需改变少量关键概率"><a href="#15-Alignment-往往只需改变少量关键概率" class="headerlink" title="15. Alignment 往往只需改变少量关键概率"></a>15. Alignment 往往只需改变少量关键概率</h2><p>课件介绍的研究把 Alignment 前后的 Token 分成：</p><ul><li><strong>Unshift</strong>：Alignment 前后都是概率第一；</li><li><strong>Marginal</strong>：原来排名第二或第三，之后升到第一；</li><li><strong>Shifted</strong>：原来排名较后，之后升到第一。</li></ul><p><img src="/img/posts/83d3d343/2026-07-05-20-26-12.png"></p><p>结果显示，许多 Token 的相对排序并未发生巨大变化，显著变化的常常包括：</p><ul><li>连接和表达风格相关 Token；</li><li>结束符 $\texttt{[END]}$。</li></ul><p>这可以解释为什么参数概率只发生局部变化，生成结果却可能天差地别：自回归生成具有路径依赖，只要早期一个 Token 改变，后续上下文和整段输出都会改变。</p><hr><h2 id="16-Pre-training-会留下长期影响"><a href="#16-Pre-training-会留下长期影响" class="headerlink" title="16. Pre-training 会留下长期影响"></a>16. Pre-training 会留下长期影响</h2><p>即使经过 SFT 和 RLHF，模型仍可能保留 Pre-training 数据分布留下的“灰烬”。</p><p>课件以 ROT Cipher 为例：模型对训练资料中更常出现的 ROT13 表现更好，却不一定能迁移到同等难度、但在语料中较少出现的其他位移。</p><p>这说明：</p><ul><li>模型表现不只由任务抽象难度决定；</li><li>训练语料中的出现频率和表达方式会留下强烈偏置；</li><li>“在一个例子上会做”不一定表示已经掌握通用算法。</li></ul><hr><h2 id="17-SFT-的两条路线：专才与通才"><a href="#17-SFT-的两条路线：专才与通才" class="headerlink" title="17. SFT 的两条路线：专才与通才"></a>17. SFT 的两条路线：专才与通才</h2><h3 id="17-1-路线一：打造专才"><a href="#17-1-路线一：打造专才" class="headerlink" title="17.1 路线一：打造专才"></a>17.1 路线一：打造专才</h3><p>给模型单一任务的数据，例如：</p><ul><li>翻译；</li><li>摘要；</li><li>分类；</li><li>文本修订。</li></ul><p>模型在特定任务上表现好，但不一定能处理其他任务。BERT 时代的任务微调是典型思路。</p><h3 id="17-2-路线二：打造通才"><a href="#17-2-路线二：打造通才" class="headerlink" title="17.2 路线二：打造通才"></a>17.2 路线二：打造通才</h3><p>混合大量不同任务的数据，让模型学习一般性的 Instruction Following，并期待迁移到未见任务。</p><p>FLAN 是早期代表性工作之一，使用大量任务进行 Instruction Fine-Tuning，目标是让单一模型处理多类任务。</p><p>现代 Chat Assistant 主要采用通才路线，但内部也可能加入代码、数学、安全等领域的专门数据。</p><hr><h2 id="18-SFT-数据：质量、长度、复杂度与多样性"><a href="#18-SFT-数据：质量、长度、复杂度与多样性" class="headerlink" title="18. SFT 数据：质量、长度、复杂度与多样性"></a>18. SFT 数据：质量、长度、复杂度与多样性</h2><p>SFT 通常不需要达到 Pre-training 那样的数量级。课件列举：</p><ul><li>InstructGPT 使用的 SFT 数据只有一万多条量级；</li><li>LLaMA 2 报告数万条高质量 SFT 数据；</li><li>LIMA 仅使用约 1000 条精挑细选的数据，也能形成可用模型。</li></ul><p>核心并不是“数据越少越好”，而是：</p><blockquote><p>SFT 的边际收益很快受数据质量制约，百万条低质量样本未必优于数万条高质量样本。</p></blockquote><h3 id="18-1-数据选择仍是开放问题"><a href="#18-1-数据选择仍是开放问题" class="headerlink" title="18.1 数据选择仍是开放问题"></a>18.1 数据选择仍是开放问题</h3><p>课件展示了多种现象：</p><ul><li>某些看似奇怪的问题数据也可能有效；</li><li>只选较长样本有时优于使用全部数据；</li><li>但答案长度不是唯一解释；</li><li>可以训练 Complexity Scorer 和 Quality Scorer；</li><li>还需要 Diversity Selection，避免样本高度相似。</li></ul><p>一个系统化选择流程可以写成：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">候选 SFT 数据</span><br><span class="line">  → 质量评分</span><br><span class="line">  → 复杂度评分</span><br><span class="line">  → 去重与多样性选择</span><br><span class="line">  → 人工抽检</span><br><span class="line">  → 训练与消融实验</span><br></pre></td></tr></table></figure><hr><h2 id="19-Knowledge-Distillation-与合成-SFT-数据"><a href="#19-Knowledge-Distillation-与合成-SFT-数据" class="headerlink" title="19. Knowledge Distillation 与合成 SFT 数据"></a>19. Knowledge Distillation 与合成 SFT 数据</h2><p>人工写高质量长答案成本很高，因此可以让更强模型担任 Teacher：</p><p><img src="/img/posts/83d3d343/2026-07-05-20-31-12.png"></p><p>这种做法叫 <strong>Knowledge Distillation</strong>。Alpaca、Vicuna 等早期工作都采用了类似思路。</p><h3 id="19-1-优势"><a href="#19-1-优势" class="headerlink" title="19.1 优势"></a>19.1 优势</h3><ul><li>降低人工写答案成本；</li><li>快速生成多领域数据；</li><li>可以把大模型的回答风格迁移给小模型；</li><li>结合筛选后，可以获得高质量小数据集。</li></ul><h3 id="19-2-局限"><a href="#19-2-局限" class="headerlink" title="19.2 局限"></a>19.2 局限</h3><ul><li>Teacher 的错误会被 Student 学到；</li><li>数据生成、清洗和 API 调用本身仍有成本；</li><li>模型可能只学到 Teacher 的风格，而非真正提高基础知识；</li><li>可能造成模型之间输出趋同。</li></ul><h3 id="19-3-Non-instructional-Fine-Tuning-与-Response-Tuning"><a href="#19-3-Non-instructional-Fine-Tuning-与-Response-Tuning" class="headerlink" title="19.3 Non-instructional Fine-Tuning 与 Response Tuning"></a>19.3 Non-instructional Fine-Tuning 与 Response Tuning</h3><p>课件进一步介绍了一些反直觉现象：</p><ul><li>不一定需要人工准备标准问题，可以截取普通文本前半句，让强模型续写，再用续写数据训练；</li><li>Response Tuning 甚至只训练 Assistant 风格的“回答”，不提供对应问题，也能激活部分 Instruction Following 能力；</li><li>提高结束符概率、降低重复等简单解码调整，也能让 Base Model 的行为更像对齐模型。</li></ul><p>这些结果支持一个观点：</p><blockquote><p>Base Model 已包含大量潜在能力，SFT 有时更像施加一种“解锁咒语”，把模型推向助手式输出分布。</p></blockquote><p>但这些方法通常不能完全取代标准、高质量的 Instruction Tuning。</p><hr><h1 id="Part-III：RLHF"><a href="#Part-III：RLHF" class="headerlink" title="Part III：RLHF"></a>Part III：RLHF</h1><h2 id="20-RLHF-与-SFT-的人类参与方式不同"><a href="#20-RLHF-与-SFT-的人类参与方式不同" class="headerlink" title="20. RLHF 与 SFT 的人类参与方式不同"></a>20. RLHF 与 SFT 的人类参与方式不同</h2><h3 id="20-1-SFT：人类负责生成标准答案"><a href="#20-1-SFT：人类负责生成标准答案" class="headerlink" title="20.1 SFT：人类负责生成标准答案"></a>20.1 SFT：人类负责生成标准答案</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">问题 → 人类写出理想回答 → 模型模仿</span><br></pre></td></tr></table></figure><p>人类负担较重，特别是在数学证明、诗歌、复杂写作等任务中，写出理想答案可能非常困难。</p><h3 id="20-2-RLHF：模型先回答，人类只判断好坏"><a href="#20-2-RLHF：模型先回答，人类只判断好坏" class="headerlink" title="20.2 RLHF：模型先回答，人类只判断好坏"></a>20.2 RLHF：模型先回答，人类只判断好坏</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">问题 → 模型生成多个回答 → 人类点赞、点踩、打分或排序</span><br></pre></td></tr></table></figure><p>通常“判断几个答案哪个更好”比“从零写出最佳答案”容易，这体现了 <strong>Discriminator–Generator Gap</strong>：辨别一个答案的质量，往往比从零生成同等质量的答案更容易。</p><hr><h2 id="21-前两阶段与第三阶段的核心差别：Token-Loss-与-Sequence-Reward"><a href="#21-前两阶段与第三阶段的核心差别：Token-Loss-与-Sequence-Reward" class="headerlink" title="21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward"></a>21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward</h2><h3 id="21-1-Pre-training-SFT：每个-Token-都有标准答案"><a href="#21-1-Pre-training-SFT：每个-Token-都有标准答案" class="headerlink" title="21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案"></a>21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案</h3><p>损失是每个 Token Cross Entropy 的总和：</p><p>$$L_{\mathrm{sup}}=\sum_{i=1}^{N}\ell_i$$</p><p>这里每个 $ℓ_i$ 对应一个 Token 的预测误差。</p><h3 id="21-2-RLHF：评价整段回答"><a href="#21-2-RLHF：评价整段回答" class="headerlink" title="21.2 RLHF：评价整段回答"></a>21.2 RLHF：评价整段回答</h3><p>模型先生成完整回答 $y$，人类或 Reward Model 给出一个整体分数 $r(x,y)$。</p><p>训练目标是最大化期望 Reward：</p><p>$$J(\theta)=\mathbb E_{x\sim\mathcal D,\,y\sim\pi_\theta(\cdot\mid x)}\left[r(x,y)\right]$$</p><p>若统一写成要最小化的 Loss：</p><p>$$L_{\mathrm{RL}}=-\mathbb E\left[r(x,y)\right]$$</p><h3 id="21-3-为什么-Sequence-level-Reward-更符合人类判断"><a href="#21-3-为什么-Sequence-level-Reward-更符合人类判断" class="headerlink" title="21.3 为什么 Sequence-level Reward 更符合人类判断"></a>21.3 为什么 Sequence-level Reward 更符合人类判断</h3><p>课件举例：标准回答是“我不可以教你”。</p><p>候选回答：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A：我很可以教你</span><br><span class="line">B：不可以教你</span><br></pre></td></tr></table></figure><p>若逐 Token 与标准答案机械对齐，A 可能只错一个字，而 B 的 Token 位置整体错位，Cross Entropy 反而更大；但人类明显认为 B 更好。</p><p>因此：</p><ul><li>Token-level Loss 关注局部模仿；</li><li>Sequence-level Reward 关注完整语义和最终效果。</li></ul><p>课件将其概括为：</p><ul><li>前两阶段：比较重视过程中的每个 Token 是否一致；</li><li>第三阶段：只问完整结果好不好，不要求与某个标准答案逐字一致。</li></ul><hr><h2 id="22-为什么-RL-比监督学习更难优化"><a href="#22-为什么-RL-比监督学习更难优化" class="headerlink" title="22. 为什么 RL 比监督学习更难优化"></a>22. 为什么 RL 比监督学习更难优化</h2><h3 id="22-1-Reward-不可直接微分"><a href="#22-1-Reward-不可直接微分" class="headerlink" title="22.1 Reward 不可直接微分"></a>22.1 Reward 不可直接微分</h3><p>前两阶段知道标准 Token，因此模型概率变化如何影响 Loss 可以通过 Backpropagation 精确计算。</p><p>RL 中，人类只给一个离散反馈，例如 $+1$ 或 $-1$。模型参数稍微变化后，人类评分会怎样变化并不直接可知，且评分信号通常不连续。</p><h3 id="22-2-Credit-Assignment-Problem"><a href="#22-2-Credit-Assignment-Problem" class="headerlink" title="22.2 Credit Assignment Problem"></a>22.2 Credit Assignment Problem</h3><p>一段回答可能有数百个 Token，但只得到一个总分。模型不知道：</p><ul><li>哪个 Token 导致低分；</li><li>是事实错误、格式错误还是语气问题；</li><li>哪一段推理值得保留；</li><li>哪个局部选择应该改变。</li></ul><p>这就是 Credit Assignment：如何把最终 Reward 归因到生成过程中的动作。</p><h3 id="22-3-Reward-稀疏且有噪声"><a href="#22-3-Reward-稀疏且有噪声" class="headerlink" title="22.3 Reward 稀疏且有噪声"></a>22.3 Reward 稀疏且有噪声</h3><ul><li>人类评价可能不一致；</li><li>同一回答在不同偏好下得分不同；</li><li>二元赞&#x2F;踩信号信息量有限；</li><li>很多中间 Token 没有即时 Reward。</li></ul><p>因此 RL 算法必须用采样和统计估计来获得更新方向。</p><hr><h2 id="23-RL-的优势：更贴近结果，也更能因材施教"><a href="#23-RL-的优势：更贴近结果，也更能因材施教" class="headerlink" title="23. RL 的优势：更贴近结果，也更能因材施教"></a>23. RL 的优势：更贴近结果，也更能因材施教</h2><h3 id="23-1-评价目标与真实需求更接近"><a href="#23-1-评价目标与真实需求更接近" class="headerlink" title="23.1 评价目标与真实需求更接近"></a>23.1 评价目标与真实需求更接近</h3><p>只要 Reward 设计得合理，优化 Reward 就直接对应：</p><ul><li>回答是否正确；</li><li>是否有帮助；</li><li>是否安全；</li><li>是否符合格式；</li><li>是否满足人类偏好。</li></ul><h3 id="23-2-训练样本由模型自己产生"><a href="#23-2-训练样本由模型自己产生" class="headerlink" title="23.2 训练样本由模型自己产生"></a>23.2 训练样本由模型自己产生</h3><p>SFT 的标准答案可能采用人类认为最佳、但模型很难模仿的解法。RL 则从模型自己能够生成的候选中选择较优路径，再提高这些路径的概率。</p><p>所以课程把 RL 描述为“因材施教”：</p><ul><li>不同模型会生成不同错误；</li><li>收到的反馈针对自身当前弱点；</li><li>模型可以从自己可达到的解法逐步改进。</li></ul><p><img src="/img/posts/83d3d343/2026-07-05-22-27-12.png"></p><p>可以把三阶段理解为：</p><ul><li>Pre-training：广泛阅读教材，形成语言与知识基础；</li><li>SFT：模仿专家写好的示范答案，学会标准作答方式；</li><li>RL：亲自做练习题，根据结果反复试错，找到模型自己更容易执行的解题路径。</li></ul><hr><h2 id="24-RL-术语与语言模型的对应关系"><a href="#24-RL-术语与语言模型的对应关系" class="headerlink" title="24. RL 术语与语言模型的对应关系"></a>24. RL 术语与语言模型的对应关系</h2><table><thead><tr><th>Reinforcement Learning</th><th>语言模型中的含义</th></tr></thead><tbody><tr><td>Agent &#x2F; Actor</td><td>语言模型</td></tr><tr><td>Policy</td><td>语言模型的生成概率分布</td></tr><tr><td>Observation &#x2F; State</td><td>当前 Prompt 与已生成的 Token</td></tr><tr><td>Action</td><td>选择下一个 Token</td></tr><tr><td>Environment</td><td>用户、工具、验证器或对话环境</td></tr><tr><td>Reward</td><td>对完整回答或中间行为的评分</td></tr><tr><td>Trajectory &#x2F; Rollout</td><td>一次完整生成过程</td></tr></tbody></table><p>语言模型策略可以写成：</p><p>$$\pi_\theta(y\mid x)=\prod_{t=1}^{T}P_\theta(y_t\mid x,y_{&lt;t})$$</p><p>其对数概率为：</p><p>$$\log\pi_\theta(y\mid x)=\sum_{t=1}^{T}\log P_\theta(y_t\mid x,y_{&lt;t})$$</p><p>这与下围棋的类比是：</p><ul><li>棋盘状态对应当前上下文；</li><li>下一手落子对应下一个 Token；</li><li>一局棋对应一段完整回答；</li><li>最终胜负对应回答 Reward。</li></ul><hr><h2 id="25-Policy-Gradient-的核心精神"><a href="#25-Policy-Gradient-的核心精神" class="headerlink" title="25. Policy Gradient 的核心精神"></a>25. Policy Gradient 的核心精神</h2><p>Policy Gradient 的基本形式是：</p><p>$$\nabla_\theta J(\theta)=\mathbb E\left[R\,\nabla_\theta\log\pi_\theta(y\mid x)\right]$$</p><p>直觉：</p><ul><li>若回答得到 Positive Reward，提高这段回答的生成概率；</li><li>若回答得到 Negative Reward，降低这段回答的生成概率。</li></ul><p>课件用“拉近 &#x2F; 拉远”解释：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">好答案：像监督学习一样，提高其 Token 序列概率；</span><br><span class="line">坏答案：反方向更新，降低其 Token 序列概率。</span><br></pre></td></tr></table></figure><p>实际算法会加入 Baseline、Advantage、Clipping、KL 约束等机制，以减少方差并避免策略更新过猛。课程提到的相关方法包括：</p><ul><li>Policy Gradient；</li><li>PPO；</li><li>DPO；</li><li>KTO；</li><li>GRPO。</li></ul><p>这些方法实现细节不同，但共同目标都是：利用偏好或 Reward 调整模型的输出概率。</p><hr><h2 id="26-Reward-Model：把有限人类反馈扩展成大量评分"><a href="#26-Reward-Model：把有限人类反馈扩展成大量评分" class="headerlink" title="26. Reward Model：把有限人类反馈扩展成大量评分"></a>26. Reward Model：把有限人类反馈扩展成大量评分</h2><p><img src="/img/posts/83d3d343/2026-07-05-22-31-04.png"></p><p>直接让人类评价每一次模型生成不现实，所以经典 RLHF 往往先训练一个 Reward Model。这里利用的仍是“批评通常比创作容易”：人类先提供少量比较结果，模型再学习近似这种判断。</p><p>流程：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">同一 Prompt 下生成多个回答</span><br><span class="line">   ↓</span><br><span class="line">人类对回答进行排序</span><br><span class="line">   ↓</span><br><span class="line">训练 Reward Model 模拟人类偏好</span><br><span class="line">   ↓</span><br><span class="line">使用 Reward Model 给大量新回答打分</span><br><span class="line">   ↓</span><br><span class="line">对语言模型执行 RL</span><br></pre></td></tr></table></figure><p>Reward Model 的输入是 Prompt 与候选回答，输出一个标量分数：</p><p>$$r_\phi(x,y)\in\mathbb R$$</p><p>若人类更喜欢 $y+$ 而不是 $y-$，一种常见的偏好损失是：</p><p>$$L_{\mathrm{RM}}=-\log\sigma\left( r_\phi(x,y^+)-r_\phi(x,y^-)\right)$$</p><p>它要求 Reward Model 给较优回答更高的分数。</p><hr><h2 id="27-RLHF、RLAIF-与-Self-Rewarding"><a href="#27-RLHF、RLAIF-与-Self-Rewarding" class="headerlink" title="27. RLHF、RLAIF 与 Self-Rewarding"></a>27. RLHF、RLAIF 与 Self-Rewarding</h2><h3 id="27-1-RLHF"><a href="#27-1-RLHF" class="headerlink" title="27.1 RLHF"></a>27.1 RLHF</h3><p>Human 提供偏好数据，Reward Model 学习模拟人类评分，再用于训练生成模型。</p><h3 id="27-2-RLAIF"><a href="#27-2-RLAIF" class="headerlink" title="27.2 RLAIF"></a>27.2 RLAIF</h3><p>把 Human Feedback 的部分工作交给 AI：</p><ul><li>由强模型评价弱模型的答案；</li><li>由 AI 根据原则或规则给出偏好；</li><li>降低大规模人工评分成本。</li></ul><h3 id="27-3-Self-Rewarding"><a href="#27-3-Self-Rewarding" class="headerlink" title="27.3 Self-Rewarding"></a>27.3 Self-Rewarding</h3><p>生成与评价甚至可以由同一个模型或同系列模型完成。其可能有效的原因是：</p><blockquote><p>生成正确答案很难，但识别明显错误有时相对容易。</p></blockquote><p>不过它也可能导致自我确认偏差：模型看不出自己的系统性错误，或奖励自己偏好的风格。</p><hr><h2 id="28-Reward-的可验证性与-Reward-Hacking"><a href="#28-Reward-的可验证性与-Reward-Hacking" class="headerlink" title="28. Reward 的可验证性与 Reward Hacking"></a>28. Reward 的可验证性与 Reward Hacking</h2><h3 id="28-1-Verifiable-Domains"><a href="#28-1-Verifiable-Domains" class="headerlink" title="28.1 Verifiable Domains"></a>28.1 Verifiable Domains</h3><p>数学、代码等任务往往有自动验证器：</p><ul><li>最终数值是否正确；</li><li>程序能否通过测试；</li><li>证明是否满足形式检查。</li></ul><p>Reward 更可靠，模型可大量试错。RL 可以发现不同于人类示范、但确实有效的解题策略。</p><h3 id="28-2-Unverifiable-Domains"><a href="#28-2-Unverifiable-Domains" class="headerlink" title="28.2 Unverifiable Domains"></a>28.2 Unverifiable Domains</h3><p>诗歌、摘要、幽默、写作风格等没有简单的客观判定函数，需要人类偏好或 Reward Model。</p><p>RLHF 使这些领域也能进行 RL，但 Reward Model 只是人类偏好的有损模拟。</p><h3 id="28-3-Reward-Hacking"><a href="#28-3-Reward-Hacking" class="headerlink" title="28.3 Reward Hacking"></a>28.3 Reward Hacking</h3><p>如果持续优化一个不完美 Reward Model，策略可能找到“骗高分”的输入，而不是产生真正更好的回答。</p><p>这称为 Reward Hacking 或对 Reward Model 的 Gaming。可能表现为：</p><ul><li>无意义重复却获得高分；</li><li>利用 Reward Model 没见过的异常模式；</li><li>形式上符合评分器偏好，但内容质量下降。</li></ul><p>因此 RLHF 通常需要：</p><ul><li>限制更新幅度；</li><li>监控真实人类评价；</li><li>持续改进 Reward Model；</li><li>防止策略偏离参考模型过远；</li><li>在效果开始恶化前 Early Stop。</li></ul><hr>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>Agents</tag>
+        <tag>Pre-training</tag>
+        <tag>RLHF</tag>
+        <tag>SFT</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《加快语言模型生成速度》课堂笔记</title>
+    <url>/posts/5fbccec5/</url>
+    <content><![CDATA[加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：
+
+是否改变原有 Attention 的计算结果或范围？
+是否需要为该方法重新训练或定制模型？
+为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。
+
+2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。
+若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value：
+$$
+q_i=W_Qx_i,
+\qquad
+k_i=W_Kx_i,
+\qquad
+v_i=W_Vx_i.
+$$
+对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为：
+$$
+a_{t,i}=\frac{q_t^{\top}k_i}{\sqrt{d_k}},
+\qquad i\le t.
+$$
+课上为了突出推论算法，常把缩放项省略，直接写成 Query 与 Key 的 dot product。
+经过 Softmax 后得到归一化权重：
+$$
+\hat a_{t,i}
+=
+\frac{e^{a_{t,i}}}
+{\sum_{j=1}^{t}e^{a_{t,j}}}.
+$$
+最终输出是 Value 的加权和：
+$$
+o_t
+=
+\sum_{i=1}^{t}\hat a_{t,i}v_i.
+$$
+2.2 Prefill 与 Decode
+一次完整生成可以分成两个阶段。
+
+
+
+阶段
+输入形式
+主要特点
+典型瓶颈
+
+
+
+Prefill
+一次输入完整 Prompt
+多个 token 的计算可以高度并行
+长序列 Attention、算力与显存带宽
+
+
+Decode
+每次新增一个 token
+必须逐 token 自回归生成，时间维度难以并行
+读取历史 KV Cache、内存带宽与延迟
+
+
+Prefill 会为 Prompt 中所有 token 计算 Q、K、V；Decode 时，每轮只新增一个 token，但新 Query 仍需要访问前面所有 token 的 Key 和 Value。
+
+Part I：Flash Attention3. Flash Attention 的目标Flash Attention 的关键特点是：
+
+结果与标准 Attention 相同，不是近似算法。
+通常不需要重新训练模型，可以直接替换 Attention 的实现。
+核心优化目标不是减少数学定义中的 Attention，而是减少 GPU 上的数据搬运次数。
+
+它是一种 IO-aware algorithm：算法设计直接考虑 GPU 存储层级，而不仅仅统计 FLOPs。
+
+4. GPU 存储层级：HBM 与 SRAM可以用“仓库”和“工作台”来类比 GPU 的两类存储。
+
+
+
+存储
+课堂类比
+特点
+
+
+
+HBM
+仓库
+容量较大，但访问较慢
+
+
+On-chip SRAM
+工作台
+容量很小，但访问和计算很快
+
+
+
+GPU 中有大量并行 Execution Units。数据一旦被搬到 SRAM，矩阵计算通常很快；真正拖慢程序的往往是：
+
+从 HBM 读取数据到 SRAM；
+将中间结果从 SRAM 写回 HBM；
+后续步骤再次从 HBM 读取同一批中间结果。
+
+因此，Attention 可能不是单纯的 compute-bound，而是明显受到 memory bandwidth &#x2F; IO 限制。
+
+Flash Attention 的核心问题：能否改变计算顺序，在结果不变的前提下，让 Q、K、V 和中间量少往返 HBM？
+
+
+5. 标准 Attention 为什么需要反复读写为简化说明，先考虑一个 Query $q$ 对长度为 $L$ 的 Key 和 Value 序列进行 Attention。
+Attention score 为：
+$$
+a_i=q^{\top}k_i,
+\qquad i=1,\ldots,L.
+$$
+为了避免指数运算溢出，实际 Softmax 通常减去全局最大值：
+$$
+a_{\max}=\max_{1\le i\le L}a_i.
+\qquad 
+\hat a_i
+=
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}.
+$$
+输出为：
+$$
+o
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$
+当序列很长时，SRAM 无法放下与 $L$ 成比例的所有 Key、Value 或 Attention score，只能将序列切成多个 chunk。设每个 chunk 包含 $N$ 个位置，chunk 数量近似为：
+$$
+B=\frac{L}{N}.
+$$
+
+朴素实现往往需要多次扫描数据：
+
+分块计算所有 $a_i$，并将 score 写回 HBM。
+再次读取 score，寻找全局最大值。
+再次读取 score，计算 Softmax 分母。
+再次读取 score，生成归一化权重并写回 HBM。
+读取 Attention 权重和 Value，计算最终加权和。
+
+问题不只是“做了多少乘法”，而是 $a_i$ 与 $\hat a_i$ 等大规模中间量被反复写入、读取。
+
+6. Online Softmax：一次扫描更新最大值和分母6.1 分块定义把第 $k$ 个 chunk 的位置集合记为 $I_k$。处理完前 $k$ 个 chunk 后，维护两个常数：
+
+$d_k$：目前见过的最大 score；
+$s_k$：以当前最大值 $d_k$ 为基准的指数和。
+
+初始化：
+$$
+d_0=-\infty,
+\qquad
+s_0=0.
+$$
+读入第 $k$ 个 chunk 后，最大值更新为：
+$$
+d_k
+=
+\max\left(
+ d_{k-1},
+ \max_{i\in I_k}a_i
+\right).
+$$
+分母更新为：
+$$
+s_k
+=
+s_{k-1}e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}e^{a_i-d_k}.
+$$
+
+旧分母原本以 $d_{k-1}$ 为基准：
+$$
+s_{k-1}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_{k-1}}.
+$$
+当新的最大值变为 $d_k$ 时，只需乘上一个修正项：
+$$
+s_{k-1}e^{d_{k-1}-d_k}
+=
+\sum_{i\in I_1\cup\cdots\cup I_{k-1}}
+e^{a_i-d_k}.
+$$
+因为：
+$$
+e^{a_i-d_{k-1}}e^{d_{k-1}-d_k}
+=
+e^{a_i-d_k}.
+$$
+这样便不需要重新读取之前所有 chunk。处理最后一个 chunk 后：
+$$
+d_B=a_{\max},
+\qquad 
+s_B
+=
+\sum_{i=1}^{L}e^{a_i-a_{\max}}.
+$$
+这就是完整 Softmax 的正确分母。
+
+7. Flash Attention：不显式保存 Attention Matrix，直接更新输出Online Softmax 仍可以先得到分母，再第二次读取 score 计算归一化权重；Flash Attention 更进一步：
+
+不必先完整生成并保存 $\hat a_i$，可以在每个 chunk 内直接结合 Value，逐步得到最终输出。
+
+令 $o_k$ 表示处理完前 $k$ 个 chunk 后，按照当前 $d_k$ 与 $s_k$ 归一化得到的局部输出。初始化：
+$$
+o_0=0.
+$$
+处理第 $k$ 个 chunk 时，输出更新为：
+$$
+o_k
+=
+o_{k-1}
+\frac{s_{k-1}}{s_k}
+e^{d_{k-1}-d_k}
++
+\sum_{i\in I_k}
+\frac{e^{a_i-d_k}}{s_k}v_i.
+$$
+第一项是在修正过去的输出：
+
+$d_{k-1}$ 变成了 $d_k$，需要指数修正；
+归一化分母从 $s_{k-1}$ 变成了 $s_k$，需要比例修正。
+
+第二项加入当前 chunk 的新贡献。
+
+处理完最后一个 chunk 后：
+$$
+o_B
+=
+\sum_{i=1}^{L}
+\frac{e^{a_i-a_{\max}}}
+{\sum_{j=1}^{L}e^{a_j-a_{\max}}}
+v_i
+=
+\sum_{i=1}^{L}\hat a_i v_i.
+$$
+所以，尽管计算过程中没有把完整 Attention 权重矩阵写入 HBM，最终输出仍与标准 Attention 完全一致。
+7.1 从单个 Query 推广到完整 Attention上面为了便于推导只画了一个 Query，真实实现会同时把 Q、K、V 划分为二维 tiles：
+
+在 SRAM 中加载一小块 Query；
+依次加载多块 Key 和 Value；
+对每一行 Query 维护对应的 running max、running sum 和输出；
+完成后只把最终输出写回 HBM。
+
+其数学思想仍是相同的 Online Softmax 与分块输出修正。
+
+8. Flash Attention 为什么更快Flash Attention 的主要收益来自：
+
+Tiling：只把当前需要的小块 Q、K、V 搬进 SRAM。
+Kernel fusion：dot product、mask、Softmax 和 Value 加权尽量在同一计算过程中完成。
+不物化完整 Attention Matrix：避免把长度平方级的 score 或权重矩阵频繁写入 HBM。
+减少 HBM 读写：用少量额外计算换取大幅减少的数据搬运。
+
+8.1 代价和限制
+需要额外的指数修正和归一化修正，计算量可能略有增加。
+实现复杂，理解和编写 kernel 更困难。
+某些框架在 Flash Attention 模式下不会保留完整 Attention 权重，因此无法直接读取整个 Attention matrix 做可视化。
+序列很短时，Attention 并不是总耗时的主要部分，速度提升可能不明显。
+Flash Attention 减少的是运算过程中的 IO，不能消除 KV Cache 对 HBM 容量的占用。
+
+8.2 课堂实验结论课堂示例中：
+
+对随机 Q、K、V 做 Attention，序列长度达到 4096 时，Flash Attention 相较朴素实现可达到约 8 到 9 倍加速。
+在真实语言模型示例中，Prompt 较短时提升有限；Prompt 约为 7 万 token 时，示例耗时约由 2.0 秒降低至 1.3 秒。
+当 Prompt 增加到约 73 万 token 时出现 CUDA Out of Memory，说明即使运算方式更高效，HBM 容量仍然有限。
+
+这些数值与具体硬件、模型、数据类型和实现有关，应理解为课堂示范，而不是固定性能保证。
+
+Part II：KV Cache9. KV Cache 的基本机制9.1 Prefill 阶段Prompt 一次性进入模型后，每一层都会为各 token 计算 Q、K、V。不同位置的输出可以并行计算。
+Prefill 完成后：
+
+保存每一层、每一个历史 token 的 Key 和 Value；
+不需要保存过去的 Query。
+
+9.2 Decode 阶段假设当前生成第 $t$ 个 token，只需：
+
+为新 token 计算 $q_t$、$k_t$、$v_t$；
+用 $q_t$ 与缓存中的所有历史 Key 计算 Attention；
+用得到的权重对所有历史 Value 做加权和；
+将新的 $k_t$、$v_t$ 追加到 Cache。
+
+9.3 为什么保存 K、V，不保存 Q未来生成新 token 时，需要的是“新的 Query 对过去所有 Key 进行检索，再读取过去的 Value”。过去 token 的 Query 已经完成了它当时的计算，以后不会再次使用。
+因此：
+
+Key 和 Value 会被未来所有 token 重复访问；
+旧 Query 不会再被使用。
+
+9.4 本质上的时间—空间交换KV Cache 避免重复计算历史 token 的 K、V，显著加快 Decode；代价是缓存量随以下因素线性增长：
+
+序列长度；
+Transformer 层数；
+KV Head 数量；
+每个 Head 的维度；
+Batch size；
+数值精度所占字节数。
+
+
+10. KV Cache 的显存计算只考虑单个 token、单个 batch 时，KV Cache 大小可写成：
+$$
+M_{\text{token}}
+=
+2
+\times N_{\text{layer}}
+\times N_{\text{KV-head}}
+\times d_{\text{head}}
+\times b,
+$$
+其中：
+
+前面的 $2$ 表示同时保存 Key 和 Value；
+$b$ 表示每个数占用的字节数，例如 FP16 为 2 Byte。
+
+以 Gemma 2 27B 的参数做简化估算：
+$$
+46
+\times 32
+\times 128
+\times 2
+\times 2
+=
+753664\ \text{Bytes}.
+$$
+约为：
+$$
+736\ \text{KiB}
+\approx
+0.72\ \text{MiB/token}.
+$$
+若把 80 GiB 全部用于该 KV Cache，理想化上限约为：
+$$
+\frac{80\ \text{GiB}}{0.72\ \text{MiB/token}}
+\approx
+114000\ \text{tokens}.
+$$
+如果有 batch，整体 KV Cache 还要再乘 batch size：
+$$
+M_{\text{total}}
+=
+B_{\text{batch}}
+\times L_{\text{seq}}
+\times M_{\text{token}}.
+$$
+
+11. MHA、MQA 与 GQAKV Cache 只保存 K 和 V，因此减少 KV Head 数量可以直接降低 Cache 大小和 Decode 时的内存读取量。
+
+
+
+方法
+Query Head
+KV Head
+核心思想
+KV Cache
+代价
+
+
+
+MHA
+多个
+与 Query 数量相同
+每个 Query Head 有独立 K、V
+最大
+表达能力强，但显存占用高
+
+
+MQA
+多个
+1 组
+所有 Query Head 共享同一组 K、V
+最小
+可能明显损伤模型能力
+
+
+GQA
+多个
+介于 1 与 Query Head 数之间
+每组 K、V 服务多个 Query Head
+居中
+在效果和效率之间折中
+
+
+若 Query Head 数为 $H_q$，KV Head 数为 $H_{kv}$，则 KV Cache 大小与 $H_{kv}$ 近似成正比：
+$$
+M_{\text{KV}}
+\propto
+H_{kv}.
+$$
+每组 KV 对应的 Query 数约为：
+$$
+G
+=
+\frac{H_q}{H_{kv}}.
+$$
+重要区别：
+
+不是让多个 K、V 共享一个 Query；
+而是让多个 Query 共享一组 K、V；
+原因是只有 K、V 需要长期缓存，Query 不需要缓存。
+
+MQA 和 GQA 改变了原始 MHA 架构，通常需要在训练模型时就采用相应设计，不能简单把任意现成模型无损改成 MQA 或 GQA。
+
+12. Multi-Head Latent Attention（MLA）12.1 核心思想MHA 需要缓存多组高维 K、V。MLA 在输入与多组 K、V 之间加入低维 bottleneck，将每个 token 压缩成 latent vector $c_i$，缓存时主要保存这个低维表示。
+
+简化表示为：
+$$
+c_i=W_Dx_i.
+$$
+每个 Head 的 Key 和 Value 可由 latent vector 线性映射得到：
+$$
+k_i=W_Kc_i,
+\qquad
+v_i=W_Vc_i.
+$$
+MLA 的关键不只是“压缩”，而是可以利用线性代数改变运算顺序，避免对序列中的每个 latent vector 都进行完整解压缩。
+12.2 Attention score 不需要逐 token 解压 Key原本：
+$$
+a_i=q^{\top}k_i.
+$$
+代入 $k_i=W_Kc_i$：
+$$
+a_i
+=q^{\top}W_Kc_i
+=
+\left(W_K^{\top}q\right)^{\top}c_i.
+$$
+定义压缩空间中的 Query：
+$$
+q'=W_K^{\top}q.
+$$
+于是：
+$$
+a_i={q'}^{\top}c_i.
+$$
+因此不需要先把每个 $c_i$ 解压成 $k_i$，只需把当前 Query 变换一次，再直接与所有缓存的 latent vectors 做 dot product。
+12.3 Weighted Sum 不需要逐 token 解压 Value标准输出为：
+$$
+o
+=
+\sum_i\hat a_i v_i.
+$$
+代入 $v_i=W_Vc_i$：
+$$
+o
+=
+\sum_i\hat a_iW_Vc_i
+=
+W_V\left(\sum_i\hat a_i c_i\right).
+$$
+所以可以：
+
+先在低维 latent space 中完成加权和；
+最后只对汇总后的一个向量做一次映射。
+
+而不是对长度为 $L$ 的每个 token 分别解压。
+12.4 特点
+大幅压缩需要保存的 KV 信息。
+需要模型在训练时学习压缩和映射，属于模型架构设计。
+相对于原始 MHA，它改变了 Attention 的参数化方式；但在该架构内部，上述换序计算本身是代数等价的，不是数值近似。
+
+
+13. Sliding Window Attention
+Sliding Window Attention 将每个 token 的可见范围限制为最近 $W$ 个 token：
+$$
+\mathcal A_t
+=
+\left\{
+\max(1,t-W+1),\ldots,t
+\right\}.
+$$
+每层只需保存固定窗口内的 KV，Cache 不再随序列无限增长。虽然单层只能看到局部，但通过多层堆叠，较早 token 的信息可被中间位置吸收后再传递给更高层，有效感受野随深度扩大——不过长距离信息仍可能逐层衰减或丢失。实际使用时常与 Full Attention 层交替，兼顾效率与全局信息传递。
+
+14. StreamingLLM 与 Attention Sink
+单纯只保留最近窗口在长序列下表现会明显下降。StreamingLLM 发现：额外保留序列最开头的少数 token 就能让模型稳定处理远超训练长度的流式输入：
+$$
+\mathcal A_t
+=
+\{1,2,\ldots,S\}
+\cup
+\{t-W+1,\ldots,t\}.
+$$
+其原理是 Softmax 权重之和必须为 1，即使当前没有需要关注的上下文，模型也必须将多余 Attention 分配给某些位置。开头的 token 往往充当了 Attention Sink——模型把”无处可放”的注意力集中到它们身上。删除这些 sink token 会破坏已形成的 Attention 行为；保留它们后表现显著恢复。这里的要点是：开头 token 被保留不一定因为语义重要，而可能是因为它们承担了稳定 Attention 分布的结构性作用。该方法可在 Inference 阶段直接应用，也可在训练时显式加入。
+
+15. KV Cache Pruning
+Scissorhands、H2O 等工作观察到：每次生成时真正获得明显 Attention 的历史 token 只占少数（heavy hitters），大量 KV 长期存在却几乎不再被访问。因此可在显存达到预算上限时，保留最近 token 和累计 Attention 较高的 token，删除长期未使用的 KV，将显存放在固定预算内。
+
+优点：通常可直接用于已有模型，丢弃大量 KV 后性能仍可能接近完整 Cache。
+风险：被删 token 以后可能重新变得重要但无法恢复；困难的长距离推理、信息检索任务可能明显退化。核心难点在于判断哪些 KV 可以安全删除。
+
+
+16. 跨对话的 KV Cache：Prompt Caching前面的 KV Cache 主要是在同一个生成过程中复用历史 K、V。服务平台还可以在不同请求之间复用相同前缀的 KV Cache。
+16.1 只有相同 Prefix 才能复用在 Causal Transformer 中，一个 token 的表示不仅取决于它自身，还取决于它前面的全部 token。
+例如两条序列：
+
+公共前缀“大家好，我是”对应的 K、V 可以复用；从“大”和“小”开始，前缀已经不同，后续即使再次出现相同的“金”字，其 K、V 也不能直接复用。
+原因可概括为：
+$$
+(k_i,v_i)
+=
+f(x_1,x_2,\ldots,x_i),
+$$
+而不是只由当前 token $x_i$ 决定。
+16.2 System Prompt 的排列原则为了提高 Cache Hit：
+
+稳定、不常变化的内容放在前面；
+日期、用户输入、任务参数等易变化内容放在后面。
+
+对于 AI Agent，常见的稳定前缀包括：
+
+可使用的工具及调用规则；
+Agent 的固定行为规范；
+身份、长期目标、固定记忆检索方式；
+长而稳定的 system prompt。
+
+容易变化的内容包括：
+
+当前时间；
+用户本轮输入；
+动态环境状态；
+临时变量和任务参数。
+
+16.3 Prompt 改写示例Cache Hit 较少的写法：
+帮我订从台北到波士顿的班机帮我订从旧金山到纽约的班机
+
+因为地点较早出现，前缀很快分叉。
+更有利于缓存的写法：
+帮我订从 X 到 Y 的班机。X=台北，Y=波士顿帮我订从 X 到 Y 的班机。X=旧金山，Y=纽约
+
+固定模板被放在前面，变化参数被移到后面，公共前缀更长。
+16.4 为什么 Prompt Caching 与成本有关如果前缀的 KV 已经计算完成，平台无需再次对这部分 Prompt 执行完整 Prefill，只需读取已有缓存。课程以 API 对 cached input 提供更低价格为例，说明计算成本与账单成本之间的联系。
+需要区分：
+
+KV Cache：通常指单次会话或生成过程中的历史 KV；
+Prompt Caching &#x2F; Prefix Caching：服务系统在多个请求之间复用相同前缀的 KV。
+
+二者保存的核心对象相同，但复用范围不同。
+
+Part III：Speculative Decoding17. 基本思想Autoregressive Decoding 每次只能生成一个 token，后一个 token 必须等待前一个 token 生成完成，因此长文本生成速度较慢。
+
+Speculative Decoding 引入一个速度很快的 draft model，类似“预言家”，先猜测接下来多个 token，再由较大的 target model 一次并行验证。
+假设 draft model 预测：
+$$
+\tilde y_1,\tilde y_2
+$$
+target model 可以同时计算：
+$$
+P(y_1\mid x),\quad
+P(y_2\mid x,\tilde y_1),\quad
+P(y_3\mid x,\tilde y_1,\tilde y_2)
+$$
+因此，一次大模型前向计算可能推进多个 token。
+17.1 验证结果
+全部猜对： 接受所有候选，并可额外得到下一个 token。
+部分猜对： 接受最长正确前缀，在第一个错误位置使用 target model 的结果，后续候选全部丢弃。
+第一个就猜错： 仍能输出 target model 生成的一个 token，但基本没有加速，并浪费部分计算。
+
+所以 draft model 不需要完全正确，只要经常能连续猜对若干 token，就可以减少 target model 的调用次数。
+17.2 谁可以作为 Draft Modeldraft model 的要求是：
+
+速度足够快；
+输出尽量接近 target model；
+偶尔犯错没有关系。
+
+常见选择包括：
+
+Non-autoregressive model；
+压缩或蒸馏后的小模型；
+检索系统或搜索引擎；
+多个 draft model 同时提出候选。
+
+draft model 不是越小越好：模型太小虽然快，但接受率可能很低；模型太大又会增加候选生成时间。
+17.3 特点与代价优点
+通常不需要重新训练或修改 target model；
+可以作为外接式推理加速方法；
+一次验证可能生成多个 token；
+通过正确的接受、拒绝和概率修正，可以保持 target model 原本的生成分布。
+
+代价
+需要额外运行 draft model；
+错误候选会造成无效计算；
+接受率低时加速效果有限；
+会增加部署与调度复杂度。
+
+其本质是：
+
+使用更多并行计算资源，换取更低的生成延迟。
+
+
+18. 方法总表
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Pre-training </tag>
-            
-            <tag> SFT </tag>
-            
-            <tag> RLHF </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</title>
-      <link href="/posts/fbe93ec0/"/>
-      <url>/posts/fbe93ec0/</url>
-      
-        <content type="html"><![CDATA[<h1 id="训练神经网络的各种技巧"><a href="#训练神经网络的各种技巧" class="headerlink" title="训练神经网络的各种技巧"></a>训练神经网络的各种技巧</h1><h2 id="1-机器学习的三个步骤"><a href="#1-机器学习的三个步骤" class="headerlink" title="1. 机器学习的三个步骤"></a>1. 机器学习的三个步骤</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-15-56-13.png"></p><p>训练模型可以分为三个步骤：</p><ol><li><strong>我要什么</strong>：定义目标与 Loss Function。</li><li><strong>我有哪些选择</strong>：决定函数集合，也就是模型架构。</li><li><strong>选择一个最好的</strong>：通过 Optimization 找到参数。</li></ol><p>训练完成后，需要先在 <strong>Validation Set</strong> 上选择模型和超参数，最后才在 <strong>Test Set</strong> 上进行一次最终评估。</p><p>深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。</p><hr><h2 id="2-先判断问题出在哪里"><a href="#2-先判断问题出在哪里" class="headerlink" title="2. 先判断问题出在哪里"></a>2. 先判断问题出在哪里</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-15-57-35.png"></p><h3 id="2-1-Optimization-问题"><a href="#2-1-Optimization-问题" class="headerlink" title="2.1 Optimization 问题"></a>2.1 Optimization 问题</h3><p><strong>现象：Training Loss 本身就降不下去。</strong></p><p>例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。</p><p>此时应该考虑：</p><ul><li>更好的 Optimizer；</li><li>调整 Learning Rate；</li><li>Skip Connection；</li><li>Normalization；</li><li>更好的 Initialization 或 Pre-training。</li></ul><h3 id="2-2-Generalization-问题"><a href="#2-2-Generalization-问题" class="headerlink" title="2.2 Generalization 问题"></a>2.2 Generalization 问题</h3><p><strong>现象：Training Loss 已经很低，但 Validation Loss 较高。</strong></p><p>这才是典型的 <strong>Overfitting</strong>。模型在训练集上表现很好，但无法推广到未见数据。</p><p>此时应该考虑：</p><ul><li>Dropout；</li><li>更多训练数据；</li><li>Data Augmentation；</li><li>Semi-supervised Learning；</li><li>Parameter Regularization；</li><li>Weight Decay 或 AdamW。</li></ul><blockquote><p>不能只因为模型表现不好，就笼统地说是 Overfitting。首先要检查 Training Loss 是否已经足够低。</p></blockquote><hr><h1 id="Part-I：改进步骤三——Optimization"><a href="#Part-I：改进步骤三——Optimization" class="headerlink" title="Part I：改进步骤三——Optimization"></a>Part I：改进步骤三——Optimization</h1><h2 id="3-Vanilla-Gradient-Descent"><a href="#3-Vanilla-Gradient-Descent" class="headerlink" title="3. Vanilla Gradient Descent"></a>3. Vanilla Gradient Descent</h2><p>目标是寻找：</p><p>$$\theta^*=\arg\min_{\theta}L(\theta)$$</p><p>每一步先计算梯度：</p><p>$$g^t=\nabla_\theta L(\theta^t)$$</p><p>再更新参数：</p><p>$$\theta^{t+1}=\theta^t-\eta g^t$$</p><p>其中，$\eta$ 是 Learning Rate。</p><p>Vanilla Gradient Descent 只根据当前梯度决定更新方向，而 Optimizer 通常会综合过去的梯度信息。</p><hr><h2 id="4-Learning-Rate-为什么难调"><a href="#4-Learning-Rate-为什么难调" class="headerlink" title="4. Learning Rate 为什么难调"></a>4. Learning Rate 为什么难调</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-15-59-14.png"></p><p>Learning Rate 太大时，参数可能越过谷底，甚至发散；太小时，训练又会非常缓慢。</p><p>更麻烦的是，不同参数方向的 Loss Surface 可能很不一样：</p><ul><li>梯度通常较大的方向，需要较小的 Learning Rate；</li><li>梯度通常较小的方向，需要较大的 Learning Rate。</li></ul><p>因此，自适应优化器会为不同参数设置不同的有效 Learning Rate。</p><hr><h2 id="5-Adagrad"><a href="#5-Adagrad" class="headerlink" title="5. Adagrad"></a>5. Adagrad</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-15-59-56.png"></p><p>Adagrad 累积每个参数过去梯度的平方：</p><p>$$\sigma_i^t=\sqrt{\sum_{k=0}^{t}(g_i^k)^2}$$</p><p>参数更新为：</p><p>$$\theta_i^{t+1}=\theta_i^t-\frac{\eta}{\sigma_i^t+\epsilon}g_i^t$$</p><p>直觉：</p><ul><li>某一维梯度长期较大，$\sigma_i^t$ 较大，有效 Learning Rate 变小；</li><li>某一维梯度长期较小，有效 Learning Rate 较大。</li></ul><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>$\sigma_i^t$ 会不断累积，很早以前的梯度和最近的梯度都有影响，导致 Learning Rate 只会越来越小，难以及时适应地形变化。</p><hr><h2 id="6-RMSProp"><a href="#6-RMSProp" class="headerlink" title="6. RMSProp"></a>6. RMSProp</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-16-00-49.png"></p><p>RMSProp 不再累积所有历史梯度，而是对梯度平方做 Exponential Moving Average：</p><p>$$(\sigma_i^t)^2=\alpha(\sigma_i^{t-1})^2+(1-\alpha)(g_i^t)^2,\qquad 0&lt;\alpha&lt;1$$</p><p>更新为：</p><p>$$\theta_i^{t+1}=\theta_i^t-\frac{\eta}{\sigma_i^t+\epsilon}g_i^t$$</p><p>与 Adagrad 相比，RMSProp 更重视最近的梯度，因此可以更快地调整每个参数的有效 Learning Rate。</p><hr><h2 id="7-Momentum"><a href="#7-Momentum" class="headerlink" title="7. Momentum"></a>7. Momentum</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-16-01-19.png"></p><p>当梯度很小、方向反复震荡，或者经过 Saddle Point 时，Vanilla Gradient Descent 容易停滞。</p><p><img src="/img/posts/fbe93ec0/2026-07-05-16-01-57.png"></p><p>Momentum 综合过去的梯度方向：</p><p>$$m_i^t=\beta m_i^{t-1}+(1-\beta)g_i^t$$</p><p>然后更新：</p><p>$$\theta_i^{t+1}=\theta_i^t-\eta m_i^t$$</p><p>直觉上，参数像具有惯性的物体：</p><ul><li>梯度长期方向一致时，移动速度会加快；</li><li>梯度来回震荡时，互相抵消；</li><li>即使当前梯度较小，也可能依靠过去积累的动量继续前进。</li></ul><hr><h2 id="8-Adam"><a href="#8-Adam" class="headerlink" title="8. Adam"></a>8. Adam</h2><p>Adam 可以理解为：</p><blockquote><p><strong>Momentum + RMSProp</strong></p></blockquote><p><img src="/img/posts/fbe93ec0/2026-07-05-16-02-20.png"></p><p>一阶动量：</p><p>$$m_i^t=\beta_1m_i^{t-1}+(1-\beta_1)g_i^t$$</p><p>二阶动量：</p><p>$$v_i^t=\beta_2v_i^{t-1}+(1-\beta_2)(g_i^t)^2$$</p><p>简化后的更新式为：</p><p>$$\theta_i^{t+1}=\theta_i^t-\eta\frac{m_i^t}{\sqrt{v_i^t}+\epsilon}$$</p><p>实际 Adam 还会对训练初期的一阶、二阶动量进行 <strong>Bias Correction</strong>。</p><p>Adam 通常能够改善 Optimization，使 Training Loss 更容易下降，但不保证 Validation Loss 一定更低。</p><hr><h2 id="9-Learning-Rate-Scheduling"><a href="#9-Learning-Rate-Scheduling" class="headerlink" title="9. Learning Rate Scheduling"></a>9. Learning Rate Scheduling</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-16-02-50.png"></p><p>即使使用 Adam，整体 Learning Rate 仍然需要随训练过程变化。</p><h3 id="Warm-up"><a href="#Warm-up" class="headerlink" title="Warm-up"></a>Warm-up</h3><p>训练初期逐渐增大学习率：</p><ul><li>初始参数和动量估计不稳定；</li><li>先用小步探索地形，避免训练突然发散。</li></ul><h3 id="Learning-Rate-Decay"><a href="#Learning-Rate-Decay" class="headerlink" title="Learning Rate Decay"></a>Learning Rate Decay</h3><p>训练后期逐渐减小学习率：</p><ul><li>前期需要较大的步伐快速探索；</li><li>后期接近较优位置时，需要较小步伐稳定收敛。</li></ul><hr><h2 id="10-Dropout"><a href="#10-Dropout" class="headerlink" title="10. Dropout"></a>10. Dropout</h2><p>训练时随机丢弃一部分神经元；Validation 和 Testing 时使用完整网络。</p><p>Dropout 相当于在训练时增加难度，使模型不能过度依赖某几个神经元，从而改善 Generalization。</p><p>需要注意：</p><ul><li>Dropout 通常会让 Training Loss 更高；</li><li>它不是用来解决 Training Loss 降不下去的问题；</li><li>适合 Training Loss 很低、Validation Loss 较高的 Overfitting 情况。</li></ul><hr><h2 id="11-Initialization-与-Pre-training"><a href="#11-Initialization-与-Pre-training" class="headerlink" title="11. Initialization 与 Pre-training"></a>11. Initialization 与 Pre-training</h2><p>不同初始参数可能使优化过程走向不同区域，因此即使使用相同模型与 Optimizer，训练结果也可能不同。</p><p>对于 ReLU 网络，常见的 Kaiming Initialization 会根据输入维度调整参数尺度，例如：</p><p>$$W_{ij}\sim\mathcal{N}\left(0,\frac{2}{\mathrm{fan\_in}}\right)$$</p><p>合适的 Initialization 可以避免每层数值过大或过小，使梯度传播更加稳定。</p><h3 id="Pre-training"><a href="#Pre-training" class="headerlink" title="Pre-training"></a>Pre-training</h3><p>先在一个容易获得大量数据的 <strong>Pretext Task</strong> 上训练，再将参数作为真正 <strong>Downstream Task</strong> 的初始化。</p><p>Pre-training 的作用包括：</p><ul><li>提供更好的起点，改善 Optimization；</li><li>利用大规模数据学习通用表示，改善 Generalization。</li></ul><p>因此，Pre-training 同时可能帮助 Optimization 和 Generalization。</p><hr><h1 id="Part-II：改进步骤二——模型架构"><a href="#Part-II：改进步骤二——模型架构" class="headerlink" title="Part II：改进步骤二——模型架构"></a>Part II：改进步骤二——模型架构</h1><h2 id="12-选择合适的函数范围"><a href="#12-选择合适的函数范围" class="headerlink" title="12. 选择合适的函数范围"></a>12. 选择合适的函数范围</h2><p><img src="/img/posts/fbe93ec0/2026-07-05-16-03-53.png"></p><ul><li>函数集合太小：可能根本不包含理想函数，产生 Underfitting。</li><li>函数集合太大：虽然表达能力强，但更容易 Overfitting。</li><li>理想情况：利用 Domain Knowledge 设计一个范围较小、但刚好包含好函数的架构。</li></ul><hr><h2 id="13-Convolutional-Neural-Network"><a href="#13-Convolutional-Neural-Network" class="headerlink" title="13. Convolutional Neural Network"></a>13. Convolutional Neural Network</h2><p>CNN 利用图像中的两个先验知识。</p><h3 id="13-1-Receptive-Field"><a href="#13-1-Receptive-Field" class="headerlink" title="13.1 Receptive Field"></a>13.1 Receptive Field</h3><p>图像中的基础模式，如边缘、眼睛、鸟嘴，只占据局部区域，因此一个神经元不需要连接整张图像。</p><p>常见设置包括：</p><ul><li>Kernel Size；</li><li>Stride；</li><li>Padding；</li><li>多个 Channel。</li></ul><p>局部连接大幅减少参数数量。</p><h3 id="13-2-Parameter-Sharing"><a href="#13-2-Parameter-Sharing" class="headerlink" title="13.2 Parameter Sharing"></a>13.2 Parameter Sharing</h3><p>相同模式可能出现在图像的不同位置，因此不同位置可以使用同一组参数，也就是同一个 Filter。</p><p>CNN 通过：</p><ul><li>Local Receptive Field；</li><li>Parameter Sharing；</li></ul><p>缩小函数搜索范围，并把图像的结构先验加入模型，因此主要改善 <strong>Generalization</strong>。</p><p><img src="/img/posts/fbe93ec0/2026-07-05-16-04-57.png"></p><hr><h2 id="14-Skip-Connection"><a href="#14-Skip-Connection" class="headerlink" title="14. Skip Connection"></a>14. Skip Connection</h2><p>深层网络中，较前面层的参数变化需要经过很多层才影响 Loss，可能出现：</p><ul><li>Gradient Vanishing；</li><li>Gradient Exploding。</li></ul><p>Residual Block 将输入直接加到变换结果上：</p><p>$$a'=F(a)+a$$</p><p>简化为线性变换时：</p><p>$$a'=Wa+a$$</p><p>Skip Connection 为信息和梯度提供一条“高速公路”，使深层网络的 Loss Surface 更容易优化。</p><p>它修改了网络架构，但主要带来 <strong>Better Optimization</strong>。</p><hr><h2 id="15-Normalization"><a href="#15-Normalization" class="headerlink" title="15. Normalization"></a>15. Normalization</h2><p>Normalization 把每层的输出限制到较稳定的范围，使不同维度的尺度更接近，从而让 Learning Rate 更容易调整。</p><p>常见方法包括：</p><ul><li>Batch Normalization；</li><li>Layer Normalization；</li><li>Batch Renormalization。</li></ul><p>Normalization 修改了模型架构，主要改善 Optimization，有时也能改善 Generalization。</p><hr><h1 id="Part-III：改进步骤一——Loss-与数据"><a href="#Part-III：改进步骤一——Loss-与数据" class="headerlink" title="Part III：改进步骤一——Loss 与数据"></a>Part III：改进步骤一——Loss 与数据</h1><h2 id="16-为什么不能直接用-Accuracy-当-Loss"><a href="#16-为什么不能直接用-Accuracy-当-Loss" class="headerlink" title="16. 为什么不能直接用 Accuracy 当 Loss"></a>16. 为什么不能直接用 Accuracy 当 Loss</h2><p>分类模型输出每个类别的分数，预测类别通常为：</p><p>$$\hat{c}=\arg\max_i z_i$$</p><p>Accuracy 只关心最终类别是否正确。当参数发生小变化但最大类别没有改变时，Accuracy 完全不变，因此大多数位置的梯度为零。</p><p>所以 Accuracy 适合 Evaluation，但不适合作为 Gradient Descent 的训练 Loss。</p><hr><h2 id="17-Softmax-与-Cross-entropy"><a href="#17-Softmax-与-Cross-entropy" class="headerlink" title="17. Softmax 与 Cross-entropy"></a>17. Softmax 与 Cross-entropy</h2><p>Softmax 将类别分数转换为概率：</p><p>$$p_i=\frac{\exp(z_i)}{\sum_j\exp(z_j)}$$</p><p>对于 One-hot Ground Truth $\hat{y}$，Cross-entropy 为：</p><p>$$L_{\mathrm{CE}}=-\sum_i \hat{y}_i\log p_i$$</p><p>当正确类别为 $c$ 时：</p><p>$$L_{\mathrm{CE}}=-\log p_c$$</p><p>Cross-entropy 是连续且可微的，可以为参数更新提供有效梯度。</p><p>训练时使用 Cross-entropy，Validation 和 Testing 时仍然可以使用 Accuracy。</p><hr><h2 id="18-更多训练数据"><a href="#18-更多训练数据" class="headerlink" title="18. 更多训练数据"></a>18. 更多训练数据</h2><p>当模型 Overfitting 时，最直接的方法是收集更多具有代表性的训练数据，使训练分布更接近真实测试分布。</p><p>但增加数据主要改善 Generalization，并不会让 Optimization 变得更简单。</p><hr><h2 id="19-Data-Augmentation"><a href="#19-Data-Augmentation" class="headerlink" title="19. Data Augmentation"></a>19. Data Augmentation</h2><p>当真实数据难以收集时，可以通过合理变换创造新数据。</p><p>例如：</p><ul><li>图像分类：翻转、裁剪、模糊、颜色变化；</li><li>语音识别：调整音量、速度或说话人音色。</li></ul><p>变换必须保持任务的 Label 不变：</p><ul><li>判断动物类别时，左右翻转通常合理；</li><li>判断动物朝向时，左右翻转会改变 Label；</li><li>语音识别可以改变说话人音色；</li><li>说话人识别则不能随意改变音色。</li></ul><p>因此，选择 Augmentation 依赖对任务的理解。</p><h3 id="Mixup"><a href="#Mixup" class="headerlink" title="Mixup"></a>Mixup</h3><p>选择两笔样本，以比例 $\lambda$ 混合：</p><p>$$\tilde{x}=\lambda x_i+(1-\lambda)x_j$$</p><p>同时混合标签：</p><p>$$\tilde{y}=\lambda y_i+(1-\lambda)y_j$$</p><p>Mixup 使模型在样本之间学习更平滑的决策边界，主要改善 Generalization。</p><hr><h2 id="20-Semi-supervised-Learning"><a href="#20-Semi-supervised-Learning" class="headerlink" title="20. Semi-supervised Learning"></a>20. Semi-supervised Learning</h2><p>现实中通常有少量带标签数据和大量无标签数据，可以定义：</p><p>$$L=\sum_{(x,y)\in D_L}l(f(x),y)+\lambda\sum_{x\in D_U}l'(f(x))$$</p><p>其中第二项利用无标签数据，并依赖对数据结构的假设。</p><h3 id="20-1-Entropy-Minimization"><a href="#20-1-Entropy-Minimization" class="headerlink" title="20.1 Entropy Minimization"></a>20.1 Entropy Minimization</h3><p>假设样本应明确属于某个类别，要求无标签样本的预测分布具有较低 Entropy：</p><p>$$H(p)=-\sum_i p_i\log p_i$$</p><p>最小化 Entropy 会使预测更加确定，并倾向让分类边界经过低密度区域。</p><h3 id="20-2-Graph-based-Consistency"><a href="#20-2-Graph-based-Consistency" class="headerlink" title="20.2 Graph-based Consistency"></a>20.2 Graph-based Consistency</h3><p>假设“相近样本应该具有相近输出”，建立样本图：</p><p>$$L=L_{\mathrm{sup}}+\lambda\sum_{x,x'\in D_U}g(x,x')\,d(f(x),f(x'))$$</p><p>其中：</p><ul><li>$g(x,x')$ 表示两个样本是否相连；</li><li>$d(\cdot,\cdot)$ 衡量两个输出分布的距离。</li></ul><p>Semi-supervised Learning 修改了 Loss，主要改善 Generalization。</p><hr><h2 id="21-Parameter-Regularization"><a href="#21-Parameter-Regularization" class="headerlink" title="21. Parameter Regularization"></a>21. Parameter Regularization</h2><p>除了数据 Loss，还可以加入人类对函数的偏好：</p><p>$$L'(\theta)=L(\theta)+\lambda R(\theta)$$</p><p>L2 Regularization 定义为：</p><p>$$R(\theta)=\sum_i\theta_i^2$$</p><p>因此：</p><p>$$\nabla_\theta L'=\nabla_\theta L+2\lambda\theta$$</p><p>用 Vanilla Gradient Descent 更新：</p><p>$$\theta^{t+1}=\theta^t-\eta\left(\nabla_\theta L+2\lambda\theta^t\right)$$</p><p>整理得到：</p><p>$$\theta^{t+1}=(1-2\eta\lambda)\theta^t-\eta\nabla_\theta L$$</p><p>可以理解为：每次更新前先把参数缩小一点，这就是 <strong>Weight Decay</strong>。</p><p>Parameter Regularization 与 Weight Decay 主要用于改善 Generalization，而不是改善 Training Loss。</p><hr><h2 id="22-AdamW"><a href="#22-AdamW" class="headerlink" title="22. AdamW"></a>22. AdamW</h2><p>在 Vanilla Gradient Descent 中，L2 Regularization 可以写成 Weight Decay；但在 Adam 这类自适应 Optimizer 中，直接把 L2 项混进梯度并不等价于真正的 Weight Decay。</p><p>AdamW 将参数衰减与 Adam 的梯度更新分开：</p><p>$$\theta^{t+1}=(1-\eta_t\lambda)\theta^t-\eta_t\frac{\hat{m}^t}{\sqrt{\hat{v}^t}+\epsilon}$$</p><p>其中，$\lambda$ 的系数定义不同，有时会写成 $2\lambda$。</p><p>相较于 Adam：</p><ul><li>AdamW 主要通过 Weight Decay 改善 Generalization；</li><li>它不一定让 Training Loss 更低；</li><li>相较于 Vanilla Gradient Descent，它仍保留 Adam 的 Optimization 优势。</li></ul><hr><h2 id="23-方法总表"><a href="#23-方法总表" class="headerlink" title="23. 方法总表"></a>23. 方法总表</h2><table><thead><tr><th>方法</th><th>修改的具体步骤</th><th>主要作用</th><th>代价 &#x2F; 不解决什么</th></tr></thead><tbody><tr><td>Adagrad、RMSProp、Momentum、Adam</td><td>改变<strong>如何寻找最优函数</strong>：利用历史梯度调整参数更新的方向或步长</td><td>Better Optimization：使 Training Loss 更容易下降</td><td><strong>不是为了改善 Generalization</strong>；需要保存额外的优化器状态，并仍需调整 Learning Rate 等超参数</td></tr><tr><td>Learning Rate Scheduling</td><td>改变<strong>如何寻找最优函数</strong>：在训练过程中动态调整 Learning Rate</td><td>Better Optimization：前期快速探索，后期稳定收敛</td><td>不直接解决 Overfitting；不合适的 Warm-up 或 Decay 可能使训练过慢或不稳定</td></tr><tr><td>Dropout</td><td>改变<strong>如何寻找最优函数</strong>：训练时随机丢弃部分神经元，在受扰动的网络上优化</td><td>Better Generalization：降低模型对个别神经元的依赖</td><td><strong>Worse Optimization</strong>，Training Loss 往往更高；Training Loss 本来就降不下去时不应优先使用</td></tr><tr><td>Initialization &#x2F; Pre-training</td><td>改变<strong>寻找最优函数的起点</strong>：使用更合适的初始参数，而非完全随机开始</td><td>Better Optimization；Pre-training 也可能带来 Better Generalization</td><td>Pre-training 需要额外数据与计算，且 Pretext Task 不一定能迁移到 Downstream Task；不能完全替代合适的 Optimizer</td></tr><tr><td>CNN</td><td>改变<strong>可选择的函数范围</strong>：加入 Local Receptive Field 与 Parameter Sharing</td><td>Better Generalization：利用图像的局部性和平移共享先验，减少参数</td><td>依赖任务先验；若局部性与参数共享的假设不成立，可能限制模型能够表达的函数</td></tr><tr><td>Skip Connection</td><td>改变<strong>可选择的函数范围</strong>：在网络中加入残差连接，使信息和梯度可以跨层传递</td><td>Better Optimization：缓解深层网络难以训练的问题</td><td>主要不是为了解决 Overfitting，不保证 Validation Loss 一定更低</td></tr><tr><td>Normalization</td><td>改变<strong>可选择的函数范围</strong>：在网络中加入 BatchNorm、LayerNorm 等归一化操作</td><td>Better Optimization；有时也能带来 Better Generalization</td><td>Generalization 的改善并不保证；会增加额外计算，部分方法还依赖 Batch Statistics</td></tr><tr><td>Cross-entropy 代替 Accuracy</td><td>改变<strong>要优化的目标</strong>：用连续、可微的 Cross-entropy 作为训练 Loss</td><td>Better Optimization：提供有效梯度，使 Gradient Descent 能够训练分类模型</td><td>不代表 Accuracy 不重要；Accuracy 适合 Evaluation，但不适合作为训练 Loss；不直接保证 Better Generalization</td></tr><tr><td>更多训练数据</td><td>改变<strong>用来定义训练目标的数据</strong>：用更多有标签样本计算 Loss</td><td>Better Generalization：让训练资料更能代表真实分布</td><td>需要收集与标注数据，并增加训练成本；不直接解决 Optimizer 或 Training Loss 降不下去的问题</td></tr><tr><td>Data Augmentation &#x2F; Mixup</td><td>改变<strong>用来定义训练目标的数据</strong>：通过合理变换或样本混合扩充训练集</td><td>Better Generalization：增加数据多样性，使模型更加稳健</td><td>变换必须保持 Label 合理；错误的 Augmentation 会伤害表现，Training Loss 也可能更高</td></tr><tr><td>Semi-supervised Learning</td><td>改变<strong>要优化的目标</strong>：在 Loss 中加入无标签数据的 Entropy、Graph Consistency 等约束</td><td>Better Generalization：利用大量无标签数据</td><td>依赖“低密度分界”“相近样本应有相近输出”等假设；假设错误可能误导模型</td></tr><tr><td>Parameter Regularization</td><td>改变<strong>要优化的目标</strong>：在数据 Loss 中加入对参数或函数复杂度的惩罚</td><td>Better Generalization：偏好较简单的函数，减少 Overfitting</td><td>会使 Training Loss 更难降低；正则化过强会导致 Underfitting</td></tr><tr><td>Weight Decay</td><td>改变<strong>如何寻找最优函数</strong>：在每次参数更新时主动缩小参数</td><td>Better Generalization</td><td>可能带来 Worse Optimization，使 Training Loss 变高；衰减系数过大会导致 Underfitting</td></tr><tr><td>AdamW</td><td>改变<strong>如何寻找最优函数</strong>：将 Adam 的自适应更新与 Weight Decay 分开执行</td><td>相比 Vanilla Gradient Descent 有 Better Optimization；相比 Adam 有 Better Generalization</td><td>需要额外调整 Weight Decay；不保证比 Adam 获得更低的 Training Loss</td></tr></tbody></table><hr>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Inference</tag>
+        <tag>Flash attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式AI时代下的机器学习 第七讲》课堂笔记</title>
+    <url>/posts/83d3d343/</url>
+    <content><![CDATA[大型语言模型的学习历程：Pre-training、SFT 与 RLHF
+以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT
+
+
+1. 整体框架：大型语言模型如何一步步变成聊天助手
+大型语言模型的训练分为三个阶段：
+
+
+
+阶段
+全称
+主要目标
+人类提供什么
+形象比喻
+
+
+
+Pre-training
+Pre-training
+熟悉语言、吸收世界知识，学会基本的文字接龙
+大量原始文本，人类直接标注较少
+学龄前：看到什么学什么
+
+
+SFT
+Supervised Fine-Tuning
+学会按照指令回答，形成有用的助手行为
+问题与标准答案
+上学校：老师给标准答案
+
+
+RLHF
+Reinforcement Learning with Human Feedback
+根据人类偏好改善完整回答
+对答案的偏好、排序或分数
+出社会：别人只告诉你好不好
+
+
+1.1 Alignment 的含义Alignment（对齐） 是让模型的行为符合人类的需求、偏好和价值观。
+狭义文献中，Alignment 有时主要指 RLHF；但从课程的定义看：
+
+SFT 用人类提供的标准答案进行对齐；
+RLHF 用人类提供的反馈进行对齐；
+因此，SFT 和 RLHF 都属于 Alignment。
+
+1.2 三阶段的关系不是重新训练，而是连续初始化每个阶段都继承前一阶段的参数：
+随机初始化   ↓Pre-trained Model   ↓ 作为初始化SFT Model   ↓ 作为初始化RLHF / RL Model
+
+这样做的原因是：前一阶段已经把参数带到一个较好的区域，后一阶段不需要从随机状态重新学习。
+1.3 三阶段真正改变的主要是“教材”从机器学习的三个步骤看：
+
+定义学习目标与训练数据；
+确定模型的函数搜索范围，例如 Transformer；
+使用优化器寻找较好的参数，例如 Adam。
+
+Pre-training、SFT 和 RLHF 通常沿用同一模型架构，参数也需要能够继承。因此三阶段最核心的差异是：训练数据和评价信号不同。
+不过，严格来说第三阶段还改变了目标函数：前两阶段最小化 token-level Cross Entropy，第三阶段最大化整段回答的 Reward。
+
+2. 三个阶段共同的基础：都在进行文字接龙2.1 文字接龙本质上是分类问题在图像分类中，模型从若干类别中选择一类；在语言模型中，词表中的每一个 Token 都是一个类别。给定前文，模型输出下一个 Token 的概率分布。
+2.2 自回归概率分解一句话由多个 Token 构成。自回归语言模型把整段文本的概率分解为逐 Token 的条件概率：
+$$
+P_\theta(x_1,x_2,\ldots,x_T)
+=
+\prod_{t=1}^{T}P_\theta(x_t\mid x_{&lt;t})
+$$
+其中：
+
+$x_t$：第 $t$ 个 Token；
+$x_{&lt;t}$：第 $t$ 个 Token 之前的全部上下文；
+$θ$：语言模型的参数。
+
+2.3 Softmax 输出模型先对词表中的每个 Token 输出一个 logit，再通过 Softmax 变成概率：
+$$
+p_\theta(v\mid x_{&lt;t})
+=
+\frac{\exp(z_v)}{\sum_{u\in\mathcal V}\exp(z_u)}
+$$
+其中 $V$ 是词表，词表大小就是分类类别数，现代模型通常有数万到数十万个 Token 类别。
+2.4 Cross Entropy &#x2F; Negative Log-Likelihood若真实的下一个 Token 是 $x_t$，单个位置的损失为：
+$$
+\ell_t
+=
+-\log P_\theta(x_t\mid x_{&lt;t})
+$$
+整段训练文本的损失为：
+$$
+L
+=
+-\sum_{t=1}^{T}\log P_\theta(x_t\mid x_{&lt;t})
+$$
+模型使用 Gradient Descent 调整参数，使正确 Token 的概率增大，从而降低 Cross Entropy。
+
+3. 从文字到 Token：训练与推理如何完成“文字接龙”3.1 为什么需要 Tokenization课件把语言模型描述为一个拥有巨大类别数的分类器。要真正送入 Transformer，文字还需要先经过 Tokenization，被转换成有限符号集合中的一维 Token 序列。神经网络处理的是这些 Token ID，而不是人眼直接看到的字词。
+一种极端做法是使用 bit：词表只有 $0$ 和 $1$，但序列会极长。另一种做法是使用更大的符号集合，换取更短的序列。因此 Tokenization 本质上在权衡：
+
+Vocabulary Size；
+Sequence Length；
+对不同语言和字符的表示效率。
+
+3.2 Byte Pair Encoding 的直觉常见 Tokenizer 会从 byte 出发，反复寻找最常出现的相邻符号对，把它们合并成新 Token。高频字符串会成为一个整体 Token，低频字符串则被拆成多个 Token。因此：
+
+Token 不一定等于一个字或一个单词；
+大小写、空格、标点都可能改变切分；
+模型实际看到的是 Token ID，而不是人眼中的字符；
+拼写、逐字符操作和罕见语言可能因此更困难。
+
+3.3 神经网络训练的输入与输出输入是长度不超过 Context Window 的 Token 序列，输出是下一个 Token 的概率分布。
+训练时不断从语料中截取窗口：
+上下文 Token → Transformer → 下一个 Token 的概率分布
+
+训练初期参数随机，输出近似随机；经过大量梯度更新后，概率分布逐渐符合训练语料中的统计规律。
+3.4 Inference：模型如何生成文本训练完成后，参数固定，进入 Inference 阶段：
+
+输入已有 Token；
+模型预测下一个 Token 的概率；
+从概率分布中选择或采样一个 Token；
+将新 Token 加入上下文；
+重复以上过程，直到生成结束符或达到长度限制。
+
+因此，一次完整回答是逐 Token 生成的。只要中间某个 Token 改变，之后的上下文就会随之改变，后续整条生成路径也可能不同。这正是为什么 SFT 或 RLHF 只需轻微调整少数关键 Token 的概率，就可能明显改变整段回答。
+
+Part I：Pre-training4. Pre-training 的目标Pre-training 是整个训练流程的起点，主要让模型获得两类能力。
+
+4.1 语言知识模型需要学习：
+
+语法结构；
+常见搭配；
+不同词形和句型；
+哪些 Token 序列符合自然语言规律。
+
+语言知识相对容易饱和。如图片的实验显示，当语料达到一定规模后，句法知识的提升会逐渐趋缓。
+4.2 世界知识模型还需要学习可以从文字中获得的世界知识，例如：
+水的沸点是摄氏一百度。
+
+但正确答案依赖上下文：
+在低压下，水的沸点低于摄氏一百度。
+
+世界知识近乎无穷，并且事实、条件与语境相互关联，所以比单纯语法需要更多、更丰富的训练数据。
+
+5. 为什么 Pre-training 属于 Self-supervised Learning假设网络中有一句话：
+人工智能真神奇
+
+它可以自动产生多条训练样本：
+输入：人          输出：工输入：人工        输出：智输入：人工智      输出：能输入：人工智能    输出：真
+
+正确答案直接来自原始文本本身，不需要人类逐条写标签。因此它属于：
+Self-supervised Learning（自监督学习，课件称自督导式学习）。
+注意：Self-supervised 不代表完全没有人工参与。数据爬取、过滤、去重、版权与隐私处理仍需要大量工程设计，只是 Token 标签可以从文本自动构造。
+
+6. 预训练数据从哪里来6.1 数据规模课件以 LLaMA 3、DeepSeek-V3 和 FineWeb 为例，展示了约 15T tokens 的训练规模。
+6.2 从原始网页到训练语料：生产级数据处理流水线
+原始网页不能直接用于训练。以 Common Crawl &#x2F; FineWeb 类流程为例，常见步骤包括：
+
+URL Filtering：删除恶意网站、垃圾站、成人内容、低质量营销站等；
+Text Extraction：从 HTML 中提取正文，去掉导航栏、CSS、脚本和模板文本；
+Language Filtering：识别语言，并根据模型目标确定各语言的比例；
+Heuristic Filtering：根据长度、字符比例、重复符号、可读性等规则过滤；
+Deduplication：去除完全重复或近似重复的数据；
+Model-based Filtering：用分类模型判断文本质量；
+PII Removal：删除地址、证件号等 Personally Identifiable Information；
+Mixture Design：控制网页、书籍、代码、论文、对话和不同语言之间的比例。
+
+数据组成会直接塑造模型能力。例如某种语言占比过低，模型在该语言上的能力通常也会较弱。
+所以“Self-supervised”只表示下一个 Token 的标签由文本自动产生，并不表示数据无需人工工程。真正昂贵的环节常常是决定抓取什么、删除什么、如何去重，以及各种来源应按什么比例混合。
+
+7. 模型不是“把互联网逐字背下来”Pre-training 的目标是通过文本学习预测规律，而不是建立一个可以逐字检索的数据库。
+因此模型可能：
+
+知道一篇小说的主要人物和情节；
+能写出风格相似、内容大致合理的续写；
+却不能准确复述原文。
+
+更合适的理解是：模型把文本中的统计规律和知识压缩进参数。压缩与生成过程可能产生信息损失，因此会出现：
+
+细节遗漏；
+原文混写；
+看似合理但并非真实原文的内容；
+Hallucination。
+
+会概括、会续写，不等于能够忠实检索。
+模型参数中的知识更像经过压缩后的长期记忆：高频、反复出现的内容通常更牢固，罕见细节则可能只留下模糊印象。若把原始资料直接放入 Context Window，模型可以依据当前上下文作答，这更接近临时的 Working Memory。因此，对精确事实而言，“从参数中回忆”和“根据上下文读取”是两种可靠性不同的方式。
+
+8. 数据越多越好吗：模型、数据与算力的平衡8.1 两种资源的作用
+更多数据：相当于读过更多教材，可降低过拟合并增加知识覆盖；
+更大模型：相当于函数搜索空间更大，表达能力更强；
+更多训练计算：才能让大模型充分读取和消化更多数据。
+
+算力有限时，不能无限增大模型和数据，必须进行配置。
+8.2 Chinchilla Scaling Law
+
+在固定训练计算量下，模型参数量与训练 Token 数存在较优配比。
+
+模型过大但数据不足，参数没有得到充分训练；模型过小但数据过多，模型容量不足。二者都不能充分利用计算预算。
+可以用一个粗略的计算量关系理解：
+$$
+C \propto N\times D
+$$
+其中：
+
+$C$：训练计算量；
+$N$：模型参数量；
+$D$：训练 Token 数。
+
+实际比例和常数取决于架构及训练设置，但核心思想是：在固定算力下，需要共同配置模型规模和数据规模。
+
+9. 数据质量往往比单纯增加数据更重要9.1 低质量数据可能破坏训练课件用包含大量重复字母的异常 Reddit 文本举例：某些极端、无意义的序列可能导致 Loss 突然升高或训练不稳定。
+因此网络语料通常经过层层过滤。课件引用 DataComp 的流程说明：
+
+Heuristic Filtering 会首先删除大量原始数据；
+Deduplication 继续去除重复内容；
+Model-based Filtering 只保留被判断为高质量的部分；
+最终保留比例可能很低，但绝对规模仍然很大。
+
+9.2 高质量数据的价值在相同算力下，高质量语料通常可以取得更好效果；达到相同效果时，也可能使用更少数据和算力。
+因此 Pre-training 数据设计要同时考虑：
+Quantity；Quality；Diversity；Coverage；Safety；Privacy；Duplication；Language Balance。
+9.3 Rephrasing the Web课件介绍了一种思路：先让已有 LLM 把网页内容重新表述，使文本更有组织、更易读，再用改写后的数据训练新模型。
+它说明“数据清洗”不一定只是删除数据，也可以进行：
+
+重写；
+结构化；
+降噪；
+统一表达风格。
+
+不过这种方法也可能把已有模型的偏差、风格和错误传播给新模型。
+
+10. 为什么 Base Model 往往不会好好回答问题Pre-training 只要求模型模仿互联网文本分布。此时的 Base Model 更像一个 Internet Document Simulator：给它一段开头，它会继续生成网络上可能出现的后文，而不是天然把自己当作正在服务用户的助手。因此，互联网中“问题”后面不一定紧跟正确答案，可能是：
+
+选择题选项；
+网友讨论；
+“知道的人请留言”；
+另一个问题；
+不完整或错误的答案。
+
+所以 Base Model 即使拥有相关知识，也未必知道：
+
+用户是在向它提问；
+它应该直接给出答案；
+什么时候应该停止；
+什么语气和格式更有帮助。
+
+10.1 Base Model 是“璞玉”
+Pre-trained Model 可能已经给正确答案分配了一定概率，只是该概率未必最高。SFT 和 RLHF 的重要作用，是改变输出分布，让有用、正确、符合人类期待的回答更容易被选中。
+
+Part II：SFT11. SFT 如何构造训练数据SFT 使用人类准备或筛选的“问题—标准回答”数据，例如：
+User：台湾最高的山是哪座？Assistant：玉山。
+
+通过 Chat Template 转换后，模型仍然进行逐 Token 预测：
+输入：User: 台湾最高的山是哪座？ Assistant:输出：玉输入：User: 台湾最高的山是哪座？ Assistant: 玉输出：山输入：User: 台湾最高的山是哪座？ Assistant: 玉山输出：[END]
+
+因此 SFT 也叫 Instruction Fine-Tuning：模型根据 Instruction 学习如何产生合适 Response。
+从计算形式看，SFT 并没有换掉“预测下一个 Token”的核心算法；真正变化的是教材从一般网络文本变成了经过设计的对话示范。模型通过模仿这些示范，逐渐学会 Chat Template、回答边界、助手语气和结束位置。
+11.1 SFT Loss设第 $i$ 条样本的问题为 $x_i$，回答为 $y_i$，只在 Assistant 回答部分计算损失：
+$$
+L_{\mathrm{SFT}}
+=
+-\sum_i\sum_{t\in\mathcal A_i}
+\log P_\theta(y_{i,t}\mid x_i,y_{i,&lt;t})
+$$
+其中 $A_i$ 表示第 $i$ 条数据中属于 Assistant 回答的 Token 位置。
+很多训练实现会 Mask 掉 User Prompt 的 Loss，因为目标是学习“如何回答”，而不是让模型复述用户问题。
+
+12. SFT 为什么能让模型“脱胎换骨”SFT 学到的重点包括：
+
+识别问题和指令；
+使用助手式语气；
+输出正确的格式；
+直接回答，而不是继续模仿网页；
+在适当位置生成结束符；
+遵守部分安全和行为规范。
+
+课件强调：SFT 的成功建立在 Pre-training 之上。没有充分预训练，只靠少量问答数据，模型容易过拟合成表面规则。
+例如仅用一条样本：
+台湾最高的山是哪座？ → 玉山
+
+模型可能错误学成：
+只要问题里出现“山”，就回答“玉山”。
+
+这说明 SFT 数据数量有限时，Pre-training 中形成的知识结构和表示非常重要。
+
+13. Pre-training 如何帮助 SFT 举一反三课件引用 Physics of Language Models 的实验说明：
+
+若某个事实在 Pre-training 中只以一种固定顺序出现一次，模型可能只学到局部 Token 邻接关系；
+如果同一知识从多个角度、不同措辞反复出现，模型更容易把人物、属性和关系连接起来；
+SFT 再教模型“看到某类问题应该如何调用关系”，它才能迁移到未在 SFT 中出现的实体。
+
+核心结论：
+
+同一个知识以多种表达反复出现，比单次机械出现更有利于形成可调用、可泛化的内部表示。
+
+因此 Pre-training 的“大量”不仅表示事实数量多，也表示同一知识在不同上下文中的多样化表达多。
+
+14. SFT 通常更像激活与规范，而不是灌入大量新知识课件把问题分为：
+
+Highly Known：模型用 Greedy Decoding 就能回答；
+Maybe Known：换一种问法后可以回答；
+Weakly Known：采样多次时偶尔答对；
+Unknown：无论如何采样都很难生成正确答案。
+
+实验结论是，SFT 对 Maybe Known 数据往往最有效，因为模型已有相关知识，只需要学习：
+
+如何理解问题；
+如何调用已有知识；
+如何以正确方式表达。
+
+对于完全 Unknown 的事实，少量 SFT 容易变成死记硬背，泛化较差，训练过久甚至可能损害整体表现。
+因此可以概括为：
+Pre-training 主要决定模型知道什么；SFT 主要决定模型怎样回答、何时回答和如何组织答案。
+
+这不是绝对规律：SFT 仍可能注入某些知识，但它通常不是大规模知识获取的高效阶段。
+
+15. Alignment 往往只需改变少量关键概率课件介绍的研究把 Alignment 前后的 Token 分成：
+
+Unshift：Alignment 前后都是概率第一；
+Marginal：原来排名第二或第三，之后升到第一；
+Shifted：原来排名较后，之后升到第一。
+
+
+结果显示，许多 Token 的相对排序并未发生巨大变化，显著变化的常常包括：
+
+连接和表达风格相关 Token；
+结束符 $\texttt{[END]}$。
+
+这可以解释为什么参数概率只发生局部变化，生成结果却可能天差地别：自回归生成具有路径依赖，只要早期一个 Token 改变，后续上下文和整段输出都会改变。
+
+16. Pre-training 会留下长期影响即使经过 SFT 和 RLHF，模型仍可能保留 Pre-training 数据分布留下的“灰烬”。
+课件以 ROT Cipher 为例：模型对训练资料中更常出现的 ROT13 表现更好，却不一定能迁移到同等难度、但在语料中较少出现的其他位移。
+这说明：
+
+模型表现不只由任务抽象难度决定；
+训练语料中的出现频率和表达方式会留下强烈偏置；
+“在一个例子上会做”不一定表示已经掌握通用算法。
+
+
+17. SFT 的两条路线：专才与通才17.1 路线一：打造专才给模型单一任务的数据，例如：
+
+翻译；
+摘要；
+分类；
+文本修订。
+
+模型在特定任务上表现好，但不一定能处理其他任务。BERT 时代的任务微调是典型思路。
+17.2 路线二：打造通才混合大量不同任务的数据，让模型学习一般性的 Instruction Following，并期待迁移到未见任务。
+FLAN 是早期代表性工作之一，使用大量任务进行 Instruction Fine-Tuning，目标是让单一模型处理多类任务。
+现代 Chat Assistant 主要采用通才路线，但内部也可能加入代码、数学、安全等领域的专门数据。
+
+18. SFT 数据：质量、长度、复杂度与多样性SFT 通常不需要达到 Pre-training 那样的数量级。课件列举：
+
+InstructGPT 使用的 SFT 数据只有一万多条量级；
+LLaMA 2 报告数万条高质量 SFT 数据；
+LIMA 仅使用约 1000 条精挑细选的数据，也能形成可用模型。
+
+核心并不是“数据越少越好”，而是：
+
+SFT 的边际收益很快受数据质量制约，百万条低质量样本未必优于数万条高质量样本。
+
+18.1 数据选择仍是开放问题课件展示了多种现象：
+
+某些看似奇怪的问题数据也可能有效；
+只选较长样本有时优于使用全部数据；
+但答案长度不是唯一解释；
+可以训练 Complexity Scorer 和 Quality Scorer；
+还需要 Diversity Selection，避免样本高度相似。
+
+一个系统化选择流程可以写成：
+候选 SFT 数据  → 质量评分  → 复杂度评分  → 去重与多样性选择  → 人工抽检  → 训练与消融实验
+
+
+19. Knowledge Distillation 与合成 SFT 数据人工写高质量长答案成本很高，因此可以让更强模型担任 Teacher：
+
+这种做法叫 Knowledge Distillation。Alpaca、Vicuna 等早期工作都采用了类似思路。
+19.1 优势
+降低人工写答案成本；
+快速生成多领域数据；
+可以把大模型的回答风格迁移给小模型；
+结合筛选后，可以获得高质量小数据集。
+
+19.2 局限
+Teacher 的错误会被 Student 学到；
+数据生成、清洗和 API 调用本身仍有成本；
+模型可能只学到 Teacher 的风格，而非真正提高基础知识；
+可能造成模型之间输出趋同。
+
+19.3 Non-instructional Fine-Tuning 与 Response Tuning课件进一步介绍了一些反直觉现象：
+
+不一定需要人工准备标准问题，可以截取普通文本前半句，让强模型续写，再用续写数据训练；
+Response Tuning 甚至只训练 Assistant 风格的“回答”，不提供对应问题，也能激活部分 Instruction Following 能力；
+提高结束符概率、降低重复等简单解码调整，也能让 Base Model 的行为更像对齐模型。
+
+这些结果支持一个观点：
+
+Base Model 已包含大量潜在能力，SFT 有时更像施加一种“解锁咒语”，把模型推向助手式输出分布。
+
+但这些方法通常不能完全取代标准、高质量的 Instruction Tuning。
+
+Part III：RLHF20. RLHF 与 SFT 的人类参与方式不同20.1 SFT：人类负责生成标准答案问题 → 人类写出理想回答 → 模型模仿
+
+人类负担较重，特别是在数学证明、诗歌、复杂写作等任务中，写出理想答案可能非常困难。
+20.2 RLHF：模型先回答，人类只判断好坏问题 → 模型生成多个回答 → 人类点赞、点踩、打分或排序
+
+通常“判断几个答案哪个更好”比“从零写出最佳答案”容易，这体现了 Discriminator–Generator Gap：辨别一个答案的质量，往往比从零生成同等质量的答案更容易。
+
+21. 前两阶段与第三阶段的核心差别：Token Loss 与 Sequence Reward21.1 Pre-training &#x2F; SFT：每个 Token 都有标准答案损失是每个 Token Cross Entropy 的总和：
+$$
+L_{\mathrm{sup}}
+=
+\sum_{i=1}^{N}\ell_i
+$$
+这里每个 $ℓ_i$ 对应一个 Token 的预测误差。
+21.2 RLHF：评价整段回答模型先生成完整回答 $y$，人类或 Reward Model 给出一个整体分数 $r(x,y)$。
+训练目标是最大化期望 Reward：
+$$
+J(\theta)
+=
+\mathbb E_{x\sim\mathcal D,\,y\sim\pi_\theta(\cdot\mid x)}
+\left[r(x,y)\right]
+$$
+若统一写成要最小化的 Loss：
+$$
+L_{\mathrm{RL}}
+=
+-\mathbb E\left[r(x,y)\right]
+$$
+21.3 为什么 Sequence-level Reward 更符合人类判断课件举例：标准回答是“我不可以教你”。
+候选回答：
+A：我很可以教你B：不可以教你
+
+若逐 Token 与标准答案机械对齐，A 可能只错一个字，而 B 的 Token 位置整体错位，Cross Entropy 反而更大；但人类明显认为 B 更好。
+因此：
+
+Token-level Loss 关注局部模仿；
+Sequence-level Reward 关注完整语义和最终效果。
+
+课件将其概括为：
+
+前两阶段：比较重视过程中的每个 Token 是否一致；
+第三阶段：只问完整结果好不好，不要求与某个标准答案逐字一致。
+
+
+22. 为什么 RL 比监督学习更难优化22.1 Reward 不可直接微分前两阶段知道标准 Token，因此模型概率变化如何影响 Loss 可以通过 Backpropagation 精确计算。
+RL 中，人类只给一个离散反馈，例如 $+1$ 或 $-1$。模型参数稍微变化后，人类评分会怎样变化并不直接可知，且评分信号通常不连续。
+22.2 Credit Assignment Problem一段回答可能有数百个 Token，但只得到一个总分。模型不知道：
+
+哪个 Token 导致低分；
+是事实错误、格式错误还是语气问题；
+哪一段推理值得保留；
+哪个局部选择应该改变。
+
+这就是 Credit Assignment：如何把最终 Reward 归因到生成过程中的动作。
+22.3 Reward 稀疏且有噪声
+人类评价可能不一致；
+同一回答在不同偏好下得分不同；
+二元赞&#x2F;踩信号信息量有限；
+很多中间 Token 没有即时 Reward。
+
+因此 RL 算法必须用采样和统计估计来获得更新方向。
+
+23. RL 的优势：更贴近结果，也更能因材施教23.1 评价目标与真实需求更接近只要 Reward 设计得合理，优化 Reward 就直接对应：
+
+回答是否正确；
+是否有帮助；
+是否安全；
+是否符合格式；
+是否满足人类偏好。
+
+23.2 训练样本由模型自己产生SFT 的标准答案可能采用人类认为最佳、但模型很难模仿的解法。RL 则从模型自己能够生成的候选中选择较优路径，再提高这些路径的概率。
+所以课程把 RL 描述为“因材施教”：
+
+不同模型会生成不同错误；
+收到的反馈针对自身当前弱点；
+模型可以从自己可达到的解法逐步改进。
+
+
+可以把三阶段理解为：
+
+Pre-training：广泛阅读教材，形成语言与知识基础；
+SFT：模仿专家写好的示范答案，学会标准作答方式；
+RL：亲自做练习题，根据结果反复试错，找到模型自己更容易执行的解题路径。
+
+
+24. RL 术语与语言模型的对应关系
+
+
+Reinforcement Learning
+语言模型中的含义
+
+
+
+Agent &#x2F; Actor
+语言模型
+
+
+Policy
+语言模型的生成概率分布
+
+
+Observation &#x2F; State
+当前 Prompt 与已生成的 Token
+
+
+Action
+选择下一个 Token
+
+
+Environment
+用户、工具、验证器或对话环境
+
+
+Reward
+对完整回答或中间行为的评分
+
+
+Trajectory &#x2F; Rollout
+一次完整生成过程
+
+
+语言模型策略可以写成：
+$$
+\pi_\theta(y\mid x)
+=
+\prod_{t=1}^{T}P_\theta(y_t\mid x,y_{&lt;t})
+$$
+其对数概率为：
+$$
+\log\pi_\theta(y\mid x)
+=
+\sum_{t=1}^{T}\log P_\theta(y_t\mid x,y_{&lt;t})
+$$
+这与下围棋的类比是：
+
+棋盘状态对应当前上下文；
+下一手落子对应下一个 Token；
+一局棋对应一段完整回答；
+最终胜负对应回答 Reward。
+
+
+25. Policy Gradient 的核心精神Policy Gradient 的基本形式是：
+$$
+\nabla_\theta J(\theta)
+=
+\mathbb E
+\left[
+R\,\nabla_\theta\log\pi_\theta(y\mid x)
+\right]
+$$
+直觉：
+
+若回答得到 Positive Reward，提高这段回答的生成概率；
+若回答得到 Negative Reward，降低这段回答的生成概率。
+
+课件用“拉近 &#x2F; 拉远”解释：
+好答案：像监督学习一样，提高其 Token 序列概率；坏答案：反方向更新，降低其 Token 序列概率。
+
+实际算法会加入 Baseline、Advantage、Clipping、KL 约束等机制，以减少方差并避免策略更新过猛。课程提到的相关方法包括：
+
+Policy Gradient；
+PPO；
+DPO；
+KTO；
+GRPO。
+
+这些方法实现细节不同，但共同目标都是：利用偏好或 Reward 调整模型的输出概率。
+
+26. Reward Model：把有限人类反馈扩展成大量评分
+直接让人类评价每一次模型生成不现实，所以经典 RLHF 往往先训练一个 Reward Model。这里利用的仍是“批评通常比创作容易”：人类先提供少量比较结果，模型再学习近似这种判断。
+流程：
+同一 Prompt 下生成多个回答   ↓人类对回答进行排序   ↓训练 Reward Model 模拟人类偏好   ↓使用 Reward Model 给大量新回答打分   ↓对语言模型执行 RL
+
+Reward Model 的输入是 Prompt 与候选回答，输出一个标量分数：
+$$
+r_\phi(x,y)\in\mathbb R
+$$
+若人类更喜欢 $y+$ 而不是 $y-$，一种常见的偏好损失是：
+$$
+L_{\mathrm{RM}}
+=
+-\log\sigma
+\left(
+ r_\phi(x,y^+)-r_\phi(x,y^-)
+\right)
+$$
+它要求 Reward Model 给较优回答更高的分数。
+
+27. RLHF、RLAIF 与 Self-Rewarding27.1 RLHFHuman 提供偏好数据，Reward Model 学习模拟人类评分，再用于训练生成模型。
+27.2 RLAIF把 Human Feedback 的部分工作交给 AI：
+
+由强模型评价弱模型的答案；
+由 AI 根据原则或规则给出偏好；
+降低大规模人工评分成本。
+
+27.3 Self-Rewarding生成与评价甚至可以由同一个模型或同系列模型完成。其可能有效的原因是：
+
+生成正确答案很难，但识别明显错误有时相对容易。
+
+不过它也可能导致自我确认偏差：模型看不出自己的系统性错误，或奖励自己偏好的风格。
+
+28. Reward 的可验证性与 Reward Hacking28.1 Verifiable Domains数学、代码等任务往往有自动验证器：
+
+最终数值是否正确；
+程序能否通过测试；
+证明是否满足形式检查。
+
+Reward 更可靠，模型可大量试错。RL 可以发现不同于人类示范、但确实有效的解题策略。
+28.2 Unverifiable Domains诗歌、摘要、幽默、写作风格等没有简单的客观判定函数，需要人类偏好或 Reward Model。
+RLHF 使这些领域也能进行 RL，但 Reward Model 只是人类偏好的有损模拟。
+28.3 Reward Hacking如果持续优化一个不完美 Reward Model，策略可能找到“骗高分”的输入，而不是产生真正更好的回答。
+这称为 Reward Hacking 或对 Reward Model 的 Gaming。可能表现为：
+
+无意义重复却获得高分；
+利用 Reward Model 没见过的异常模式；
+形式上符合评分器偏好，但内容质量下降。
+
+因此 RLHF 通常需要：
+
+限制更新幅度；
+监控真实人类评价；
+持续改进 Reward Model；
+防止策略偏离参考模型过远；
+在效果开始恶化前 Early Stop。
+
+
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Optimization </tag>
-            
-            <tag> Training tips </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《加快语言模型生成速度》课堂笔记</title>
-      <link href="/posts/5fbccec5/"/>
-      <url>/posts/5fbccec5/</url>
-      
-        <content type="html"><![CDATA[<h1 id="加快语言模型的生成速度：Inference-加速"><a href="#加快语言模型的生成速度：Inference-加速" class="headerlink" title="加快语言模型的生成速度：Inference 加速"></a>加快语言模型的生成速度：Inference 加速</h1><h2 id="1-核心要点"><a href="#1-核心要点" class="headerlink" title="1. 核心要点"></a>1. 核心要点</h2><p>语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：</p><ol><li><strong>是否改变原有 Attention 的计算结果或范围？</strong></li><li><strong>是否需要为该方法重新训练或定制模型？</strong></li><li><strong>为了加速，还付出了什么代价？</strong> 例如额外显存、额外计算、模型能力下降或算法复杂度上升。</li></ol><h2 id="2-语言模型推论回顾"><a href="#2-语言模型推论回顾" class="headerlink" title="2. 语言模型推论回顾"></a>2. 语言模型推论回顾</h2><h3 id="2-1-Autoregressive-Generation"><a href="#2-1-Autoregressive-Generation" class="headerlink" title="2.1 Autoregressive Generation"></a>2.1 Autoregressive Generation</h3><p>语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。</p><p>若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value：</p><p>$$q_i=W_Qx_i,\qquadk_i=W_Kx_i,\qquadv_i=W_Vx_i.$$</p><p>对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为：</p><p>$$a_{t,i}=\frac{q_t^{\top}k_i}{\sqrt{d_k}},\qquad i\le t.$$</p><p>课上为了突出推论算法，常把缩放项省略，直接写成 Query 与 Key 的 dot product。</p><p>经过 Softmax 后得到归一化权重：</p><p>$$\hat a_{t,i}=\frac{e^{a_{t,i}}}{\sum_{j=1}^{t}e^{a_{t,j}}}.$$</p><p>最终输出是 Value 的加权和：</p><p>$$o_t=\sum_{i=1}^{t}\hat a_{t,i}v_i.$$</p><h3 id="2-2-Prefill-与-Decode"><a href="#2-2-Prefill-与-Decode" class="headerlink" title="2.2 Prefill 与 Decode"></a>2.2 Prefill 与 Decode</h3><p><img src="/img/posts/5fbccec5/2026-07-04-12-19-41.png"></p><p>一次完整生成可以分成两个阶段。</p><table><thead><tr><th>阶段</th><th>输入形式</th><th>主要特点</th><th>典型瓶颈</th></tr></thead><tbody><tr><td><strong>Prefill</strong></td><td>一次输入完整 Prompt</td><td>多个 token 的计算可以高度并行</td><td>长序列 Attention、算力与显存带宽</td></tr><tr><td><strong>Decode</strong></td><td>每次新增一个 token</td><td>必须逐 token 自回归生成，时间维度难以并行</td><td>读取历史 KV Cache、内存带宽与延迟</td></tr></tbody></table><p>Prefill 会为 Prompt 中所有 token 计算 Q、K、V；Decode 时，每轮只新增一个 token，但新 Query 仍需要访问前面所有 token 的 Key 和 Value。</p><hr><h1 id="Part-I：Flash-Attention"><a href="#Part-I：Flash-Attention" class="headerlink" title="Part I：Flash Attention"></a>Part I：Flash Attention</h1><h2 id="3-Flash-Attention-的目标"><a href="#3-Flash-Attention-的目标" class="headerlink" title="3. Flash Attention 的目标"></a>3. Flash Attention 的目标</h2><p>Flash Attention 的关键特点是：</p><ul><li><strong>结果与标准 Attention 相同，不是近似算法。</strong></li><li><strong>通常不需要重新训练模型，可以直接替换 Attention 的实现。</strong></li><li>核心优化目标不是减少数学定义中的 Attention，而是减少 GPU 上的<strong>数据搬运次数</strong>。</li></ul><p>它是一种 <strong>IO-aware algorithm</strong>：算法设计直接考虑 GPU 存储层级，而不仅仅统计 FLOPs。</p><hr><h2 id="4-GPU-存储层级：HBM-与-SRAM"><a href="#4-GPU-存储层级：HBM-与-SRAM" class="headerlink" title="4. GPU 存储层级：HBM 与 SRAM"></a>4. GPU 存储层级：HBM 与 SRAM</h2><p>可以用“仓库”和“工作台”来类比 GPU 的两类存储。</p><table><thead><tr><th>存储</th><th>课堂类比</th><th>特点</th></tr></thead><tbody><tr><td><strong>HBM</strong></td><td>仓库</td><td>容量较大，但访问较慢</td></tr><tr><td><strong>On-chip SRAM</strong></td><td>工作台</td><td>容量很小，但访问和计算很快</td></tr></tbody></table><p><img src="/img/posts/5fbccec5/2026-07-04-12-43-18.png"></p><p>GPU 中有大量并行 Execution Units。数据一旦被搬到 SRAM，矩阵计算通常很快；真正拖慢程序的往往是：</p><ul><li>从 HBM 读取数据到 SRAM；</li><li>将中间结果从 SRAM 写回 HBM；</li><li>后续步骤再次从 HBM 读取同一批中间结果。</li></ul><p>因此，Attention 可能不是单纯的 compute-bound，而是明显受到 <strong>memory bandwidth &#x2F; IO</strong> 限制。</p><blockquote><p>Flash Attention 的核心问题：能否改变计算顺序，在结果不变的前提下，让 Q、K、V 和中间量少往返 HBM？</p></blockquote><hr><h2 id="5-标准-Attention-为什么需要反复读写"><a href="#5-标准-Attention-为什么需要反复读写" class="headerlink" title="5. 标准 Attention 为什么需要反复读写"></a>5. 标准 Attention 为什么需要反复读写</h2><p>为简化说明，先考虑一个 Query $q$ 对长度为 $L$ 的 Key 和 Value 序列进行 Attention。</p><p>Attention score 为：</p><p>$$a_i=q^{\top}k_i,\qquad i=1,\ldots,L.$$</p><p>为了避免指数运算溢出，实际 Softmax 通常减去全局最大值：</p><p>$$a_{\max}=\max_{1\le i\le L}a_i.\qquad \hat a_i=\frac{e^{a_i-a_{\max}}}{\sum_{j=1}^{L}e^{a_j-a_{\max}}}.$$</p><p>输出为：</p><p>$$o=\sum_{i=1}^{L}\hat a_i v_i.$$</p><p>当序列很长时，SRAM 无法放下与 $L$ 成比例的所有 Key、Value 或 Attention score，只能将序列切成多个 chunk。设每个 chunk 包含 $N$ 个位置，chunk 数量近似为：</p><p>$$B=\frac{L}{N}.$$</p><p><img src="/img/posts/5fbccec5/2026-07-04-12-45-04.png"></p><p>朴素实现往往需要多次扫描数据：</p><ol><li>分块计算所有 $a_i$，并将 score 写回 HBM。</li><li>再次读取 score，寻找全局最大值。</li><li>再次读取 score，计算 Softmax 分母。</li><li>再次读取 score，生成归一化权重并写回 HBM。</li><li>读取 Attention 权重和 Value，计算最终加权和。</li></ol><p>问题不只是“做了多少乘法”，而是 $a_i$ 与 $\hat a_i$ 等大规模中间量被反复写入、读取。</p><hr><h2 id="6-Online-Softmax：一次扫描更新最大值和分母"><a href="#6-Online-Softmax：一次扫描更新最大值和分母" class="headerlink" title="6. Online Softmax：一次扫描更新最大值和分母"></a>6. Online Softmax：一次扫描更新最大值和分母</h2><h3 id="6-1-分块定义"><a href="#6-1-分块定义" class="headerlink" title="6.1 分块定义"></a>6.1 分块定义</h3><p>把第 $k$ 个 chunk 的位置集合记为 $I_k$。处理完前 $k$ 个 chunk 后，维护两个常数：</p><ul><li>$d_k$：目前见过的最大 score；</li><li>$s_k$：以当前最大值 $d_k$ 为基准的指数和。</li></ul><p>初始化：</p><p>$$d_0=-\infty,\qquads_0=0.$$</p><p>读入第 $k$ 个 chunk 后，最大值更新为：</p><p>$$d_k=\max\left( d_{k-1}, \max_{i\in I_k}a_i\right).$$</p><p>分母更新为：</p><p>$$s_k=s_{k-1}e^{d_{k-1}-d_k}+\sum_{i\in I_k}e^{a_i-d_k}.$$</p><p><img src="/img/posts/5fbccec5/2026-07-04-13-11-19.png"></p><p>旧分母原本以 $d_{k-1}$ 为基准：</p><p>$$s_{k-1}=\sum_{i\in I_1\cup\cdots\cup I_{k-1}}e^{a_i-d_{k-1}}.$$</p><p>当新的最大值变为 $d_k$ 时，只需乘上一个修正项：</p><p>$$s_{k-1}e^{d_{k-1}-d_k}=\sum_{i\in I_1\cup\cdots\cup I_{k-1}}e^{a_i-d_k}.$$</p><p>因为：</p><p>$$e^{a_i-d_{k-1}}e^{d_{k-1}-d_k}=e^{a_i-d_k}.$$</p><p>这样便不需要重新读取之前所有 chunk。处理最后一个 chunk 后：</p><p>$$d_B=a_{\max},\qquad s_B=\sum_{i=1}^{L}e^{a_i-a_{\max}}.$$</p><p>这就是完整 Softmax 的正确分母。</p><hr><h2 id="7-Flash-Attention：不显式保存-Attention-Matrix，直接更新输出"><a href="#7-Flash-Attention：不显式保存-Attention-Matrix，直接更新输出" class="headerlink" title="7. Flash Attention：不显式保存 Attention Matrix，直接更新输出"></a>7. Flash Attention：不显式保存 Attention Matrix，直接更新输出</h2><p>Online Softmax 仍可以先得到分母，再第二次读取 score 计算归一化权重；Flash Attention 更进一步：</p><blockquote><p>不必先完整生成并保存 $\hat a_i$，可以在每个 chunk 内直接结合 Value，逐步得到最终输出。</p></blockquote><p>令 $o_k$ 表示处理完前 $k$ 个 chunk 后，按照当前 $d_k$ 与 $s_k$ 归一化得到的局部输出。初始化：</p><p>$$o_0=0.$$</p><p>处理第 $k$ 个 chunk 时，输出更新为：</p><p>$$o_k=o_{k-1}\frac{s_{k-1}}{s_k}e^{d_{k-1}-d_k}+\sum_{i\in I_k}\frac{e^{a_i-d_k}}{s_k}v_i.$$</p><p>第一项是在修正过去的输出：</p><ul><li>$d_{k-1}$ 变成了 $d_k$，需要指数修正；</li><li>归一化分母从 $s_{k-1}$ 变成了 $s_k$，需要比例修正。</li></ul><p>第二项加入当前 chunk 的新贡献。</p><p><img src="/img/posts/5fbccec5/2026-07-04-13-14-43.png"></p><p>处理完最后一个 chunk 后：</p><p>$$o_B=\sum_{i=1}^{L}\frac{e^{a_i-a_{\max}}}{\sum_{j=1}^{L}e^{a_j-a_{\max}}}v_i=\sum_{i=1}^{L}\hat a_i v_i.$$</p><p>所以，尽管计算过程中没有把完整 Attention 权重矩阵写入 HBM，最终输出仍与标准 Attention 完全一致。</p><h3 id="7-1-从单个-Query-推广到完整-Attention"><a href="#7-1-从单个-Query-推广到完整-Attention" class="headerlink" title="7.1 从单个 Query 推广到完整 Attention"></a>7.1 从单个 Query 推广到完整 Attention</h3><p>上面为了便于推导只画了一个 Query，真实实现会同时把 Q、K、V 划分为二维 tiles：</p><ul><li>在 SRAM 中加载一小块 Query；</li><li>依次加载多块 Key 和 Value；</li><li>对每一行 Query 维护对应的 running max、running sum 和输出；</li><li>完成后只把最终输出写回 HBM。</li></ul><p>其数学思想仍是相同的 Online Softmax 与分块输出修正。</p><hr><h2 id="8-Flash-Attention-为什么更快"><a href="#8-Flash-Attention-为什么更快" class="headerlink" title="8. Flash Attention 为什么更快"></a>8. Flash Attention 为什么更快</h2><p>Flash Attention 的主要收益来自：</p><ol><li><strong>Tiling</strong>：只把当前需要的小块 Q、K、V 搬进 SRAM。</li><li><strong>Kernel fusion</strong>：dot product、mask、Softmax 和 Value 加权尽量在同一计算过程中完成。</li><li><strong>不物化完整 Attention Matrix</strong>：避免把长度平方级的 score 或权重矩阵频繁写入 HBM。</li><li><strong>减少 HBM 读写</strong>：用少量额外计算换取大幅减少的数据搬运。</li></ol><h3 id="8-1-代价和限制"><a href="#8-1-代价和限制" class="headerlink" title="8.1 代价和限制"></a>8.1 代价和限制</h3><ul><li>需要额外的指数修正和归一化修正，计算量可能略有增加。</li><li>实现复杂，理解和编写 kernel 更困难。</li><li>某些框架在 Flash Attention 模式下不会保留完整 Attention 权重，因此无法直接读取整个 Attention matrix 做可视化。</li><li>序列很短时，Attention 并不是总耗时的主要部分，速度提升可能不明显。</li><li>Flash Attention 减少的是运算过程中的 IO，<strong>不能消除 KV Cache 对 HBM 容量的占用</strong>。</li></ul><h3 id="8-2-课堂实验结论"><a href="#8-2-课堂实验结论" class="headerlink" title="8.2 课堂实验结论"></a>8.2 课堂实验结论</h3><p>课堂示例中：</p><ul><li>对随机 Q、K、V 做 Attention，序列长度达到 4096 时，Flash Attention 相较朴素实现可达到约 8 到 9 倍加速。</li><li>在真实语言模型示例中，Prompt 较短时提升有限；Prompt 约为 7 万 token 时，示例耗时约由 2.0 秒降低至 1.3 秒。</li><li>当 Prompt 增加到约 73 万 token 时出现 CUDA Out of Memory，说明即使运算方式更高效，HBM 容量仍然有限。</li></ul><p>这些数值与具体硬件、模型、数据类型和实现有关，应理解为课堂示范，而不是固定性能保证。</p><hr><h1 id="Part-II：KV-Cache"><a href="#Part-II：KV-Cache" class="headerlink" title="Part II：KV Cache"></a>Part II：KV Cache</h1><h2 id="9-KV-Cache-的基本机制"><a href="#9-KV-Cache-的基本机制" class="headerlink" title="9. KV Cache 的基本机制"></a>9. KV Cache 的基本机制</h2><h3 id="9-1-Prefill-阶段"><a href="#9-1-Prefill-阶段" class="headerlink" title="9.1 Prefill 阶段"></a>9.1 Prefill 阶段</h3><p>Prompt 一次性进入模型后，每一层都会为各 token 计算 Q、K、V。不同位置的输出可以并行计算。</p><p>Prefill 完成后：</p><ul><li>保存每一层、每一个历史 token 的 Key 和 Value；</li><li>不需要保存过去的 Query。</li></ul><h3 id="9-2-Decode-阶段"><a href="#9-2-Decode-阶段" class="headerlink" title="9.2 Decode 阶段"></a>9.2 Decode 阶段</h3><p>假设当前生成第 $t$ 个 token，只需：</p><ol><li>为新 token 计算 $q_t$、$k_t$、$v_t$；</li><li>用 $q_t$ 与缓存中的所有历史 Key 计算 Attention；</li><li>用得到的权重对所有历史 Value 做加权和；</li><li>将新的 $k_t$、$v_t$ 追加到 Cache。</li></ol><h3 id="9-3-为什么保存-K、V，不保存-Q"><a href="#9-3-为什么保存-K、V，不保存-Q" class="headerlink" title="9.3 为什么保存 K、V，不保存 Q"></a>9.3 为什么保存 K、V，不保存 Q</h3><p>未来生成新 token 时，需要的是“新的 Query 对过去所有 Key 进行检索，再读取过去的 Value”。过去 token 的 Query 已经完成了它当时的计算，以后不会再次使用。</p><p>因此：</p><ul><li>Key 和 Value 会被未来所有 token 重复访问；</li><li>旧 Query 不会再被使用。</li></ul><h3 id="9-4-本质上的时间—空间交换"><a href="#9-4-本质上的时间—空间交换" class="headerlink" title="9.4 本质上的时间—空间交换"></a>9.4 本质上的时间—空间交换</h3><p>KV Cache 避免重复计算历史 token 的 K、V，显著加快 Decode；代价是缓存量随以下因素线性增长：</p><ul><li>序列长度；</li><li>Transformer 层数；</li><li>KV Head 数量；</li><li>每个 Head 的维度；</li><li>Batch size；</li><li>数值精度所占字节数。</li></ul><hr><h2 id="10-KV-Cache-的显存计算"><a href="#10-KV-Cache-的显存计算" class="headerlink" title="10. KV Cache 的显存计算"></a>10. KV Cache 的显存计算</h2><p>只考虑单个 token、单个 batch 时，KV Cache 大小可写成：</p><p>$$M_{\text{token}}=2\times N_{\text{layer}}\times N_{\text{KV-head}}\times d_{\text{head}}\times b,$$</p><p>其中：</p><ul><li>前面的 $2$ 表示同时保存 Key 和 Value；</li><li>$b$ 表示每个数占用的字节数，例如 FP16 为 2 Byte。</li></ul><p><img src="/img/posts/5fbccec5/2026-07-04-13-31-34.png"><br>以 Gemma 2 27B 的参数做<strong>简化</strong>估算：</p><p>$$46\times 32\times 128\times 2\times 2=753664\ \text{Bytes}.$$</p><p>约为：</p><p>$$736\ \text{KiB}\approx0.72\ \text{MiB/token}.$$</p><p>若把 80 GiB 全部用于该 KV Cache，理想化上限约为：</p><p>$$\frac{80\ \text{GiB}}{0.72\ \text{MiB/token}}\approx114000\ \text{tokens}.$$</p><p>如果有 batch，整体 KV Cache 还要再乘 batch size：</p><p>$$M_{\text{total}}=B_{\text{batch}}\times L_{\text{seq}}\times M_{\text{token}}.$$</p><hr><h2 id="11-MHA、MQA-与-GQA"><a href="#11-MHA、MQA-与-GQA" class="headerlink" title="11. MHA、MQA 与 GQA"></a>11. MHA、MQA 与 GQA</h2><p>KV Cache 只保存 K 和 V，因此减少 KV Head 数量可以直接降低 Cache 大小和 Decode 时的内存读取量。</p><table><thead><tr><th>方法</th><th align="right">Query Head</th><th align="right">KV Head</th><th>核心思想</th><th>KV Cache</th><th>代价</th></tr></thead><tbody><tr><td><strong>MHA</strong></td><td align="right">多个</td><td align="right">与 Query 数量相同</td><td>每个 Query Head 有独立 K、V</td><td>最大</td><td>表达能力强，但显存占用高</td></tr><tr><td><strong>MQA</strong></td><td align="right">多个</td><td align="right">1 组</td><td>所有 Query Head 共享同一组 K、V</td><td>最小</td><td>可能明显损伤模型能力</td></tr><tr><td><strong>GQA</strong></td><td align="right">多个</td><td align="right">介于 1 与 Query Head 数之间</td><td>每组 K、V 服务多个 Query Head</td><td>居中</td><td>在效果和效率之间折中</td></tr></tbody></table><p>若 Query Head 数为 $H_q$，KV Head 数为 $H_{kv}$，则 KV Cache 大小与 $H_{kv}$ 近似成正比：</p><p>$$M_{\text{KV}}\proptoH_{kv}.$$</p><p>每组 KV 对应的 Query 数约为：</p><p>$$G=\frac{H_q}{H_{kv}}.$$</p><p>重要区别：</p><ul><li>不是让多个 K、V 共享一个 Query；</li><li>而是让多个 Query 共享一组 K、V；</li><li>原因是只有 K、V 需要长期缓存，Query 不需要缓存。</li></ul><p>MQA 和 GQA 改变了原始 MHA 架构，通常需要在训练模型时就采用相应设计，不能简单把任意现成模型无损改成 MQA 或 GQA。</p><hr><h2 id="12-Multi-Head-Latent-Attention（MLA）"><a href="#12-Multi-Head-Latent-Attention（MLA）" class="headerlink" title="12. Multi-Head Latent Attention（MLA）"></a>12. Multi-Head Latent Attention（MLA）</h2><h3 id="12-1-核心思想"><a href="#12-1-核心思想" class="headerlink" title="12.1 核心思想"></a>12.1 核心思想</h3><p>MHA 需要缓存多组高维 K、V。MLA 在输入与多组 K、V 之间加入低维 bottleneck，将每个 token 压缩成 latent vector $c_i$，缓存时主要保存这个低维表示。</p><p><img src="/img/posts/5fbccec5/2026-07-04-13-47-42.png"></p><p>简化表示为：</p><p>$$c_i=W_Dx_i.$$</p><p>每个 Head 的 Key 和 Value 可由 latent vector 线性映射得到：</p><p>$$k_i=W_Kc_i,\qquadv_i=W_Vc_i.$$</p><p>MLA 的关键不只是“压缩”，而是可以利用线性代数改变运算顺序，避免对序列中的每个 latent vector 都进行完整解压缩。</p><h3 id="12-2-Attention-score-不需要逐-token-解压-Key"><a href="#12-2-Attention-score-不需要逐-token-解压-Key" class="headerlink" title="12.2 Attention score 不需要逐 token 解压 Key"></a>12.2 Attention score 不需要逐 token 解压 Key</h3><p>原本：</p><p>$$a_i=q^{\top}k_i.$$</p><p>代入 $k_i=W_Kc_i$：</p><p>$$a_i=q^{\top}W_Kc_i=\left(W_K^{\top}q\right)^{\top}c_i.$$</p><p>定义压缩空间中的 Query：</p><p>$$q'=W_K^{\top}q.$$</p><p>于是：</p><p>$$a_i={q'}^{\top}c_i.$$</p><p>因此不需要先把每个 $c_i$ 解压成 $k_i$，只需把当前 Query 变换一次，再直接与所有缓存的 latent vectors 做 dot product。</p><h3 id="12-3-Weighted-Sum-不需要逐-token-解压-Value"><a href="#12-3-Weighted-Sum-不需要逐-token-解压-Value" class="headerlink" title="12.3 Weighted Sum 不需要逐 token 解压 Value"></a>12.3 Weighted Sum 不需要逐 token 解压 Value</h3><p><img src="/img/posts/5fbccec5/2026-07-04-13-48-37.png"><br>标准输出为：</p><p>$$o=\sum_i\hat a_i v_i.$$</p><p>代入 $v_i=W_Vc_i$：</p><p>$$o=\sum_i\hat a_iW_Vc_i=W_V\left(\sum_i\hat a_i c_i\right).$$</p><p>所以可以：</p><ol><li>先在低维 latent space 中完成加权和；</li><li>最后只对汇总后的一个向量做一次映射。</li></ol><p>而不是对长度为 $L$ 的每个 token 分别解压。</p><h3 id="12-4-特点"><a href="#12-4-特点" class="headerlink" title="12.4 特点"></a>12.4 特点</h3><ul><li>大幅压缩需要保存的 KV 信息。</li><li>需要模型在训练时学习压缩和映射，属于模型架构设计。</li><li>相对于原始 MHA，它改变了 Attention 的参数化方式；但在该架构内部，上述换序计算本身是代数等价的，不是数值近似。</li></ul><hr><h2 id="13-Sliding-Window-Attention"><a href="#13-Sliding-Window-Attention" class="headerlink" title="13. Sliding Window Attention"></a>13. Sliding Window Attention</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-52-31.png"></p><p>Sliding Window Attention 将每个 token 的可见范围限制为最近 $W$ 个 token：</p><p>$$\mathcal A_t=\left\{\max(1,t-W+1),\ldots,t\right\}.$$</p><p>每层只需保存固定窗口内的 KV，Cache 不再随序列无限增长。虽然单层只能看到局部，但通过多层堆叠，较早 token 的信息可被中间位置吸收后再传递给更高层，有效感受野随深度扩大——不过长距离信息仍可能逐层衰减或丢失。实际使用时常与 Full Attention 层交替，兼顾效率与全局信息传递。</p><hr><h2 id="14-StreamingLLM-与-Attention-Sink"><a href="#14-StreamingLLM-与-Attention-Sink" class="headerlink" title="14. StreamingLLM 与 Attention Sink"></a>14. StreamingLLM 与 Attention Sink</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-53-58.png"></p><p>单纯只保留最近窗口在长序列下表现会明显下降。StreamingLLM 发现：<strong>额外保留序列最开头的少数 token</strong> 就能让模型稳定处理远超训练长度的流式输入：</p><p>$$\mathcal A_t=\{1,2,\ldots,S\}\cup\{t-W+1,\ldots,t\}.$$</p><p>其原理是 Softmax 权重之和必须为 1，即使当前没有需要关注的上下文，模型也必须将多余 Attention 分配给某些位置。开头的 token 往往充当了 <strong>Attention Sink</strong>——模型把”无处可放”的注意力集中到它们身上。删除这些 sink token 会破坏已形成的 Attention 行为；保留它们后表现显著恢复。这里的要点是：开头 token 被保留不一定因为语义重要，而可能是因为它们承担了稳定 Attention 分布的结构性作用。该方法可在 Inference 阶段直接应用，也可在训练时显式加入。</p><hr><h2 id="15-KV-Cache-Pruning"><a href="#15-KV-Cache-Pruning" class="headerlink" title="15. KV Cache Pruning"></a>15. KV Cache Pruning</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-54-15.png"></p><p>Scissorhands、H2O 等工作观察到：每次生成时真正获得明显 Attention 的历史 token 只占少数（heavy hitters），大量 KV 长期存在却几乎不再被访问。因此可在显存达到预算上限时，保留最近 token 和累计 Attention 较高的 token，删除长期未使用的 KV，将显存放在固定预算内。</p><ul><li><strong>优点</strong>：通常可直接用于已有模型，丢弃大量 KV 后性能仍可能接近完整 Cache。</li><li><strong>风险</strong>：被删 token 以后可能重新变得重要但无法恢复；困难的长距离推理、信息检索任务可能明显退化。核心难点在于判断哪些 KV 可以安全删除。</li></ul><hr><h2 id="16-跨对话的-KV-Cache：Prompt-Caching"><a href="#16-跨对话的-KV-Cache：Prompt-Caching" class="headerlink" title="16. 跨对话的 KV Cache：Prompt Caching"></a>16. 跨对话的 KV Cache：Prompt Caching</h2><p>前面的 KV Cache 主要是在同一个生成过程中复用历史 K、V。服务平台还可以在<strong>不同请求之间</strong>复用相同前缀的 KV Cache。</p><h3 id="16-1-只有相同-Prefix-才能复用"><a href="#16-1-只有相同-Prefix-才能复用" class="headerlink" title="16.1 只有相同 Prefix 才能复用"></a>16.1 只有相同 Prefix 才能复用</h3><p>在 Causal Transformer 中，一个 token 的表示不仅取决于它自身，还取决于它前面的全部 token。</p><p>例如两条序列：</p><p><img src="/img/posts/5fbccec5/2026-07-04-13-54-47.png"></p><p>公共前缀“大家好，我是”对应的 K、V 可以复用；从“大”和“小”开始，前缀已经不同，后续即使再次出现相同的“金”字，其 K、V 也不能直接复用。</p><p>原因可概括为：</p><p>$$(k_i,v_i)=f(x_1,x_2,\ldots,x_i),$$</p><p>而不是只由当前 token $x_i$ 决定。</p><h3 id="16-2-System-Prompt-的排列原则"><a href="#16-2-System-Prompt-的排列原则" class="headerlink" title="16.2 System Prompt 的排列原则"></a>16.2 System Prompt 的排列原则</h3><p>为了提高 Cache Hit：</p><ul><li><strong>稳定、不常变化的内容放在前面</strong>；</li><li><strong>日期、用户输入、任务参数等易变化内容放在后面</strong>。</li></ul><p><img src="/img/posts/5fbccec5/2026-07-04-13-55-34.png"><br>对于 AI Agent，常见的稳定前缀包括：</p><ul><li>可使用的工具及调用规则；</li><li>Agent 的固定行为规范；</li><li>身份、长期目标、固定记忆检索方式；</li><li>长而稳定的 system prompt。</li></ul><p>容易变化的内容包括：</p><ul><li>当前时间；</li><li>用户本轮输入；</li><li>动态环境状态；</li><li>临时变量和任务参数。</li></ul><h3 id="16-3-Prompt-改写示例"><a href="#16-3-Prompt-改写示例" class="headerlink" title="16.3 Prompt 改写示例"></a>16.3 Prompt 改写示例</h3><p>Cache Hit 较少的写法：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">帮我订从台北到波士顿的班机</span><br><span class="line">帮我订从旧金山到纽约的班机</span><br></pre></td></tr></table></figure><p>因为地点较早出现，前缀很快分叉。</p><p>更有利于缓存的写法：</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">帮我订从 X 到 Y 的班机。X=台北，Y=波士顿</span><br><span class="line">帮我订从 X 到 Y 的班机。X=旧金山，Y=纽约</span><br></pre></td></tr></table></figure><p>固定模板被放在前面，变化参数被移到后面，公共前缀更长。</p><h3 id="16-4-为什么-Prompt-Caching-与成本有关"><a href="#16-4-为什么-Prompt-Caching-与成本有关" class="headerlink" title="16.4 为什么 Prompt Caching 与成本有关"></a>16.4 为什么 Prompt Caching 与成本有关</h3><p>如果前缀的 KV 已经计算完成，平台无需再次对这部分 Prompt 执行完整 Prefill，只需读取已有缓存。课程以 API 对 cached input 提供更低价格为例，说明计算成本与账单成本之间的联系。</p><p>需要区分：</p><ul><li><strong>KV Cache</strong>：通常指单次会话或生成过程中的历史 KV；</li><li><strong>Prompt Caching &#x2F; Prefix Caching</strong>：服务系统在多个请求之间复用相同前缀的 KV。</li></ul><p>二者保存的核心对象相同，但复用范围不同。</p><hr><h1 id="Part-III：Speculative-Decoding"><a href="#Part-III：Speculative-Decoding" class="headerlink" title="Part III：Speculative Decoding"></a>Part III：Speculative Decoding</h1><h2 id="17-基本思想"><a href="#17-基本思想" class="headerlink" title="17. 基本思想"></a>17. 基本思想</h2><p>Autoregressive Decoding 每次只能生成一个 token，后一个 token 必须等待前一个 token 生成完成，因此长文本生成速度较慢。</p><p><img src="/img/posts/5fbccec5/2026-07-05-11-50-28.png"></p><p>Speculative Decoding 引入一个速度很快的 <strong>draft model</strong>，类似“预言家”，先猜测接下来多个 token，再由较大的 <strong>target model</strong> 一次并行验证。</p><p>假设 draft model 预测：</p><p>$$\tilde y_1,\tilde y_2$$</p><p>target model 可以同时计算：</p><p>$$P(y_1\mid x),\quadP(y_2\mid x,\tilde y_1),\quadP(y_3\mid x,\tilde y_1,\tilde y_2)$$</p><p>因此，一次大模型前向计算可能推进多个 token。</p><h3 id="17-1-验证结果"><a href="#17-1-验证结果" class="headerlink" title="17.1 验证结果"></a>17.1 验证结果</h3><ul><li><strong>全部猜对：</strong> 接受所有候选，并可额外得到下一个 token。</li><li><strong>部分猜对：</strong> 接受最长正确前缀，在第一个错误位置使用 target model 的结果，后续候选全部丢弃。</li><li><strong>第一个就猜错：</strong> 仍能输出 target model 生成的一个 token，但基本没有加速，并浪费部分计算。</li></ul><p>所以 draft model 不需要完全正确，只要经常能连续猜对若干 token，就可以减少 target model 的调用次数。</p><h3 id="17-2-谁可以作为-Draft-Model"><a href="#17-2-谁可以作为-Draft-Model" class="headerlink" title="17.2 谁可以作为 Draft Model"></a>17.2 谁可以作为 Draft Model</h3><p>draft model 的要求是：</p><ul><li>速度足够快；</li><li>输出尽量接近 target model；</li><li>偶尔犯错没有关系。</li></ul><p>常见选择包括：</p><ul><li>Non-autoregressive model；</li><li>压缩或蒸馏后的小模型；</li><li>检索系统或搜索引擎；</li><li>多个 draft model 同时提出候选。</li></ul><p>draft model 不是越小越好：模型太小虽然快，但接受率可能很低；模型太大又会增加候选生成时间。</p><h3 id="17-3-特点与代价"><a href="#17-3-特点与代价" class="headerlink" title="17.3 特点与代价"></a>17.3 特点与代价</h3><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul><li>通常不需要重新训练或修改 target model；</li><li>可以作为外接式推理加速方法；</li><li>一次验证可能生成多个 token；</li><li>通过正确的接受、拒绝和概率修正，可以保持 target model 原本的生成分布。</li></ul><h3 id="代价"><a href="#代价" class="headerlink" title="代价"></a>代价</h3><ul><li>需要额外运行 draft model；</li><li>错误候选会造成无效计算；</li><li>接受率低时加速效果有限；</li><li>会增加部署与调度复杂度。</li></ul><p>其本质是：</p><blockquote><p>使用更多并行计算资源，换取更低的生成延迟。</p></blockquote><hr><h2 id="18-方法总表"><a href="#18-方法总表" class="headerlink" title="18. 方法总表"></a>18. 方法总表</h2><p><img src="/img/posts/5fbccec5/2026-07-04-13-57-49.png"></p>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Pre-training</tag>
+        <tag>RLHF</tag>
+        <tag>SFT</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</title>
+    <url>/posts/e7b43b2b/</url>
+    <content><![CDATA[语言模型内部运作
+第一部分：从 Prompt 到下一个 Token2. Tokenization 与 Embedding
+输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。
+今  天  天  气  真  好  ！540 123 123 729 938 432 0
+
+Embedding Table 将 Token ID 转成向量：
+$$
+E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i]
+$$
+其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。
+初始 Token Embedding 的特点：
+
+相同 Token 的向量完全相同；
+语义相关的 Token 通常更接近；
+多义词还没有结合上下文，因此会混合不同含义。
+
+例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。
+
+3. Layer by Layer
+Token Embedding 会依次经过多层 Transformer：
+$$
+H^{(\ell)}=\operatorname{Layer}_{\ell}\left(H^{(\ell-1)}\right)
+$$
+每层输入一串向量，也输出同样长度的一串向量。经过层处理后，向量融合了上下文，因此也称为：
+
+Contextualized Embedding；
+Hidden &#x2F; Latent Representation；
+Hidden State。
+
+
+
+
+类型
+是否结合上下文
+相同 Token 的表示
+
+
+
+Token Embedding
+否
+相同
+
+
+Contextualized Embedding
+是
+可随语境变化
+
+
+例如，水果含义和公司含义的 $apple$ 初始向量相同，但经过多层后会逐渐分开。
+
+4. LM Head、Logits 与 Softmax
+模型取最后一层、最后一个位置的 Representation，通过 LM Head 映射到整个词表：
+$$
+z=W_{\mathrm{LM}}h_n^{(L)}
+$$
+$z$ 中每一维对应一个 Token 的分数，称为 Logit。Logit 可以是任意实数，并不是概率。
+
+许多模型会让 LM Head 与输入 Embedding Table 共用参数。此时可以把 Unembedding 理解为：最终 Representation 与每个 Token Embedding 计算匹配分数。
+$$
+z_i=E_i^\top h_n^{(L)}
+$$
+Softmax 将 Logits 转为便于采样的分布：
+$$
+p_i(T)=\frac{\exp(z_i/T)}{\sum_j\exp(z_j/T)}
+$$
+
+$T$ 大：分布更平均，输出更随机；
+$T$ 小：分布更集中，输出更保守。
+
+实际解码还可能结合 Top-k、Top-p 等方法。这里的概率主要用于排序和采样，不必理解为完全校准的真实概率。
+
+第二部分：每层 Representation 表示什么5. Representation SpaceEmbedding &#x2F; Representation 位于高维空间中：
+
+含义相近的内容可能聚集；
+某些方向可能对应特定语义变化；
+不同模型、不同层中的方向含义未必相同。
+
+$$
+\operatorname{Emb}(\text{冷})-
+\operatorname{Emb}(\text{cold})+
+\operatorname{Emb}(\text{small})
+\approx
+\operatorname{Emb}(\text{小})
+$$
+这种向量加减有时成立，但不是所有模型都能稳定复现。
+
+6. 投影到低维空间Representation 通常有几千维，可以寻找特定低维子空间进行观察。
+Structural Probe研究发现，BERT 某些中间层的 Representation 经特定投影后，可以呈现接近句法树的结构。重点是：
+
+不是任意投影都能得到句法树；
+中间层通常包含较明显的句法信息；
+浅层和最后层未必最适合表示句法结构。
+
+
+7. Activation Steering除了观察 Representation，还可以直接修改它，看模型行为如何变化。相关名称包括 Representation Engineering、Activation Engineering 和 Activation Steering。
+
+以拒绝行为为例，计算“会拒绝”和“不会拒绝”两类 Prompt 在某层的平均 Representation，二者之差作为候选拒绝方向：
+$$
+r^{(\ell)}=
+\mu_{\mathrm{reject}}^{(\ell)}-
+\mu_{\mathrm{answer}}^{(\ell)}
+$$
+推理时加入或减去该方向：
+$$
+\widetilde h^{(\ell)}=h^{(\ell)}+\alpha r^{(\ell)}
+$$
+
+加入可能增强拒绝倾向；
+减去可能削弱拒绝倾向；
+需要逐层实验，寻找最有效的层。
+
+类似方法也可寻找 Sycophancy，即过度迎合，相关的方向。
+局限：均值差可能混入其他因素，一个行为也未必只由单一方向控制；干预成功不等于完全解释了模型机制。
+
+8. Logit Lens
+正常情况下只有最后一层经过 LM Head。Logit Lens 把每一层的 Hidden State 都送入 LM Head：
+$$
+z^{(\ell)}=W_{\mathrm{LM}}h_n^{(\ell)}
+$$
+这样可以观察模型在不同层最倾向输出哪个 Token。
+
+翻译案例中，输入法语 $fleur$ 并要求输出中文。模型中间层先出现英文 $flower$，后层才变成中文“花”。这提示某些多语言模型可能先形成偏英文的中间表示。
+但 Logit Lens 只是观察工具：中间层本来未必适合直接被最终 LM Head 解码，Top-1 Token 也不能代表完整的内部信息。
+
+9. PatchscopesLogit Lens 只能将 Representation 解释成一个 Token；Patchscopes 则尝试生成完整句子：
+
+从 Source Prompt 的某层取出 Representation；
+构造 Target Prompt，例如“请简单介绍 X”；
+用 Source Representation 替换 $X$ 的 Representation；
+从该层继续生成文字。
+
+改变 Target Prompt，可以从不同角度解释同一个 Representation。
+
+第三部分：Transformer Layer 内部结构10. Transformer Block课件将一个 Transformer Layer 简化为：
+输入→ Self-Attention→ Residual Connection→ Feed-Forward Network→ Residual Connection→ 输出
+
+实际模型通常还包含 Normalization。
+
+11. Self-Attention更新某个 Token 的 Representation 时，Self-Attention 要完成两件事：
+
+找到上下文中哪些 Token 与它相关；
+将这些 Token 的信息加进来。
+
+Query、Key、Value：
+$$
+Q=HW_Q,\qquad K=HW_K,\qquad V=HW_V
+$$
+
+Query：当前 Token 想找什么；
+Key：每个 Token 可以如何被匹配；
+Value：被关注后实际读取的内容。
+
+
+核心计算：
+$$
+A=\operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right),
+\qquad O=AV
+$$
+即先用 Query 和 Key 算相关程度，再用得到的权重对 Value 加权求和。最后通过 Residual Connection 保留原信息：
+$$
+H'=H+O
+$$
+
+12. 位置信息与 Multi-Head Attention只有 Token Embedding 时，模型不知道 Token 的位置，因此需要位置编码。
+一种简单方法是加入 Positional Embedding：
+$$
+\widetilde h_i=h_i+p_i
+$$
+LLaMA 等模型通常使用 RoPE，根据位置旋转 Query 和 Key，使 Attention 分数包含相对位置信息。
+单个 Attention Head 通常只擅长某类关系，例如数量、形容词或指代，因此模型使用多个 Head：
+$$
+\operatorname{MHA}(H)=
+\operatorname{Concat}(\operatorname{head}_1,\ldots,\operatorname{head}_m)W_O
+$$
+课堂实作中，LLaMA 使用 Grouped-Query Attention：多个 Query Head 共用较少的 Key &#x2F; Value Head，从而减少参数量和 KV Cache。
+
+13. Causal Attention 与复杂度自回归语言模型在第 $i$ 个位置只能关注自己和左侧 Token，不能读取未来内容：
+$$
+M_{ij}=
+\begin{cases}
+0,&amp;j\le i\\
+-\infty,&amp;j&gt;i
+\end{cases}
+$$
+因此 Attention Heatmap 的右上三角为 0。
+长度为 $n$ 的序列需要计算 $n × n$ 的 Attention Matrix，主要开销约为：
+$$
+\mathcal O(n^2)
+$$
+这也是长上下文计算成本较高的原因之一。
+
+14. Feed-Forward NetworkSelf-Attention 负责 Token 之间的信息交换；FFN 对每个位置独立应用相同的非线性变换：
+$$
+\operatorname{FFN}(x)=W_2\sigma(W_1x+b_1)+b_2
+$$
+通常先扩维再压回原维度：
+$$
+d\rightarrow d_{\mathrm{ff}}\rightarrow d
+$$
+课件用 ReLU 说明激活函数：
+$$
+\operatorname{ReLU}(x)=\max(0,x)
+$$
+现代 LLM 常使用 SiLU、GeLU 或 SwiGLU。FFN 也可以被解释为某种 Key-Value Memory：第一层检测模式，第二层把对应信息写回 Residual Stream。
+矩阵变换中的单个输出维度可以看作一个 Neuron，即“加权求和 + Bias + Activation”。
+
+第四部分：课堂实作课堂比较 LLaMA 3B 和 Gemma 4B：
+
+15. 分析 Embedding 与 Hidden State可计算 Token Embedding 之间的 Cosine Similarity：
+$$
+\operatorname{cos}(u,v)=
+\frac{u^\top v}{\lVert u\rVert_2\lVert v\rVert_2}
+$$
+课堂中，$apple$ 会接近不同大小写形式、中文“苹果”、$iPhone$、$MacBook$ 或 $Cupertino$ 等词，说明 Embedding 编码了统计语义关系，但个别近邻不一定容易解释。
+取出各层 Hidden State：
+课堂实验表明：
+
+相同 Token 在第 0 层完全相同；
+经过 Transformer 后，会因左侧上下文不同而分开；
+同义上下文中的 $apple$ 相似度较高，不同含义则随层数增加逐渐分离；
+跨层比较时要考虑不同层本身的分布差异，不能只看原始 Cosine Similarity。
+
+
+16. 实作 Logit Lens 与 AttentionLogit Lens：
+输入“天气”时，中间层可能出现 $weather$、$forecast$ 等英文词，最后层才形成目标中文 Token。这与前面的多语言中间表示现象一致，但不能推广为所有模型都使用英文思考。
+Attention Weight：
+在句子 $The apple is green. What color is the apple?$ 中，部分 Head 会让后面的 $apple$ 或 $color$ 关注前面的 $green$ 和 $apple$。右上三角为 0，来自 Causal Mask。
+Attention Weight 只是某个 Head 在本次计算中的信息路由，不能直接等同于完整解释。很多 Head 还会关注 BOS Token，这可能是 Attention Sink：当没有明显相关信息时，BOS 成为默认落点。
+
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Inference </tag>
-            
-            <tag> Flash attention </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《生成式AI时代下的机器学习 第二讲》课堂笔记</title>
-      <link href="/posts/a823301/"/>
-      <url>/posts/a823301/</url>
-      
-        <content type="html"><![CDATA[<h2 id="1-什么是-AI-Agent"><a href="#1-什么是-AI-Agent" class="headerlink" title="1. 什么是 AI Agent"></a>1. 什么是 AI Agent</h2><p>AI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。</p><p>普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。</p><p>最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。<br><img src="/img/posts/a823301/2026-07-03-20-18-18.png"><br>AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment interaction 非常接近。</p><p>$$Goal → Observation_t → Action_t → Environment → Observation_t+1 → …$$</p><h2 id="2-从-RL-Agent-到-LLM-Agent"><a href="#2-从-RL-Agent-到-LLM-Agent" class="headerlink" title="2. 从 RL Agent 到 LLM Agent"></a>2. 从 RL Agent 到 LLM Agent</h2><p>传统 Reinforcement Learning 的做法是先把任务目标设计成 reward，再训练一个 policy 去 maximize reward。以围棋为例，可以把胜利设为 +1、失败设为 -1，然后通过大量交互让模型学习。</p><p>这种路线的主要限制是 task-specific：通常每一个任务都要重新定义环境、action space 和 reward，并训练一套新的参数。一个会下围棋的模型不会因此自然获得下西洋棋或操作网页的能力。</p><p>LLM Agent 的想法不同：直接把已有的 Large Language Model 放入 Agent loop。goal 可以用自然语言表达；observation 可以是文字、图片或其他多模态信息；模型输出一段描述 action 的文字，再由外部系统把这段文字翻译为真正可以执行的操作。<br><img src="/img/posts/a823301/2026-07-03-20-20-26.png"><br>从 LLM 自己的角度看，它没有突然学会一种全新的算法。goal、observation、action、下一次 observation 会依次进入 context，模型一直在做 next-token prediction。所谓 Agent，更多是对现有 LLM 能力的一种系统化使用方式，而不是重新训练出的新模型。</p><p>这也解释了为什么强大的 LLM 仍可能在棋类等任务中违反规则：语言上的流畅与对环境状态、规则约束和长期计划的可靠维护并不是同一件事。</p><h2 id="3-使用-LLM-驱动-Agent-的优势与限制"><a href="#3-使用-LLM-驱动-Agent-的优势与限制" class="headerlink" title="3. 使用 LLM 驱动 Agent 的优势与限制"></a>3. 使用 LLM 驱动 Agent 的优势与限制</h2><p>第一项优势是 action space 更开放。传统 Agent 通常只能从预先定义好的有限动作中选择；LLM 可以生成近乎任意的文字，因此可以表达更多行动，也更容易扩展到新的工具和任务。</p><p>第二项优势是能够直接利用 richer feedback。传统 RL 往往把环境反馈压缩成一个 reward 数值，但数值本身信息很少，reward 设计也很困难。LLM Agent 可以直接阅读 compile error、网页提示、测试结果或用户意见，从具体错误中修改下一步行为。</p><p>第三项优势是通用性。相同的基础模型可以在不同 prompt、不同工具和不同环境包装下承担 programmer、web agent、research assistant 等角色，而不一定要为每个任务单独训练。</p><p>但开放 action space 也意味着更难验证。语言模型可能产生看似合理、实际上不可执行或不符合规则的 action；多步执行还会放大早期错误。因此，一个完整 Agent system 通常还需要 memory、tool interface、validator、planner、permission control 等外部机制。</p><h2 id="4-Agent-的三个关键能力"><a href="#4-Agent-的三个关键能力" class="headerlink" title="4. Agent 的三个关键能力"></a>4. Agent 的三个关键能力</h2><p>第一，能否根据过去的 experience 和当前 feedback 调整行为。这里不依赖更新模型参数，而是改变模型在下一步能够看到的 context。</p><p>第二，能否使用外部 tools。模型不可能把所有知识和能力都存进参数，因此需要搜索、执行代码、调用 API，甚至向其他 AI 求助。</p><p>第三，能否 planning。Agent 不仅要产生眼前的 action，还要考虑一连串动作如何共同实现最终 goal，并在环境变化时重新规划。</p><p>这三部分彼此相连：memory 为 planning 提供过去经验，tools 扩展可执行能力，而 planning 决定何时读取 memory、何时调用 tool、何时直接行动。</p><h2 id="5-不更新参数，如何根据反馈改变行为"><a href="#5-不更新参数，如何根据反馈改变行为" class="headerlink" title="5. 不更新参数，如何根据反馈改变行为"></a>5. 不更新参数，如何根据反馈改变行为</h2><p>假设 programmer agent 写出的代码出现 compile error。传统学习思路会想到收集数据、更新 parameters；本课强调另一条路线：把 error message 直接加入后续输入，模型面对不同 context，自然会产生不同代码。</p><p>这类改变属于 in-context adaptation，而不是 model training。模型参数没有变化，变化的是输入中新增了什么信息。对于 LLM 来说，“第一次写错”和“看过错误日志后重写”是两个不同的续写条件。<br><img src="/img/posts/a823301/2026-07-03-20-23-56.png"><br>问题在于不能把 Agent 一生中的全部记录都塞进 context。随着交互步数增加，序列会变得过长，计算成本上升，重要经验也会被大量琐碎内容淹没。课程用 Highly Superior Autobiographical Memory 的类比说明：记住全部细节不一定等于更会思考。</p><p>因此，真正的问题不是“能不能存下来”，而是“什么值得存、什么时候读取、如何把零散经历整理成有用经验”。</p><h2 id="6-Agent-Memory：Read、Write-与-Reflection"><a href="#6-Agent-Memory：Read、Write-与-Reflection" class="headerlink" title="6. Agent Memory：Read、Write 与 Reflection"></a>6. Agent Memory：Read、Write 与 Reflection</h2><p>Memory 可以看作 Agent 的长期经验库。它与当前 context 不同：context 是模型这一次直接看到的内容；memory 则可以长期保存，但需要额外模块把合适的信息取出来。<br><img src="/img/posts/a823301/2026-07-03-20-26-04.png"><br>Read 模块负责 retrieval。当前 observation 相当于 query，过去经历构成 database，系统从中选出 relevant experience，再把这些经验放入 prompt。技术上它与 RAG 非常相似，区别主要在于资料来源：一般 RAG 检索外部知识，Agent memory 检索自己的经历。</p><p>Write 模块决定什么值得进入长期记忆。把每一个 observation 都保存会让 memory 被“桌子还在那里”“房间没有变化”等细节塞满。Write 可以由另一个 LLM 或 Agent 自己判断事件的重要性、novelty、长期价值和失败代价。</p><p>Reflection 模块对已有记忆进行更高层次的整理，例如总结规律、抽象策略、建立事件之间的因果或实体关系。它也可以把经历组织为 knowledge graph，再用 GraphRAG、HippoRAG 一类方法检索。</p><p>Reflection 并不天然可靠。它可能从有限证据推导出错误结论，并把错误总结长期保存。因此 memory system 需要保留原始证据、标注来源和时间，并允许用户或系统修正。</p><p>ChatGPT 的 memory 可以作为直观例子：明确说“记住这件事”可能触发 Write；之后相关问题会触发 Read。但模型可能把对话重新表述后再保存，所以记忆内容不一定逐字准确。</p><p>$$\text{Memory System} = \text{Write} + \text{Read / Retrieval} + \text{Reflection}$$</p><h2 id="7-Tool-Use-与-Function-Calling"><a href="#7-Tool-Use-与-Function-Calling" class="headerlink" title="7. Tool Use 与 Function Calling"></a>7. Tool Use 与 Function Calling</h2><p>对 Agent 而言，tool 是一个只需知道 interface、无需理解内部实现的外部能力。常见工具包括 Search Engine、Python、database、calculator、浏览器，以及具有不同能力的其他 AI。</p><p>工具可以统一抽象为 function：模型需要知道函数名称、参数含义、调用格式和返回结果。所谓 tool use 或 function calling，本质上是模型决定“此时应该调用哪个 function，并提供什么 arguments”。<br><img src="/img/posts/a823301/2026-07-03-20-28-47.png"><br>一个通用流程是：System Prompt 说明可用工具和调用格式；User Prompt 给出当前任务；模型生成结构化 tool call；Agent runtime 解析这段输出并真正执行函数；工具结果作为 observation 写回 context；模型继续生成最终回答或下一次调用。</p><p>必须区分“模型输出了一串调用文字”和“函数真的被执行”。LLM 只会生成 token，真正连接 API、处理权限、执行代码和捕获错误的是 Agent developer 编写的 orchestration layer。</p><p>System Prompt 通常包含开发者长期固定的规则，User Prompt 则是本次用户输入。它们在实际平台上可能具有不同优先级，但无论具体 API 如何设计，核心都是让模型清楚知道可做什么、何时调用、输出应该满足什么 schema。</p><p>$$\text{LLM} \to \text{tool call} \to \text{runtime executes function} \to \text{tool output} \to \text{LLM}$$</p><h2 id="8-工具很多时如何选择，以及如何自己制造工具"><a href="#8-工具很多时如何选择，以及如何自己制造工具" class="headerlink" title="8. 工具很多时如何选择，以及如何自己制造工具"></a>8. 工具很多时如何选择，以及如何自己制造工具</h2><p>当工具只有几个时，可以把全部 description 放入 prompt；当工具达到数百或数千个时，完整阅读所有说明既浪费 context，也会增加选错工具的概率。</p><p>解决办法与 memory retrieval 相似：把 tool descriptions 存入工具库，根据当前 observation 先做 tool retrieval &#x2F; tool selection，只把少量候选工具的 schema 提供给决策模型。<br><img src="/img/posts/a823301/2026-07-03-20-33-48.png"><br>工具选择本身可以使用 embedding retrieval、classifier、LLM reranker 或层级目录。它要同时考虑 relevance、cost、latency、权限、可靠性与数据隐私，而不只是语义相似度。</p><p>LLM 还可以 make tools。因为工具本质上可以是一段 function，模型能够为反复出现的问题编写脚本，验证成功后把它保存到工具库，未来再次调用。</p><p>这种“把成功做法封装成工具”的机制与 memory 很相似：一个保存自然语言经验，一个保存可执行程序。两者都把一次性的尝试转化为可复用资产。</p><h2 id="9-不要盲信工具：Internal-Knowledge-与-External-Knowledge"><a href="#9-不要盲信工具：Internal-Knowledge-与-External-Knowledge" class="headerlink" title="9. 不要盲信工具：Internal Knowledge 与 External Knowledge"></a>9. 不要盲信工具：Internal Knowledge 与 External Knowledge</h2><p>工具可能出错，检索内容也可能是玩笑、广告、过时资料或恶意信息。课程以搜索结果建议在披萨中加入胶水的例子说明：RAG 能找到资料，不代表资料可信，也不代表模型能够正确理解语境。<br><img src="/img/posts/a823301/2026-07-03-20-34-33.png"><br>LLM 在使用工具时会在 internal knowledge 与 external knowledge 之间权衡。外部结果如果与模型原有信念略有差异，模型可能接受；如果数值极端不合理，模型可能回到自己的 prior 并指出工具异常。</p><p>这种判断不是稳定的事实验证器。课程示例中，100°C 的异常温度仍可能被直接接受，而 10000°C 才触发质疑，说明模型的 sanity check 有阈值、也有不一致性。<br><img src="/img/posts/a823301/2026-07-03-20-35-43.png"><br>有些研究指出：外部信息与模型 prior 差距越大，越难改变模型；模型对原答案越有信心，也越不容易被检索内容说服。</p><p>当多个来源冲突时，模型可能受到不应影响内容正确性的因素左右。例如：模型可能更信任 AI-generated text、较新的发布日期，以及某些页面视觉模板；而来源标签本身未必产生预期影响。</p><p>即使工具返回的每条资料都正确，最终 synthesis 仍可能错误，例如把同名人物的信息混合。可靠 Agent 需要 cross-check、source attribution、constraint validation 和异常检测，而不是把工具输出直接复制给用户。</p><p>使用工具还存在 cost。对于 3×4 这样的简单问题，调用计算器可能比模型直接回答更慢；是否调用应由任务难度、准确性要求、latency 和成本共同决定。</p><h2 id="10-Reactive-Response-与显式-Planning"><a href="#10-Reactive-Response-与显式-Planning" class="headerlink" title="10. Reactive Response 与显式 Planning"></a>10. Reactive Response 与显式 Planning</h2><p>Reactive Agent 只根据当前 observation 立刻产生下一步 action。它可能在简单任务中足够有效，但容易局部贪心：每一步看似合理，组合起来却无法完成长期目标。</p><p>显式 planning 要求模型先生成一串可能的 actions，再把 plan 放回 context，后续动作按照计划执行。Plan-and-Solve 一类 prompting 方法体现了“先整体分解，再逐步执行”的思想。<br><img src="/img/posts/a823301/2026-07-03-20-43-27.png"><br>计划不能被视为不可修改的脚本。action 之后的 observation 由环境决定，对手可能走出意外棋步，网页可能弹出广告，API 可能失败。Agent 应在关键 observation 后重新检查 plan，并产生 plan′。</p><p>理想流程不是“每一步都推翻全部计划”，也不是“无论发生什么都坚持原计划”，而是持续比较预期状态与真实状态，只在偏差足以影响目标时 replan。</p><p>$$\begin{aligned}\text{plan}_t &amp;= P(\text{goal}, \text{observation}_t, \text{memory}) \\\text{action}_t &amp;= \pi(\text{observation}_t, \text{plan}_t)\end{aligned}$$</p><h2 id="11-强化规划：Tree-Search、World-Model-与-Reasoning"><a href="#11-强化规划：Tree-Search、World-Model-与-Reasoning" class="headerlink" title="11. 强化规划：Tree Search、World Model 与 Reasoning"></a>11. 强化规划：Tree Search、World Model 与 Reasoning</h2><p>一种加强 planning 的方法是 search：从当前状态尝试多个 action，观察后继状态，再继续展开，寻找能到达目标的路径。由于完整搜索代价巨大，需要用 value estimate 或 LLM judge 提前剪掉“看起来没有希望”的分支。<br><img src="/img/posts/a823301/2026-07-03-20-44-40.png"><br>Tree Search for Language Model Agents 展示了这种思想在 web agent 中的应用：模型探索候选路径，对成功概率打分，保留更有希望的路线。它比单次 reactive decision 更像真正的规划。</p><p>真实环境搜索存在 irreversible action：披萨已经下单后，不能因为另一分支更好就当作从未发生。因此，很多搜索不能直接在现实中反复试错。</p><p>解决思路是把探索放进内部 simulation。World Model 根据假想 action 预测可能出现的 observation，Agent 在“脑内小剧场”中比较分支，只把选中的 action 真正执行。Web agent 研究可以让 LLM 用文字模拟点击某个按钮后的页面变化。</p><p>Reasoning model 的长链思考也可被理解为内部 rollout：它尝试不同步骤、模拟后果、找到一个 plan，再执行第一步。课程中的积木例子展示了这种效果。</p><p>但更长 reasoning 并不总是更好。The Danger of Overthinking 指出，一些 Agent 会在可以低风险试一下时持续思考，或在尚未行动前就因为想象困难而放弃。有效 Agent 要在 thinking 与 acting 之间做资源分配。</p>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Transformer</tag>
+        <tag>Attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</title>
+    <url>/posts/fbe93ec0/</url>
+    <content><![CDATA[训练神经网络的各种技巧1. 机器学习的三个步骤
+训练模型可以分为三个步骤：
+
+我要什么：定义目标与 Loss Function。
+我有哪些选择：决定函数集合，也就是模型架构。
+选择一个最好的：通过 Optimization 找到参数。
+
+训练完成后，需要先在 Validation Set 上选择模型和超参数，最后才在 Test Set 上进行一次最终评估。
+深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。
+
+2. 先判断问题出在哪里
+2.1 Optimization 问题现象：Training Loss 本身就降不下去。
+例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。
+此时应该考虑：
+
+更好的 Optimizer；
+调整 Learning Rate；
+Skip Connection；
+Normalization；
+更好的 Initialization 或 Pre-training。
+
+2.2 Generalization 问题现象：Training Loss 已经很低，但 Validation Loss 较高。
+这才是典型的 Overfitting。模型在训练集上表现很好，但无法推广到未见数据。
+此时应该考虑：
+
+Dropout；
+更多训练数据；
+Data Augmentation；
+Semi-supervised Learning；
+Parameter Regularization；
+Weight Decay 或 AdamW。
+
+
+不能只因为模型表现不好，就笼统地说是 Overfitting。首先要检查 Training Loss 是否已经足够低。
+
+
+Part I：改进步骤三——Optimization3. Vanilla Gradient Descent目标是寻找：
+$$
+\theta^*=\arg\min_{\theta}L(\theta)
+$$
+每一步先计算梯度：
+$$
+g^t=\nabla_\theta L(\theta^t)
+$$
+再更新参数：
+$$
+\theta^{t+1}=\theta^t-\eta g^t
+$$
+其中，$\eta$ 是 Learning Rate。
+Vanilla Gradient Descent 只根据当前梯度决定更新方向，而 Optimizer 通常会综合过去的梯度信息。
+
+4. Learning Rate 为什么难调
+Learning Rate 太大时，参数可能越过谷底，甚至发散；太小时，训练又会非常缓慢。
+更麻烦的是，不同参数方向的 Loss Surface 可能很不一样：
+
+梯度通常较大的方向，需要较小的 Learning Rate；
+梯度通常较小的方向，需要较大的 Learning Rate。
+
+因此，自适应优化器会为不同参数设置不同的有效 Learning Rate。
+
+5. Adagrad
+Adagrad 累积每个参数过去梯度的平方：
+$$
+\sigma_i^t=\sqrt{\sum_{k=0}^{t}(g_i^k)^2}
+$$
+参数更新为：
+$$
+\theta_i^{t+1}
+=
+\theta_i^t-
+\frac{\eta}{\sigma_i^t+\epsilon}g_i^t
+$$
+直觉：
+
+某一维梯度长期较大，$\sigma_i^t$ 较大，有效 Learning Rate 变小；
+某一维梯度长期较小，有效 Learning Rate 较大。
+
+问题$\sigma_i^t$ 会不断累积，很早以前的梯度和最近的梯度都有影响，导致 Learning Rate 只会越来越小，难以及时适应地形变化。
+
+6. RMSProp
+RMSProp 不再累积所有历史梯度，而是对梯度平方做 Exponential Moving Average：
+$$
+(\sigma_i^t)^2
+=
+\alpha(\sigma_i^{t-1})^2
++
+(1-\alpha)(g_i^t)^2,
+\qquad 0&lt;\alpha&lt;1
+$$
+更新为：
+$$
+\theta_i^{t+1}
+=
+\theta_i^t-
+\frac{\eta}{\sigma_i^t+\epsilon}g_i^t
+$$
+与 Adagrad 相比，RMSProp 更重视最近的梯度，因此可以更快地调整每个参数的有效 Learning Rate。
+
+7. Momentum
+当梯度很小、方向反复震荡，或者经过 Saddle Point 时，Vanilla Gradient Descent 容易停滞。
+
+Momentum 综合过去的梯度方向：
+$$
+m_i^t
+=
+\beta m_i^{t-1}
++
+(1-\beta)g_i^t
+$$
+然后更新：
+$$
+\theta_i^{t+1}
+=
+\theta_i^t-\eta m_i^t
+$$
+直觉上，参数像具有惯性的物体：
+
+梯度长期方向一致时，移动速度会加快；
+梯度来回震荡时，互相抵消；
+即使当前梯度较小，也可能依靠过去积累的动量继续前进。
+
+
+8. AdamAdam 可以理解为：
+
+Momentum + RMSProp
+
+
+一阶动量：
+$$
+m_i^t
+=
+\beta_1m_i^{t-1}
++
+(1-\beta_1)g_i^t
+$$
+二阶动量：
+$$
+v_i^t
+=
+\beta_2v_i^{t-1}
++
+(1-\beta_2)(g_i^t)^2
+$$
+简化后的更新式为：
+$$
+\theta_i^{t+1}
+=
+\theta_i^t
+-
+\eta
+\frac{m_i^t}{\sqrt{v_i^t}+\epsilon}
+$$
+实际 Adam 还会对训练初期的一阶、二阶动量进行 Bias Correction。
+Adam 通常能够改善 Optimization，使 Training Loss 更容易下降，但不保证 Validation Loss 一定更低。
+
+9. Learning Rate Scheduling
+即使使用 Adam，整体 Learning Rate 仍然需要随训练过程变化。
+Warm-up训练初期逐渐增大学习率：
+
+初始参数和动量估计不稳定；
+先用小步探索地形，避免训练突然发散。
+
+Learning Rate Decay训练后期逐渐减小学习率：
+
+前期需要较大的步伐快速探索；
+后期接近较优位置时，需要较小步伐稳定收敛。
+
+
+10. Dropout训练时随机丢弃一部分神经元；Validation 和 Testing 时使用完整网络。
+Dropout 相当于在训练时增加难度，使模型不能过度依赖某几个神经元，从而改善 Generalization。
+需要注意：
+
+Dropout 通常会让 Training Loss 更高；
+它不是用来解决 Training Loss 降不下去的问题；
+适合 Training Loss 很低、Validation Loss 较高的 Overfitting 情况。
+
+
+11. Initialization 与 Pre-training不同初始参数可能使优化过程走向不同区域，因此即使使用相同模型与 Optimizer，训练结果也可能不同。
+对于 ReLU 网络，常见的 Kaiming Initialization 会根据输入维度调整参数尺度，例如：
+$$
+W_{ij}\sim
+\mathcal{N}
+\left(
+0,\frac{2}{\mathrm{fan\_in}}
+\right)
+$$
+合适的 Initialization 可以避免每层数值过大或过小，使梯度传播更加稳定。
+Pre-training先在一个容易获得大量数据的 Pretext Task 上训练，再将参数作为真正 Downstream Task 的初始化。
+Pre-training 的作用包括：
+
+提供更好的起点，改善 Optimization；
+利用大规模数据学习通用表示，改善 Generalization。
+
+因此，Pre-training 同时可能帮助 Optimization 和 Generalization。
+
+Part II：改进步骤二——模型架构12. 选择合适的函数范围
+
+函数集合太小：可能根本不包含理想函数，产生 Underfitting。
+函数集合太大：虽然表达能力强，但更容易 Overfitting。
+理想情况：利用 Domain Knowledge 设计一个范围较小、但刚好包含好函数的架构。
+
+
+13. Convolutional Neural NetworkCNN 利用图像中的两个先验知识。
+13.1 Receptive Field图像中的基础模式，如边缘、眼睛、鸟嘴，只占据局部区域，因此一个神经元不需要连接整张图像。
+常见设置包括：
+
+Kernel Size；
+Stride；
+Padding；
+多个 Channel。
+
+局部连接大幅减少参数数量。
+13.2 Parameter Sharing相同模式可能出现在图像的不同位置，因此不同位置可以使用同一组参数，也就是同一个 Filter。
+CNN 通过：
+
+Local Receptive Field；
+Parameter Sharing；
+
+缩小函数搜索范围，并把图像的结构先验加入模型，因此主要改善 Generalization。
+
+
+14. Skip Connection深层网络中，较前面层的参数变化需要经过很多层才影响 Loss，可能出现：
+
+Gradient Vanishing；
+Gradient Exploding。
+
+Residual Block 将输入直接加到变换结果上：
+$$
+a'=F(a)+a
+$$
+简化为线性变换时：
+$$
+a'=Wa+a
+$$
+Skip Connection 为信息和梯度提供一条“高速公路”，使深层网络的 Loss Surface 更容易优化。
+它修改了网络架构，但主要带来 Better Optimization。
+
+15. NormalizationNormalization 把每层的输出限制到较稳定的范围，使不同维度的尺度更接近，从而让 Learning Rate 更容易调整。
+常见方法包括：
+
+Batch Normalization；
+Layer Normalization；
+Batch Renormalization。
+
+Normalization 修改了模型架构，主要改善 Optimization，有时也能改善 Generalization。
+
+Part III：改进步骤一——Loss 与数据16. 为什么不能直接用 Accuracy 当 Loss分类模型输出每个类别的分数，预测类别通常为：
+$$
+\hat{c}=\arg\max_i z_i
+$$
+Accuracy 只关心最终类别是否正确。当参数发生小变化但最大类别没有改变时，Accuracy 完全不变，因此大多数位置的梯度为零。
+所以 Accuracy 适合 Evaluation，但不适合作为 Gradient Descent 的训练 Loss。
+
+17. Softmax 与 Cross-entropySoftmax 将类别分数转换为概率：
+$$
+p_i=
+\frac{\exp(z_i)}
+{\sum_j\exp(z_j)}
+$$
+对于 One-hot Ground Truth $\hat{y}$，Cross-entropy 为：
+$$
+L_{\mathrm{CE}}
+=
+-\sum_i \hat{y}_i\log p_i
+$$
+当正确类别为 $c$ 时：
+$$
+L_{\mathrm{CE}}=-\log p_c
+$$
+Cross-entropy 是连续且可微的，可以为参数更新提供有效梯度。
+训练时使用 Cross-entropy，Validation 和 Testing 时仍然可以使用 Accuracy。
+
+18. 更多训练数据当模型 Overfitting 时，最直接的方法是收集更多具有代表性的训练数据，使训练分布更接近真实测试分布。
+但增加数据主要改善 Generalization，并不会让 Optimization 变得更简单。
+
+19. Data Augmentation当真实数据难以收集时，可以通过合理变换创造新数据。
+例如：
+
+图像分类：翻转、裁剪、模糊、颜色变化；
+语音识别：调整音量、速度或说话人音色。
+
+变换必须保持任务的 Label 不变：
+
+判断动物类别时，左右翻转通常合理；
+判断动物朝向时，左右翻转会改变 Label；
+语音识别可以改变说话人音色；
+说话人识别则不能随意改变音色。
+
+因此，选择 Augmentation 依赖对任务的理解。
+Mixup选择两笔样本，以比例 $\lambda$ 混合：
+$$
+\tilde{x}
+=
+\lambda x_i+(1-\lambda)x_j
+$$
+同时混合标签：
+$$
+\tilde{y}
+=
+\lambda y_i+(1-\lambda)y_j
+$$
+Mixup 使模型在样本之间学习更平滑的决策边界，主要改善 Generalization。
+
+20. Semi-supervised Learning现实中通常有少量带标签数据和大量无标签数据，可以定义：
+$$
+L
+=
+\sum_{(x,y)\in D_L}l(f(x),y)
++
+\lambda
+\sum_{x\in D_U}l'(f(x))
+$$
+其中第二项利用无标签数据，并依赖对数据结构的假设。
+20.1 Entropy Minimization假设样本应明确属于某个类别，要求无标签样本的预测分布具有较低 Entropy：
+$$
+H(p)
+=
+-\sum_i p_i\log p_i
+$$
+最小化 Entropy 会使预测更加确定，并倾向让分类边界经过低密度区域。
+20.2 Graph-based Consistency假设“相近样本应该具有相近输出”，建立样本图：
+$$
+L
+=
+L_{\mathrm{sup}}
++
+\lambda
+\sum_{x,x'\in D_U}
+g(x,x')\,
+d(f(x),f(x'))
+$$
+其中：
+
+$g(x,x')$ 表示两个样本是否相连；
+$d(\cdot,\cdot)$ 衡量两个输出分布的距离。
+
+Semi-supervised Learning 修改了 Loss，主要改善 Generalization。
+
+21. Parameter Regularization除了数据 Loss，还可以加入人类对函数的偏好：
+$$
+L'(\theta)
+=
+L(\theta)+\lambda R(\theta)
+$$
+L2 Regularization 定义为：
+$$
+R(\theta)=\sum_i\theta_i^2
+$$
+因此：
+$$
+\nabla_\theta L'
+=
+\nabla_\theta L+2\lambda\theta
+$$
+用 Vanilla Gradient Descent 更新：
+$$
+\theta^{t+1}
+=
+\theta^t-\eta
+\left(
+\nabla_\theta L+2\lambda\theta^t
+\right)
+$$
+整理得到：
+$$
+\theta^{t+1}
+=
+(1-2\eta\lambda)\theta^t
+-
+\eta\nabla_\theta L
+$$
+可以理解为：每次更新前先把参数缩小一点，这就是 Weight Decay。
+Parameter Regularization 与 Weight Decay 主要用于改善 Generalization，而不是改善 Training Loss。
+
+22. AdamW在 Vanilla Gradient Descent 中，L2 Regularization 可以写成 Weight Decay；但在 Adam 这类自适应 Optimizer 中，直接把 L2 项混进梯度并不等价于真正的 Weight Decay。
+AdamW 将参数衰减与 Adam 的梯度更新分开：
+$$
+\theta^{t+1}
+=
+(1-\eta_t\lambda)\theta^t
+-
+\eta_t
+\frac{\hat{m}^t}
+{\sqrt{\hat{v}^t}+\epsilon}
+$$
+其中，$\lambda$ 的系数定义不同，有时会写成 $2\lambda$。
+相较于 Adam：
+
+AdamW 主要通过 Weight Decay 改善 Generalization；
+它不一定让 Training Loss 更低；
+相较于 Vanilla Gradient Descent，它仍保留 Adam 的 Optimization 优势。
+
+
+23. 方法总表
+
+
+方法
+修改的具体步骤
+主要作用
+代价 &#x2F; 不解决什么
+
+
+
+Adagrad、RMSProp、Momentum、Adam
+改变如何寻找最优函数：利用历史梯度调整参数更新的方向或步长
+Better Optimization：使 Training Loss 更容易下降
+不是为了改善 Generalization；需要保存额外的优化器状态，并仍需调整 Learning Rate 等超参数
+
+
+Learning Rate Scheduling
+改变如何寻找最优函数：在训练过程中动态调整 Learning Rate
+Better Optimization：前期快速探索，后期稳定收敛
+不直接解决 Overfitting；不合适的 Warm-up 或 Decay 可能使训练过慢或不稳定
+
+
+Dropout
+改变如何寻找最优函数：训练时随机丢弃部分神经元，在受扰动的网络上优化
+Better Generalization：降低模型对个别神经元的依赖
+Worse Optimization，Training Loss 往往更高；Training Loss 本来就降不下去时不应优先使用
+
+
+Initialization &#x2F; Pre-training
+改变寻找最优函数的起点：使用更合适的初始参数，而非完全随机开始
+Better Optimization；Pre-training 也可能带来 Better Generalization
+Pre-training 需要额外数据与计算，且 Pretext Task 不一定能迁移到 Downstream Task；不能完全替代合适的 Optimizer
+
+
+CNN
+改变可选择的函数范围：加入 Local Receptive Field 与 Parameter Sharing
+Better Generalization：利用图像的局部性和平移共享先验，减少参数
+依赖任务先验；若局部性与参数共享的假设不成立，可能限制模型能够表达的函数
+
+
+Skip Connection
+改变可选择的函数范围：在网络中加入残差连接，使信息和梯度可以跨层传递
+Better Optimization：缓解深层网络难以训练的问题
+主要不是为了解决 Overfitting，不保证 Validation Loss 一定更低
+
+
+Normalization
+改变可选择的函数范围：在网络中加入 BatchNorm、LayerNorm 等归一化操作
+Better Optimization；有时也能带来 Better Generalization
+Generalization 的改善并不保证；会增加额外计算，部分方法还依赖 Batch Statistics
+
+
+Cross-entropy 代替 Accuracy
+改变要优化的目标：用连续、可微的 Cross-entropy 作为训练 Loss
+Better Optimization：提供有效梯度，使 Gradient Descent 能够训练分类模型
+不代表 Accuracy 不重要；Accuracy 适合 Evaluation，但不适合作为训练 Loss；不直接保证 Better Generalization
+
+
+更多训练数据
+改变用来定义训练目标的数据：用更多有标签样本计算 Loss
+Better Generalization：让训练资料更能代表真实分布
+需要收集与标注数据，并增加训练成本；不直接解决 Optimizer 或 Training Loss 降不下去的问题
+
+
+Data Augmentation &#x2F; Mixup
+改变用来定义训练目标的数据：通过合理变换或样本混合扩充训练集
+Better Generalization：增加数据多样性，使模型更加稳健
+变换必须保持 Label 合理；错误的 Augmentation 会伤害表现，Training Loss 也可能更高
+
+
+Semi-supervised Learning
+改变要优化的目标：在 Loss 中加入无标签数据的 Entropy、Graph Consistency 等约束
+Better Generalization：利用大量无标签数据
+依赖“低密度分界”“相近样本应有相近输出”等假设；假设错误可能误导模型
+
+
+Parameter Regularization
+改变要优化的目标：在数据 Loss 中加入对参数或函数复杂度的惩罚
+Better Generalization：偏好较简单的函数，减少 Overfitting
+会使 Training Loss 更难降低；正则化过强会导致 Underfitting
+
+
+Weight Decay
+改变如何寻找最优函数：在每次参数更新时主动缩小参数
+Better Generalization
+可能带来 Worse Optimization，使 Training Loss 变高；衰减系数过大会导致 Underfitting
+
+
+AdamW
+改变如何寻找最优函数：将 Adam 的自适应更新与 Weight Decay 分开执行
+相比 Vanilla Gradient Descent 有 Better Optimization；相比 Adam 有 Better Generalization
+需要额外调整 Weight Decay；不保证比 Adam 获得更低的 Training Loss
+
+
+
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Agent </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>《生成式AI时代下的机器学习 第四讲》课堂笔记</title>
-      <link href="/posts/f1d5593e/"/>
-      <url>/posts/f1d5593e/</url>
-      
-        <content type="html"><![CDATA[<h2 id="1-每一种架构都有存在的理由"><a href="#1-每一种架构都有存在的理由" class="headerlink" title="1. 每一种架构都有存在的理由"></a>1. 每一种架构都有存在的理由</h2><p>任何网络架构都带有特定的归纳偏置（inductive bias）。</p><p><img src="/img/posts/f1d5593e/2026-07-03-12-38-24.png"><br>CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合；</p><p><img src="/img/posts/f1d5593e/2026-07-03-12-39-35.png"><br><img src="/img/posts/f1d5593e/2026-07-03-12-40-03.png"><br>Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。</p><p>同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？</p><blockquote><p><strong>本节结论：</strong> 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。</p></blockquote><h2 id="2-Transformer（这里主要关注-Self-Attention）出现的理由"><a href="#2-Transformer（这里主要关注-Self-Attention）出现的理由" class="headerlink" title="2. Transformer（这里主要关注 Self-Attention）出现的理由"></a>2. Transformer（这里主要关注 Self-Attention）出现的理由</h2><p><img src="/img/posts/f1d5593e/2026-07-03-12-46-27.png"><br>在 Self-Attention 出现之前主流使用 RNNs 做序列建模：<br>输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。<br>RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。<br><img src="/img/posts/f1d5593e/2026-07-03-12-52-53.png"></p><blockquote><p><strong>注意：</strong> $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。</p></blockquote><p>广义 RNN 可以写成下式，其中 $f_A$ 负责整理旧记忆，$f_B$ 负责写入新信息，$f_C$ 负责从记忆中读出当前输出。三个函数可以随时间变化，并由当前输入控制。</p><p>$$H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t)$$</p><p><em>状态更新：整理旧记忆 + 写入新信息</em></p><p>$$y_t = f_{C,t}(H_t)$$</p><p><em>从当前状态读取输出</em></p><blockquote><p><strong>本节结论：</strong> RNN 的优势是推理时只需要保留一个固定大小的状态；其传统劣势是状态必须按时间顺序更新，训练不容易并行。</p></blockquote><p>当 $f_A、f_B、f_C$ 由当前输入决定时，模型可以动态控制遗忘、写入与读出。LSTM&#x2F;GRU 的门控机制正是在实现这种条件化的状态更新。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-08-32.png"></p><p>可以把它类比为 AI Agent 的记忆系统：H 是 memory；$f_B$ 是 Write，决定哪些新信息写入；$f_A$ 是 Reflection，决定如何整理或遗忘旧信息；$f_C$ 是 Read，决定当前读取什么。<br><img src="/img/posts/f1d5593e/2026-07-03-13-09-05.png"></p><p>这个类比非常重要，因为后续 Linear Attention 的主要问题恰恰是为了并行化而去掉了 Reflection，之后 RetNet、Mamba、DeltaNet 又尝试把“可控的记忆更新”加回来。</p><h2 id="3-Self-Attention：直接从所有历史位置读取"><a href="#3-Self-Attention：直接从所有历史位置读取" class="headerlink" title="3. Self-Attention：直接从所有历史位置读取"></a>3. Self-Attention：直接从所有历史位置读取</h2><p><img src="/img/posts/f1d5593e/2026-07-03-13-10-14.png"><br>Self-Attention 为每个输入 $x_i$ 生成 $Query、Key、Value$。计算位置 $t$ 的输出时，用 $q_i$ 与所有允许访问的 $k_i$ 计算相似度，再经过 softmax 得到归一化权重，最后对$v_i$ 加权求和。</p><p>$$q_t = W_Q x_t, \quad k_i = W_K x_i, \quad v_i = W_V x_i$$</p><p>$$y_t = \sum_{i \le t} \text{softmax}_i(q_t^\top k_i / \sqrt{d}) \cdot v_i$$</p><p>Attention 的概念早于 2017 年；“Attention Is All You Need”的关键贡献不是发明 Attention，而是去掉循环结构，主要依赖 Attention 构造 Transformer。</p><p>在自回归生成时，第 t 步需要访问此前所有 Key&#x2F;Value，因此随着序列变长，每步计算量和 KV Cache 都会增长。</p><blockquote><p><strong>本节结论：</strong> Self-Attention 不把过去压成单个状态，而是保留并显式访问过去的表示。</p></blockquote><h2 id="4-Transformer-为什么取代传统-RNN：训练并行化"><a href="#4-Transformer-为什么取代传统-RNN：训练并行化" class="headerlink" title="4. Transformer 为什么取代传统 RNN：训练并行化"></a>4. Transformer 为什么取代传统 RNN：训练并行化</h2><p><img src="/img/posts/f1d5593e/2026-07-03-13-40-54.png"></p><p>训练语言模型时，可以把完整目标序列右移一位作为输入，并同时预测每个位置的下一个 token。Self-Attention 中各位置的 Q、K、V 和输出可以主要通过矩阵乘法一次并行计算。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-41-12.png"></p><p>矩阵乘法非常适合 GPU。相比之下，传统 RNN 必须先得到 $H_1$，才能得到 $H_2$，再得到 $H_3$，GPU 会因为时间依赖而等待。</p><p><img src="/img/posts/f1d5593e/2026-07-03-13-41-44.png"></p><p>所以 Transformer 的核心历史优势不是“真正无限的记忆”，而是训练吞吐量高、并行性好、容易扩大模型与数据规模。</p><p>代价是推理时成本随上下文变长而增长。RAG、Agent、多模态输入又不断推动上下文长度增加，因此人们重新关注具有固定状态的 RNN 类架构。</p><blockquote><p><strong>本节结论：</strong> Transformer 赢得主流地位的关键是训练效率。<br><img src="/img/posts/f1d5593e/2026-07-03-13-42-37.png"></p></blockquote><h2 id="5-RNN-能否并行？从递推展开到-Linear-Attention"><a href="#5-RNN-能否并行？从递推展开到-Linear-Attention" class="headerlink" title="5. RNN 能否并行？从递推展开到 Linear Attention"></a>5. RNN 能否并行？从递推展开到 Linear Attention</h2><h3 id="5-1-一般的-RNN-形式"><a href="#5-1-一般的-RNN-形式" class="headerlink" title="5.1 一般的 RNN 形式"></a>5.1 一般的 RNN 形式</h3><p>考虑一个广义的 RNN：</p><p>$$H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t), \qquad y_t = f_{C,t}(H_t)$$</p><p>其中：</p><ul><li>$H_t$ 是第 $t$ 个时间点的 hidden state</li><li>$f_{A,t}$ 负责处理或整理旧的记忆</li><li>$f_{B,t}$ 负责将当前输入 $x_t$ 写入记忆</li><li>$f_{C,t}$ 负责从记忆 $H_t$ 中读取信息，产生输出 $y_t$</li></ul><p>假设初始状态满足 $f_{A,1}(H_0) = 0$，则前几个时间点为：</p><p>$$\begin{aligned}H_1 &amp;= f_{A,1}(H_0) + f_{B,1}(x_1) = f_{B,1}(x_1), \\H_2 &amp;= f_{A,2}(H_1) + f_{B,2}(x_2)      = f_{A,2}\!\left(f_{B,1}(x_1)\right) + f_{B,2}(x_2), \\H_3 &amp;= f_{A,3}(H_2) + f_{B,3}(x_3) \\    &amp;= f_{A,3}\!\left(        f_{A,2}\!\left(f_{B,1}(x_1)\right)        + f_{B,2}(x_2)       \right) + f_{B,3}(x_3).\end{aligned}$$</p><p>因此 $H_t$ 中存在大量嵌套运算：</p><p>$$H_t = f_{A,t}\!\left(        f_{A,t-1}\!\left(            \cdots            f_{A,2}\!\left(f_{B,1}(x_1)\right) + \cdots        \right)      \right) + f_{B,t}(x_t)$$</p><p>由于计算 $H_t$ 必须先得到 $H_{t-1}$，而计算 $H_{t-1}$ 又必须先得到 $H_{t-2}$，所以一般 RNN 在训练时难以并行。</p><h3 id="5-2-将状态更新简化为累加"><a href="#5-2-将状态更新简化为累加" class="headerlink" title="5.2 将状态更新简化为累加"></a>5.2 将状态更新简化为累加</h3><p>为了消除这种复杂的序列依赖，令：</p><p>$$f_{A,t}(H_{t-1}) = H_{t-1}$$</p><p>即不再对旧记忆执行复杂的 Reflection，而只是直接保留旧记忆。</p><p>于是状态更新变为：</p><p>$$H_t = H_{t-1} + f_{B,t}(x_t)$$</p><p>记 $D_t = f_{B,t}(x_t)$，并令 $H_0 = 0$，则：</p><p>$$\begin{aligned}H_1 &amp;= D_1, \\H_2 &amp;= D_1 + D_2, \\H_3 &amp;= D_1 + D_2 + D_3, \\&amp;\ \vdots \\H_t &amp;= D_1 + D_2 + \cdots + D_t = \sum_{i=1}^{t} D_i\end{aligned}$$</p><p>此时每一个 $D_i$ 都只依赖当前输入 $x_i$，因此所有 $D_i$ 可以同时计算。</p><h3 id="5-3-将-hidden-state-设为矩阵"><a href="#5-3-将-hidden-state-设为矩阵" class="headerlink" title="5.3 将 hidden state 设为矩阵"></a>5.3 将 hidden state 设为矩阵</h3><p>令 hidden state 为一个矩阵：</p><p>$$H_t \in \mathbb{R}^{d_v \times d_k}$$</p><p>写入记忆的内容同样是一个矩阵：</p><p>$$D_t = f_{B,t}(x_t) \in \mathbb{R}^{d_v \times d_k}$$</p><p>读取记忆时，使用一个 query vector：</p><p>$$q_t = W_Q x_t, \qquad q_t \in \mathbb{R}^{d_k}$$</p><p>定义读取函数为：</p><p>$$f_{C,t}(H_t) = H_t q_t$$</p><p>因此 $y_t = H_t q_t$。</p><p>将 $H_t = \sum_{i=1}^{t} D_i$ 代入，可得：</p><p>$$\begin{aligned}y_t &amp;= \left(\sum_{i=1}^{t} D_i\right) q_t \\    &amp;= \sum_{i=1}^{t} D_i q_t\end{aligned}$$</p><p>例如：</p><p>$$\begin{aligned}y_1 &amp;= D_1 q_1, \\y_2 &amp;= D_1 q_2 + D_2 q_2, \\y_3 &amp;= D_1 q_3 + D_2 q_3 + D_3 q_3, \\&amp;\ \vdots \\y_t &amp;= D_1 q_t + D_2 q_t + \cdots + D_t q_t\end{aligned}$$</p><h3 id="5-4-使用-outer-product-写入记忆"><a href="#5-4-使用-outer-product-写入记忆" class="headerlink" title="5.4 使用 outer product 写入记忆"></a>5.4 使用 outer product 写入记忆</h3><p>对于每个输入 $x_t$，分别产生 value 和 key：</p><p>$$v_t = W_V x_t, \qquad k_t = W_K x_t$$</p><p>其中 $v_t \in \mathbb{R}^{d_v}$，$k_t \in \mathbb{R}^{d_k}$。</p><p>定义写入记忆的矩阵为：</p><p>$$D_t = v_t k_t^{\top}$$</p><p>这是一个 outer product：$v_t k_t^{\top} \in \mathbb{R}^{d_v \times d_k}$。</p><p>因此 hidden state 的更新公式变为：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}$$</p><p>展开后：</p><p>$$H_t = \sum_{i=1}^{t} v_i k_i^{\top}$$</p><p>这里可以将 $v_i$ 理解为要写入记忆的内容，将 $k_i$ 理解为决定这些内容写入哪个位置的地址。</p><h3 id="5-5-推导输出公式"><a href="#5-5-推导输出公式" class="headerlink" title="5.5 推导输出公式"></a>5.5 推导输出公式</h3><p>将 $D_i = v_i k_i^{\top}$ 代入输出公式：</p><p>$$\begin{aligned}y_t &amp;= \sum_{i=1}^{t} D_i q_t \\    &amp;= \sum_{i=1}^{t} v_i k_i^{\top} q_t\end{aligned}$$</p><p>由于 $k_i^{\top} q_t$ 是一个 scalar，因此可以写为：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>定义 attention score：</p><p>$$a_{t,i} = k_i^{\top} q_t$$</p><p>于是：</p><p>$$y_t = \sum_{i=1}^{t} a_{t,i} v_i$$</p><p>展开为：</p><p>$$\begin{aligned}y_1 &amp;= v_1 k_1^{\top} q_1, \\y_2 &amp;= v_1 k_1^{\top} q_2 + v_2 k_2^{\top} q_2, \\y_3 &amp;= v_1 k_1^{\top} q_3 + v_2 k_2^{\top} q_3 + v_3 k_3^{\top} q_3, \\&amp;\ \vdots \\y_t &amp;= v_1 k_1^{\top} q_t + v_2 k_2^{\top} q_t + \cdots + v_t k_t^{\top} q_t \\    &amp;= a_{t,1} v_1 + a_{t,2} v_2 + \cdots + a_{t,t} v_t\end{aligned}$$</p><p>这个形式已经与 causal Self-Attention 完全相同，区别是这里没有使用 Softmax，因此称为 <strong>Linear Attention</strong>。</p><h3 id="5-6-与标准-Self-Attention-的比较"><a href="#5-6-与标准-Self-Attention-的比较" class="headerlink" title="5.6 与标准 Self-Attention 的比较"></a>5.6 与标准 Self-Attention 的比较</h3><p><img src="/img/posts/f1d5593e/2026-07-03-13-59-51.png"><br>标准 causal Self-Attention 为：</p><p>$$\widetilde{a}_{t,i} =\frac{    \exp\!\left(q_t^{\top} k_i / \sqrt{d_k}\right)}{    \sum_{j=1}^{t} \exp\!\left(q_t^{\top} k_j / \sqrt{d_k}\right)}$$</p><p>并计算：</p><p>$$y_t = \sum_{i=1}^{t} \widetilde{a}_{t,i} v_i$$</p><p>Linear Attention 则直接使用 $a_{t,i} = k_i^{\top} q_t$，因此：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>也就是说：</p><p>$$\text{Linear Attention} = \text{Self-Attention without Softmax}$$</p><h3 id="5-7-Training-时的并行形式"><a href="#5-7-Training-时的并行形式" class="headerlink" title="5.7 Training 时的并行形式"></a>5.7 Training 时的并行形式</h3><p>将所有 query、key 和 value 按列排列：</p><p>$$Q = \begin{bmatrix} q_1 &amp; q_2 &amp; \cdots &amp; q_T \end{bmatrix}, \quadK = \begin{bmatrix} k_1 &amp; k_2 &amp; \cdots &amp; k_T \end{bmatrix}, \quadV = \begin{bmatrix} v_1 &amp; v_2 &amp; \cdots &amp; v_T \end{bmatrix}$$</p><p>其中 $Q, K \in \mathbb{R}^{d_k \times T}$，$V \in \mathbb{R}^{d_v \times T}$。</p><p>注意 $K^{\top} Q \in \mathbb{R}^{T \times T}$，且其第 $(i,t)$ 个元素为：</p><p>$$(K^{\top} Q)_{i,t} = k_i^{\top} q_t$$</p><p>定义 causal mask：</p><p>$$M_{i,t} =\begin{cases}1, &amp; i \leq t, \\0, &amp; i &gt; t\end{cases}$$</p><p>于是所有位置的输出可以一次写成：</p><p>$$Y = V\left[\left(K^{\top} Q\right) \odot M\right]$$</p><p>其中 $Y = \begin{bmatrix} y_1 &amp; y_2 &amp; \cdots &amp; y_T \end{bmatrix}$。</p><p>因此在 Training 阶段，Linear Attention 可以像 Self-Attention 一样通过矩阵运算并行计算所有输出。</p><h3 id="5-8-Inference-时的-RNN-形式"><a href="#5-8-Inference-时的-RNN-形式" class="headerlink" title="5.8 Inference 时的 RNN 形式"></a>5.8 Inference 时的 RNN 形式</h3><p>在 autoregressive inference 中，不需要保存过去所有的 key 和 value，只需要保存当前矩阵状态 $H_{t-1}$。</p><p>每产生一个新的 token，只需计算：</p><p>$$q_t = W_Q x_t, \qquad k_t = W_K x_t, \qquad v_t = W_V x_t$$</p><p>然后更新状态：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}$$</p><p>最后读取：</p><p>$$y_t = H_t q_t$$</p><p>因此核心递归公式为：</p><p>$$H_t = H_{t-1} + v_t k_t^{\top}, \qquady_t = H_t q_t$$</p><p>展开后又得到：</p><p>$$y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i$$</p><p>所以 Linear Attention 具有两种等价的计算方式：</p><p>$$\begin{aligned}\text{Training:}\quad &amp;\text{像 Self-Attention，可以并行计算}, \\\text{Inference:}\quad &amp;\text{像 RNN，递归更新固定大小的 state}.\end{aligned}$$</p><p><img src="/img/posts/f1d5593e/2026-07-03-14-00-55.png"></p><blockquote><p><strong>本节结论：</strong> Linear Attention 的关键等价：训练时可写成 Attention 形式并行计算；推理时可写成 RNN 形式，用固定状态逐步更新。</p></blockquote><h2 id="6-Linear-Attention-的”写入—读取”解释"><a href="#6-Linear-Attention-的”写入—读取”解释" class="headerlink" title="6. Linear Attention 的”写入—读取”解释"></a>6. Linear Attention 的”写入—读取”解释</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-02-20.png"></p><p>状态 $H_t$ 可以看成一个矩阵记忆库。$v_t$ 是要写入的内容，$k_t$ 决定把内容分配到哪些列；外积 $v_t k_t^\top$ 因而是一次结构化写入。</p><p>读取时，$q_t$ 决定从哪些列取出多少信息，$H_t q_t$ 得到最终输出。</p><p><img src="/img/posts/f1d5593e/2026-07-03-14-02-59.png"></p><p>展开递推后，输出等于所有历史 Value 的加权和，权重为 $k_i^\top q_t$。它与普通 Self-Attention 的主要形式差异是没有 softmax。</p><blockquote><p><strong>本节结论：</strong> Key 控制“写到哪里”，Value 表示“写什么”，Query 控制“从哪里读”。</p></blockquote><h2 id="7-为什么没有-Softmax-的-Linear-Attention-往往较弱？"><a href="#7-为什么没有-Softmax-的-Linear-Attention-往往较弱？" class="headerlink" title="7. 为什么没有 Softmax 的 Linear Attention 往往较弱？"></a>7. 为什么没有 Softmax 的 Linear Attention 往往较弱？</h2><p>常见说法是 RNN 状态有限，而 Self-Attention 可以访问任意长历史。但课件强调：<strong>有限维的 Query&#x2F;Key 空间同样无法为无限多位置提供彼此正交、完全无干扰的地址，因此 Self-Attention 也不是字面意义上的无限记忆。</strong></p><p>更关键的差别是 softmax 带来的相对竞争。某个分数是否重要，不只取决于自身大小，也取决于同一上下文中是否出现更高分数。新出现的更重要信息会降低旧信息的归一化权重。</p><p>原始 Linear Attention 中，$H_t = H_{t-1} + v_t k_t^\top$，写入后信息永久累积，模型不会主动遗忘或重整记忆；随着序列增长，干扰不断积累。</p><blockquote><p><strong>本节结论：</strong> Softmax 的价值不仅是归一化，它让不同位置竞争，使“重要性”依上下文动态改变；Linear Attention 则需要额外机制实现遗忘与重写。</p></blockquote><h2 id="8-RetNet：让记忆逐渐衰减"><a href="#8-RetNet：让记忆逐渐衰减" class="headerlink" title="8. RetNet：让记忆逐渐衰减"></a>8. RetNet：让记忆逐渐衰减</h2><p>Retention Network 在旧状态前乘固定衰减系数 $\gamma$（通常 $0 &lt; \gamma &lt; 1$），使较久远的信息指数衰减。</p><p>递推推理时，每一步仍只维护固定状态。并行训练时，位置 $i$ 对位置 $t$ 的贡献额外乘 $\gamma^{t-i}$，因此仍可写成类似 Attention 的并行形式。</p><p>缺点是所有信息按同一速度衰减，无法根据内容决定哪些信息应长期保留。</p><p>$$H_t = \gamma H_{t-1} + v_t k_t^\top, \quad y_t = H_t q_t$$</p><h2 id="9-Gated-Retention-与更细粒度-Reflection"><a href="#9-Gated-Retention-与更细粒度-Reflection" class="headerlink" title="9. Gated Retention 与更细粒度 Reflection"></a>9. Gated Retention 与更细粒度 Reflection</h2><p>Gated Retention 把固定 $\gamma$ 改成输入相关的 $\gamma_t$，例如 $\gamma_t = \text{sigmoid}(W_\gamma x_t)$。模型可以在段落切换、不重要 token 等情形下快速遗忘，也可以在重要信息出现时接近 1、长期保留。<br><img src="/img/posts/f1d5593e/2026-07-03-14-07-07.png"><br>更一般地，可以使用矩阵门 $G_t$ 与旧状态逐元素相乘：$H_t = G_t \odot H_{t-1} + v_t k_t^\top$。若 $G_t$ 采用可分解结构 $1 s_t^\top$，就能分别对记忆矩阵的不同列执行抹去、保留或减弱，并保持可并行实现的结构。</p><p>很多现代模型都可以统一写成“先变换旧状态，再写入新外积，最后读取”的广义 RNN 形式。</p><p>$$\gamma_t = \text{sigmoid}(W_\gamma x_t)$$</p><p>$$H_t = \gamma_t H_{t-1} + v_t k_t^\top$$</p><p><em>Gated Retention</em></p><p>$$H_t = G_t \odot H_{t-1} + v_t k_t^\top$$</p><h2 id="10-Mamba-与-Mamba-2"><a href="#10-Mamba-与-Mamba-2" class="headerlink" title="10. Mamba 与 Mamba-2"></a>10. Mamba 与 Mamba-2</h2><p>Mamba 属于选择性状态空间模型（Selective State Space Model）。在统一递推视角下，它也是对旧状态进行输入相关的变换，再写入新信息。第一代 Mamba 的状态更新形式较复杂，来源于连续时间状态空间模型的离散化。</p><p>由于第一代 Mamba 不能完全化成简单的全矩阵乘法，训练中使用 hardware-aware selective scan&#x2F;scan algorithm 来获得并行效率。</p><p>Mamba-2 的核心更新可写成与 Gated Retention 相近的时间相关衰减形式。这里应理解为”核心递推结构相似”，而不是说完整网络模块的每个细节都相同。</p><p>Mamba 引起关注的原因是：它在一些语言建模实验中取得了可与改进型 Transformer 竞争的效果，同时自回归推理吞吐量更高，尤其适合长序列。</p><h2 id="11-DeltaNet：写入前先擦除冲突记忆"><a href="#11-DeltaNet：写入前先擦除冲突记忆" class="headerlink" title="11. DeltaNet：写入前先擦除冲突记忆"></a>11. DeltaNet：写入前先擦除冲突记忆</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-09-44.png"></p><p>DeltaNet 不只是整体衰减旧状态，而是先计算当前 Key 所指向的位置已经存了什么：$H_{t-1} k_t$。随后把旧内容向量与目标 $v_t$ 的差异用于更新，实现”先擦除，再写入”。</p><p>它的更新可等价看成对一个局部记忆损失执行一步梯度下降。</p><p>$$H_t = H_{t-1} - \beta_t(H_{t-1} k_t - v_t) k_t^\top$$</p><p><em>DeltaNet：擦除旧关联并写入新关联</em></p><p>$$L_t(H) = \frac{1}{2} \| H k_t - v_t \|^2$$</p><p><em>上述更新等价于对该损失执行一步梯度下降</em></p><p>若把状态矩阵视为参数，那么 DeltaNet 的更新就是测试时的一步梯度下降。Titans 将这一观点扩展为”Learning to Memorize at Test Time”：模型在处理输入时动态更新长期记忆。</p><p>这类方法把序列模型与在线学习联系起来：推理不再只是固定参数的前向传播，部分记忆参数会根据当前样本发生变化。</p><h2 id="12-应用、边界与研究趋势"><a href="#12-应用、边界与研究趋势" class="headerlink" title="12. 应用、边界与研究趋势"></a>12. 应用、边界与研究趋势</h2><p>Mamba&#x2F;Linear-Attention 类模型已从小规模实验扩展到更大的语言模型与多模态模型，说明固定状态路线具有实际可扩展性。</p><p>在视觉任务中，是否需要 Mamba 取决于任务。MambaOut 的讨论表明，图像分类未必需要大范围序列混合，CNN 的局部归纳偏置可能足够；但图像分割等需要全局关系的任务仍可能受益。</p><p>另一个趋势是不从零训练，而是把现有 Transformer 中的 Self-Attention 替换为 Mamba&#x2F;SSM&#x2F;Linear Attention，并尽量迁移原有参数，再进行微调。</p><p>最终问题仍未结束：到未来，Self-Attention 会继续长期占据主导，还是会被混合架构或状态空间模型取代？更现实的答案可能不是单一胜者，而是不同模块根据任务与硬件约束组合使用。</p><h2 id="13-各式Model（截止当时课件）"><a href="#13-各式Model（截止当时课件）" class="headerlink" title="13. 各式Model（截止当时课件）"></a>13. 各式Model（截止当时课件）</h2><p><img src="/img/posts/f1d5593e/2026-07-03-14-11-25.png"></p>]]></content>
-      
-      
+      <tags>
+        <tag>AI</tag>
+        <tag>Optimization</tag>
+        <tag>Training tips</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>我的第一篇博客</title>
+    <url>/posts/d95d7e09/</url>
+    <content><![CDATA[Hello!这是我的第一篇blog。:)
+]]></content>
       <categories>
-          
-          <category> 学习笔记 </category>
-          
+        <category>闲言碎语</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> AI </tag>
-            
-            <tag> Attention </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
-      <title>我的第一篇博客</title>
-      <link href="/posts/d95d7e09/"/>
-      <url>/posts/d95d7e09/</url>
-      
-        <content type="html"><![CDATA[<p>Hello!这是我的第一篇blog。:)</p>]]></content>
-      
-      
+      <tags>
+        <tag>随笔</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式AI时代下的机器学习 第二讲》课堂笔记</title>
+    <url>/posts/a823301/</url>
+    <content><![CDATA[1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。
+普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。
+最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment interaction 非常接近。
+$$
+Goal → Observation_t → Action_t → Environment → Observation_t+1 → …
+$$
+2. 从 RL Agent 到 LLM Agent传统 Reinforcement Learning 的做法是先把任务目标设计成 reward，再训练一个 policy 去 maximize reward。以围棋为例，可以把胜利设为 +1、失败设为 -1，然后通过大量交互让模型学习。
+这种路线的主要限制是 task-specific：通常每一个任务都要重新定义环境、action space 和 reward，并训练一套新的参数。一个会下围棋的模型不会因此自然获得下西洋棋或操作网页的能力。
+LLM Agent 的想法不同：直接把已有的 Large Language Model 放入 Agent loop。goal 可以用自然语言表达；observation 可以是文字、图片或其他多模态信息；模型输出一段描述 action 的文字，再由外部系统把这段文字翻译为真正可以执行的操作。从 LLM 自己的角度看，它没有突然学会一种全新的算法。goal、observation、action、下一次 observation 会依次进入 context，模型一直在做 next-token prediction。所谓 Agent，更多是对现有 LLM 能力的一种系统化使用方式，而不是重新训练出的新模型。
+这也解释了为什么强大的 LLM 仍可能在棋类等任务中违反规则：语言上的流畅与对环境状态、规则约束和长期计划的可靠维护并不是同一件事。
+3. 使用 LLM 驱动 Agent 的优势与限制第一项优势是 action space 更开放。传统 Agent 通常只能从预先定义好的有限动作中选择；LLM 可以生成近乎任意的文字，因此可以表达更多行动，也更容易扩展到新的工具和任务。
+第二项优势是能够直接利用 richer feedback。传统 RL 往往把环境反馈压缩成一个 reward 数值，但数值本身信息很少，reward 设计也很困难。LLM Agent 可以直接阅读 compile error、网页提示、测试结果或用户意见，从具体错误中修改下一步行为。
+第三项优势是通用性。相同的基础模型可以在不同 prompt、不同工具和不同环境包装下承担 programmer、web agent、research assistant 等角色，而不一定要为每个任务单独训练。
+但开放 action space 也意味着更难验证。语言模型可能产生看似合理、实际上不可执行或不符合规则的 action；多步执行还会放大早期错误。因此，一个完整 Agent system 通常还需要 memory、tool interface、validator、planner、permission control 等外部机制。
+4. Agent 的三个关键能力第一，能否根据过去的 experience 和当前 feedback 调整行为。这里不依赖更新模型参数，而是改变模型在下一步能够看到的 context。
+第二，能否使用外部 tools。模型不可能把所有知识和能力都存进参数，因此需要搜索、执行代码、调用 API，甚至向其他 AI 求助。
+第三，能否 planning。Agent 不仅要产生眼前的 action，还要考虑一连串动作如何共同实现最终 goal，并在环境变化时重新规划。
+这三部分彼此相连：memory 为 planning 提供过去经验，tools 扩展可执行能力，而 planning 决定何时读取 memory、何时调用 tool、何时直接行动。
+5. 不更新参数，如何根据反馈改变行为假设 programmer agent 写出的代码出现 compile error。传统学习思路会想到收集数据、更新 parameters；本课强调另一条路线：把 error message 直接加入后续输入，模型面对不同 context，自然会产生不同代码。
+这类改变属于 in-context adaptation，而不是 model training。模型参数没有变化，变化的是输入中新增了什么信息。对于 LLM 来说，“第一次写错”和“看过错误日志后重写”是两个不同的续写条件。问题在于不能把 Agent 一生中的全部记录都塞进 context。随着交互步数增加，序列会变得过长，计算成本上升，重要经验也会被大量琐碎内容淹没。课程用 Highly Superior Autobiographical Memory 的类比说明：记住全部细节不一定等于更会思考。
+因此，真正的问题不是“能不能存下来”，而是“什么值得存、什么时候读取、如何把零散经历整理成有用经验”。
+6. Agent Memory：Read、Write 与 ReflectionMemory 可以看作 Agent 的长期经验库。它与当前 context 不同：context 是模型这一次直接看到的内容；memory 则可以长期保存，但需要额外模块把合适的信息取出来。Read 模块负责 retrieval。当前 observation 相当于 query，过去经历构成 database，系统从中选出 relevant experience，再把这些经验放入 prompt。技术上它与 RAG 非常相似，区别主要在于资料来源：一般 RAG 检索外部知识，Agent memory 检索自己的经历。
+Write 模块决定什么值得进入长期记忆。把每一个 observation 都保存会让 memory 被“桌子还在那里”“房间没有变化”等细节塞满。Write 可以由另一个 LLM 或 Agent 自己判断事件的重要性、novelty、长期价值和失败代价。
+Reflection 模块对已有记忆进行更高层次的整理，例如总结规律、抽象策略、建立事件之间的因果或实体关系。它也可以把经历组织为 knowledge graph，再用 GraphRAG、HippoRAG 一类方法检索。
+Reflection 并不天然可靠。它可能从有限证据推导出错误结论，并把错误总结长期保存。因此 memory system 需要保留原始证据、标注来源和时间，并允许用户或系统修正。
+ChatGPT 的 memory 可以作为直观例子：明确说“记住这件事”可能触发 Write；之后相关问题会触发 Read。但模型可能把对话重新表述后再保存，所以记忆内容不一定逐字准确。
+$$
+\text{Memory System} = \text{Write} + \text{Read / Retrieval} + \text{Reflection}
+$$
+7. Tool Use 与 Function Calling对 Agent 而言，tool 是一个只需知道 interface、无需理解内部实现的外部能力。常见工具包括 Search Engine、Python、database、calculator、浏览器，以及具有不同能力的其他 AI。
+工具可以统一抽象为 function：模型需要知道函数名称、参数含义、调用格式和返回结果。所谓 tool use 或 function calling，本质上是模型决定“此时应该调用哪个 function，并提供什么 arguments”。一个通用流程是：System Prompt 说明可用工具和调用格式；User Prompt 给出当前任务；模型生成结构化 tool call；Agent runtime 解析这段输出并真正执行函数；工具结果作为 observation 写回 context；模型继续生成最终回答或下一次调用。
+必须区分“模型输出了一串调用文字”和“函数真的被执行”。LLM 只会生成 token，真正连接 API、处理权限、执行代码和捕获错误的是 Agent developer 编写的 orchestration layer。
+System Prompt 通常包含开发者长期固定的规则，User Prompt 则是本次用户输入。它们在实际平台上可能具有不同优先级，但无论具体 API 如何设计，核心都是让模型清楚知道可做什么、何时调用、输出应该满足什么 schema。
+$$
+\text{LLM} \to \text{tool call} \to \text{runtime executes function} \to \text{tool output} \to \text{LLM}
+$$
+8. 工具很多时如何选择，以及如何自己制造工具当工具只有几个时，可以把全部 description 放入 prompt；当工具达到数百或数千个时，完整阅读所有说明既浪费 context，也会增加选错工具的概率。
+解决办法与 memory retrieval 相似：把 tool descriptions 存入工具库，根据当前 observation 先做 tool retrieval &#x2F; tool selection，只把少量候选工具的 schema 提供给决策模型。工具选择本身可以使用 embedding retrieval、classifier、LLM reranker 或层级目录。它要同时考虑 relevance、cost、latency、权限、可靠性与数据隐私，而不只是语义相似度。
+LLM 还可以 make tools。因为工具本质上可以是一段 function，模型能够为反复出现的问题编写脚本，验证成功后把它保存到工具库，未来再次调用。
+这种“把成功做法封装成工具”的机制与 memory 很相似：一个保存自然语言经验，一个保存可执行程序。两者都把一次性的尝试转化为可复用资产。
+9. 不要盲信工具：Internal Knowledge 与 External Knowledge工具可能出错，检索内容也可能是玩笑、广告、过时资料或恶意信息。课程以搜索结果建议在披萨中加入胶水的例子说明：RAG 能找到资料，不代表资料可信，也不代表模型能够正确理解语境。LLM 在使用工具时会在 internal knowledge 与 external knowledge 之间权衡。外部结果如果与模型原有信念略有差异，模型可能接受；如果数值极端不合理，模型可能回到自己的 prior 并指出工具异常。
+这种判断不是稳定的事实验证器。课程示例中，100°C 的异常温度仍可能被直接接受，而 10000°C 才触发质疑，说明模型的 sanity check 有阈值、也有不一致性。有些研究指出：外部信息与模型 prior 差距越大，越难改变模型；模型对原答案越有信心，也越不容易被检索内容说服。
+当多个来源冲突时，模型可能受到不应影响内容正确性的因素左右。例如：模型可能更信任 AI-generated text、较新的发布日期，以及某些页面视觉模板；而来源标签本身未必产生预期影响。
+即使工具返回的每条资料都正确，最终 synthesis 仍可能错误，例如把同名人物的信息混合。可靠 Agent 需要 cross-check、source attribution、constraint validation 和异常检测，而不是把工具输出直接复制给用户。
+使用工具还存在 cost。对于 3×4 这样的简单问题，调用计算器可能比模型直接回答更慢；是否调用应由任务难度、准确性要求、latency 和成本共同决定。
+10. Reactive Response 与显式 PlanningReactive Agent 只根据当前 observation 立刻产生下一步 action。它可能在简单任务中足够有效，但容易局部贪心：每一步看似合理，组合起来却无法完成长期目标。
+显式 planning 要求模型先生成一串可能的 actions，再把 plan 放回 context，后续动作按照计划执行。Plan-and-Solve 一类 prompting 方法体现了“先整体分解，再逐步执行”的思想。计划不能被视为不可修改的脚本。action 之后的 observation 由环境决定，对手可能走出意外棋步，网页可能弹出广告，API 可能失败。Agent 应在关键 observation 后重新检查 plan，并产生 plan′。
+理想流程不是“每一步都推翻全部计划”，也不是“无论发生什么都坚持原计划”，而是持续比较预期状态与真实状态，只在偏差足以影响目标时 replan。
+$$
+\begin{aligned}
+\text{plan}_t &amp;= P(\text{goal}, \text{observation}_t, \text{memory}) \\
+\text{action}_t &amp;= \pi(\text{observation}_t, \text{plan}_t)
+\end{aligned}
+$$
+11. 强化规划：Tree Search、World Model 与 Reasoning一种加强 planning 的方法是 search：从当前状态尝试多个 action，观察后继状态，再继续展开，寻找能到达目标的路径。由于完整搜索代价巨大，需要用 value estimate 或 LLM judge 提前剪掉“看起来没有希望”的分支。Tree Search for Language Model Agents 展示了这种思想在 web agent 中的应用：模型探索候选路径，对成功概率打分，保留更有希望的路线。它比单次 reactive decision 更像真正的规划。
+真实环境搜索存在 irreversible action：披萨已经下单后，不能因为另一分支更好就当作从未发生。因此，很多搜索不能直接在现实中反复试错。
+解决思路是把探索放进内部 simulation。World Model 根据假想 action 预测可能出现的 observation，Agent 在“脑内小剧场”中比较分支，只把选中的 action 真正执行。Web agent 研究可以让 LLM 用文字模拟点击某个按钮后的页面变化。
+Reasoning model 的长链思考也可被理解为内部 rollout：它尝试不同步骤、模拟后果、找到一个 plan，再执行第一步。课程中的积木例子展示了这种效果。
+但更长 reasoning 并不总是更好。The Danger of Overthinking 指出，一些 Agent 会在可以低风险试一下时持续思考，或在尚未行动前就因为想象困难而放弃。有效 Agent 要在 thinking 与 acting 之间做资源分配。
+]]></content>
       <categories>
-          
-          <category> 闲言碎语 </category>
-          
+        <category>学习笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 随笔 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-  
-  
+      <tags>
+        <tag>AI</tag>
+        <tag>Agent</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《生成式AI时代下的机器学习 第四讲》课堂笔记</title>
+    <url>/posts/f1d5593e/</url>
+    <content><![CDATA[1. 每一种架构都有存在的理由任何网络架构都带有特定的归纳偏置（inductive bias）。
+CNN 通过局部感受野和参数共享适配图像，减少不必要的参数并缓解过拟合；
+Residual Connection 的目的则不是减少参数，而是改善深层网络的优化，使损失曲面更平滑、更容易训练。
+同理，理解 Transformer 或 Mamba 时，或者更新的架构时，而应先问：它们分别要解决什么计算瓶颈、记忆问题与训练问题？
+
+本节结论： 核心问题不是“新架构的名字是什么”，而是“它为了解决什么旧问题而出现”。
+
+2. Transformer（这里主要关注 Self-Attention）出现的理由在 Self-Attention 出现之前主流使用 RNNs 做序列建模：输入向量序列 $x_1,\dots,x_t$，输出另一组向量 $y_1,\dots,y_t$。RNN 的核心是隐藏状态 $H_t$，汇总截至时间 $t$ 已经看到的输入，并作为后续预测的内部记忆。
+
+注意： $H_t$ 不一定是一个小向量，也可以是较大的矩阵；因此”RNN 天生只能记很少信息”并不准确。
+
+广义 RNN 可以写成下式，其中 $f_A$ 负责整理旧记忆，$f_B$ 负责写入新信息，$f_C$ 负责从记忆中读出当前输出。三个函数可以随时间变化，并由当前输入控制。
+$$
+H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t)
+$$
+状态更新：整理旧记忆 + 写入新信息
+$$
+y_t = f_{C,t}(H_t)
+$$
+从当前状态读取输出
+
+本节结论： RNN 的优势是推理时只需要保留一个固定大小的状态；其传统劣势是状态必须按时间顺序更新，训练不容易并行。
+
+当 $f_A、f_B、f_C$ 由当前输入决定时，模型可以动态控制遗忘、写入与读出。LSTM&#x2F;GRU 的门控机制正是在实现这种条件化的状态更新。
+
+可以把它类比为 AI Agent 的记忆系统：H 是 memory；$f_B$ 是 Write，决定哪些新信息写入；$f_A$ 是 Reflection，决定如何整理或遗忘旧信息；$f_C$ 是 Read，决定当前读取什么。
+这个类比非常重要，因为后续 Linear Attention 的主要问题恰恰是为了并行化而去掉了 Reflection，之后 RetNet、Mamba、DeltaNet 又尝试把“可控的记忆更新”加回来。
+3. Self-Attention：直接从所有历史位置读取Self-Attention 为每个输入 $x_i$ 生成 $Query、Key、Value$。计算位置 $t$ 的输出时，用 $q_i$ 与所有允许访问的 $k_i$ 计算相似度，再经过 softmax 得到归一化权重，最后对$v_i$ 加权求和。
+$$
+q_t = W_Q x_t, \quad k_i = W_K x_i, \quad v_i = W_V x_i
+$$
+$$
+y_t = \sum_{i \le t} \text{softmax}_i(q_t^\top k_i / \sqrt{d}) \cdot v_i
+$$
+Attention 的概念早于 2017 年；“Attention Is All You Need”的关键贡献不是发明 Attention，而是去掉循环结构，主要依赖 Attention 构造 Transformer。
+在自回归生成时，第 t 步需要访问此前所有 Key&#x2F;Value，因此随着序列变长，每步计算量和 KV Cache 都会增长。
+
+本节结论： Self-Attention 不把过去压成单个状态，而是保留并显式访问过去的表示。
+
+4. Transformer 为什么取代传统 RNN：训练并行化
+训练语言模型时，可以把完整目标序列右移一位作为输入，并同时预测每个位置的下一个 token。Self-Attention 中各位置的 Q、K、V 和输出可以主要通过矩阵乘法一次并行计算。
+
+矩阵乘法非常适合 GPU。相比之下，传统 RNN 必须先得到 $H_1$，才能得到 $H_2$，再得到 $H_3$，GPU 会因为时间依赖而等待。
+
+所以 Transformer 的核心历史优势不是“真正无限的记忆”，而是训练吞吐量高、并行性好、容易扩大模型与数据规模。
+代价是推理时成本随上下文变长而增长。RAG、Agent、多模态输入又不断推动上下文长度增加，因此人们重新关注具有固定状态的 RNN 类架构。
+
+本节结论： Transformer 赢得主流地位的关键是训练效率。
+
+5. RNN 能否并行？从递推展开到 Linear Attention5.1 一般的 RNN 形式考虑一个广义的 RNN：
+$$
+H_t = f_{A,t}(H_{t-1}) + f_{B,t}(x_t), \qquad y_t = f_{C,t}(H_t)
+$$
+其中：
+
+$H_t$ 是第 $t$ 个时间点的 hidden state
+$f_{A,t}$ 负责处理或整理旧的记忆
+$f_{B,t}$ 负责将当前输入 $x_t$ 写入记忆
+$f_{C,t}$ 负责从记忆 $H_t$ 中读取信息，产生输出 $y_t$
+
+假设初始状态满足 $f_{A,1}(H_0) = 0$，则前几个时间点为：
+$$
+\begin{aligned}
+H_1 &amp;= f_{A,1}(H_0) + f_{B,1}(x_1) = f_{B,1}(x_1), \\
+H_2 &amp;= f_{A,2}(H_1) + f_{B,2}(x_2)
+      = f_{A,2}\!\left(f_{B,1}(x_1)\right) + f_{B,2}(x_2), \\
+H_3 &amp;= f_{A,3}(H_2) + f_{B,3}(x_3) \\
+    &amp;= f_{A,3}\!\left(
+        f_{A,2}\!\left(f_{B,1}(x_1)\right)
+        + f_{B,2}(x_2)
+       \right) + f_{B,3}(x_3).
+\end{aligned}
+$$
+因此 $H_t$ 中存在大量嵌套运算：
+$$
+H_t = f_{A,t}\!\left(
+        f_{A,t-1}\!\left(
+            \cdots
+            f_{A,2}\!\left(f_{B,1}(x_1)\right) + \cdots
+        \right)
+      \right) + f_{B,t}(x_t)
+$$
+由于计算 $H_t$ 必须先得到 $H_{t-1}$，而计算 $H_{t-1}$ 又必须先得到 $H_{t-2}$，所以一般 RNN 在训练时难以并行。
+5.2 将状态更新简化为累加为了消除这种复杂的序列依赖，令：
+$$
+f_{A,t}(H_{t-1}) = H_{t-1}
+$$
+即不再对旧记忆执行复杂的 Reflection，而只是直接保留旧记忆。
+于是状态更新变为：
+$$
+H_t = H_{t-1} + f_{B,t}(x_t)
+$$
+记 $D_t = f_{B,t}(x_t)$，并令 $H_0 = 0$，则：
+$$
+\begin{aligned}
+H_1 &amp;= D_1, \\
+H_2 &amp;= D_1 + D_2, \\
+H_3 &amp;= D_1 + D_2 + D_3, \\
+&amp;\ \vdots \\
+H_t &amp;= D_1 + D_2 + \cdots + D_t = \sum_{i=1}^{t} D_i
+\end{aligned}
+$$
+此时每一个 $D_i$ 都只依赖当前输入 $x_i$，因此所有 $D_i$ 可以同时计算。
+5.3 将 hidden state 设为矩阵令 hidden state 为一个矩阵：
+$$
+H_t \in \mathbb{R}^{d_v \times d_k}
+$$
+写入记忆的内容同样是一个矩阵：
+$$
+D_t = f_{B,t}(x_t) \in \mathbb{R}^{d_v \times d_k}
+$$
+读取记忆时，使用一个 query vector：
+$$
+q_t = W_Q x_t, \qquad q_t \in \mathbb{R}^{d_k}
+$$
+定义读取函数为：
+$$
+f_{C,t}(H_t) = H_t q_t
+$$
+因此 $y_t = H_t q_t$。
+将 $H_t = \sum_{i=1}^{t} D_i$ 代入，可得：
+$$
+\begin{aligned}
+y_t &amp;= \left(\sum_{i=1}^{t} D_i\right) q_t \\
+    &amp;= \sum_{i=1}^{t} D_i q_t
+\end{aligned}
+$$
+例如：
+$$
+\begin{aligned}
+y_1 &amp;= D_1 q_1, \\
+y_2 &amp;= D_1 q_2 + D_2 q_2, \\
+y_3 &amp;= D_1 q_3 + D_2 q_3 + D_3 q_3, \\
+&amp;\ \vdots \\
+y_t &amp;= D_1 q_t + D_2 q_t + \cdots + D_t q_t
+\end{aligned}
+$$
+5.4 使用 outer product 写入记忆对于每个输入 $x_t$，分别产生 value 和 key：
+$$
+v_t = W_V x_t, \qquad k_t = W_K x_t
+$$
+其中 $v_t \in \mathbb{R}^{d_v}$，$k_t \in \mathbb{R}^{d_k}$。
+定义写入记忆的矩阵为：
+$$
+D_t = v_t k_t^{\top}
+$$
+这是一个 outer product：$v_t k_t^{\top} \in \mathbb{R}^{d_v \times d_k}$。
+因此 hidden state 的更新公式变为：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}
+$$
+展开后：
+$$
+H_t = \sum_{i=1}^{t} v_i k_i^{\top}
+$$
+这里可以将 $v_i$ 理解为要写入记忆的内容，将 $k_i$ 理解为决定这些内容写入哪个位置的地址。
+5.5 推导输出公式将 $D_i = v_i k_i^{\top}$ 代入输出公式：
+$$
+\begin{aligned}
+y_t &amp;= \sum_{i=1}^{t} D_i q_t \\
+    &amp;= \sum_{i=1}^{t} v_i k_i^{\top} q_t
+\end{aligned}
+$$
+由于 $k_i^{\top} q_t$ 是一个 scalar，因此可以写为：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+定义 attention score：
+$$
+a_{t,i} = k_i^{\top} q_t
+$$
+于是：
+$$
+y_t = \sum_{i=1}^{t} a_{t,i} v_i
+$$
+展开为：
+$$
+\begin{aligned}
+y_1 &amp;= v_1 k_1^{\top} q_1, \\
+y_2 &amp;= v_1 k_1^{\top} q_2 + v_2 k_2^{\top} q_2, \\
+y_3 &amp;= v_1 k_1^{\top} q_3 + v_2 k_2^{\top} q_3 + v_3 k_3^{\top} q_3, \\
+&amp;\ \vdots \\
+y_t &amp;= v_1 k_1^{\top} q_t + v_2 k_2^{\top} q_t + \cdots + v_t k_t^{\top} q_t \\
+    &amp;= a_{t,1} v_1 + a_{t,2} v_2 + \cdots + a_{t,t} v_t
+\end{aligned}
+$$
+这个形式已经与 causal Self-Attention 完全相同，区别是这里没有使用 Softmax，因此称为 Linear Attention。
+5.6 与标准 Self-Attention 的比较标准 causal Self-Attention 为：
+$$
+\widetilde{a}_{t,i} =
+\frac{
+    \exp\!\left(q_t^{\top} k_i / \sqrt{d_k}\right)
+}{
+    \sum_{j=1}^{t} \exp\!\left(q_t^{\top} k_j / \sqrt{d_k}\right)
+}
+$$
+并计算：
+$$
+y_t = \sum_{i=1}^{t} \widetilde{a}_{t,i} v_i
+$$
+Linear Attention 则直接使用 $a_{t,i} = k_i^{\top} q_t$，因此：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+也就是说：
+$$
+\text{Linear Attention} = \text{Self-Attention without Softmax}
+$$
+5.7 Training 时的并行形式将所有 query、key 和 value 按列排列：
+$$
+Q = \begin{bmatrix} q_1 &amp; q_2 &amp; \cdots &amp; q_T \end{bmatrix}, \quad
+K = \begin{bmatrix} k_1 &amp; k_2 &amp; \cdots &amp; k_T \end{bmatrix}, \quad
+V = \begin{bmatrix} v_1 &amp; v_2 &amp; \cdots &amp; v_T \end{bmatrix}
+$$
+其中 $Q, K \in \mathbb{R}^{d_k \times T}$，$V \in \mathbb{R}^{d_v \times T}$。
+注意 $K^{\top} Q \in \mathbb{R}^{T \times T}$，且其第 $(i,t)$ 个元素为：
+$$
+(K^{\top} Q)_{i,t} = k_i^{\top} q_t
+$$
+定义 causal mask：
+$$
+M_{i,t} =
+\begin{cases}
+1, &amp; i \leq t, \\
+0, &amp; i &gt; t
+\end{cases}
+$$
+于是所有位置的输出可以一次写成：
+$$
+Y = V\left[\left(K^{\top} Q\right) \odot M\right]
+$$
+其中 $Y = \begin{bmatrix} y_1 &amp; y_2 &amp; \cdots &amp; y_T \end{bmatrix}$。
+因此在 Training 阶段，Linear Attention 可以像 Self-Attention 一样通过矩阵运算并行计算所有输出。
+5.8 Inference 时的 RNN 形式在 autoregressive inference 中，不需要保存过去所有的 key 和 value，只需要保存当前矩阵状态 $H_{t-1}$。
+每产生一个新的 token，只需计算：
+$$
+q_t = W_Q x_t, \qquad k_t = W_K x_t, \qquad v_t = W_V x_t
+$$
+然后更新状态：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}
+$$
+最后读取：
+$$
+y_t = H_t q_t
+$$
+因此核心递归公式为：
+$$
+H_t = H_{t-1} + v_t k_t^{\top}, \qquad
+y_t = H_t q_t
+$$
+展开后又得到：
+$$
+y_t = \sum_{i=1}^{t} \left(k_i^{\top} q_t\right) v_i
+$$
+所以 Linear Attention 具有两种等价的计算方式：
+$$
+\begin{aligned}
+\text{Training:}\quad &amp;\text{像 Self-Attention，可以并行计算}, \\
+\text{Inference:}\quad &amp;\text{像 RNN，递归更新固定大小的 state}.
+\end{aligned}
+$$
+
+
+本节结论： Linear Attention 的关键等价：训练时可写成 Attention 形式并行计算；推理时可写成 RNN 形式，用固定状态逐步更新。
+
+6. Linear Attention 的”写入—读取”解释
+状态 $H_t$ 可以看成一个矩阵记忆库。$v_t$ 是要写入的内容，$k_t$ 决定把内容分配到哪些列；外积 $v_t k_t^\top$ 因而是一次结构化写入。
+读取时，$q_t$ 决定从哪些列取出多少信息，$H_t q_t$ 得到最终输出。
+
+展开递推后，输出等于所有历史 Value 的加权和，权重为 $k_i^\top q_t$。它与普通 Self-Attention 的主要形式差异是没有 softmax。
+
+本节结论： Key 控制“写到哪里”，Value 表示“写什么”，Query 控制“从哪里读”。
+
+7. 为什么没有 Softmax 的 Linear Attention 往往较弱？常见说法是 RNN 状态有限，而 Self-Attention 可以访问任意长历史。但课件强调：有限维的 Query&#x2F;Key 空间同样无法为无限多位置提供彼此正交、完全无干扰的地址，因此 Self-Attention 也不是字面意义上的无限记忆。
+更关键的差别是 softmax 带来的相对竞争。某个分数是否重要，不只取决于自身大小，也取决于同一上下文中是否出现更高分数。新出现的更重要信息会降低旧信息的归一化权重。
+原始 Linear Attention 中，$H_t = H_{t-1} + v_t k_t^\top$，写入后信息永久累积，模型不会主动遗忘或重整记忆；随着序列增长，干扰不断积累。
+
+本节结论： Softmax 的价值不仅是归一化，它让不同位置竞争，使“重要性”依上下文动态改变；Linear Attention 则需要额外机制实现遗忘与重写。
+
+8. RetNet：让记忆逐渐衰减Retention Network 在旧状态前乘固定衰减系数 $\gamma$（通常 $0 &lt; \gamma &lt; 1$），使较久远的信息指数衰减。
+递推推理时，每一步仍只维护固定状态。并行训练时，位置 $i$ 对位置 $t$ 的贡献额外乘 $\gamma^{t-i}$，因此仍可写成类似 Attention 的并行形式。
+缺点是所有信息按同一速度衰减，无法根据内容决定哪些信息应长期保留。
+$$
+H_t = \gamma H_{t-1} + v_t k_t^\top, \quad y_t = H_t q_t
+$$
+9. Gated Retention 与更细粒度 ReflectionGated Retention 把固定 $\gamma$ 改成输入相关的 $\gamma_t$，例如 $\gamma_t = \text{sigmoid}(W_\gamma x_t)$。模型可以在段落切换、不重要 token 等情形下快速遗忘，也可以在重要信息出现时接近 1、长期保留。更一般地，可以使用矩阵门 $G_t$ 与旧状态逐元素相乘：$H_t = G_t \odot H_{t-1} + v_t k_t^\top$。若 $G_t$ 采用可分解结构 $1 s_t^\top$，就能分别对记忆矩阵的不同列执行抹去、保留或减弱，并保持可并行实现的结构。
+很多现代模型都可以统一写成“先变换旧状态，再写入新外积，最后读取”的广义 RNN 形式。
+$$
+\gamma_t = \text{sigmoid}(W_\gamma x_t)
+$$
+$$
+H_t = \gamma_t H_{t-1} + v_t k_t^\top
+$$
+Gated Retention
+$$
+H_t = G_t \odot H_{t-1} + v_t k_t^\top
+$$
+10. Mamba 与 Mamba-2Mamba 属于选择性状态空间模型（Selective State Space Model）。在统一递推视角下，它也是对旧状态进行输入相关的变换，再写入新信息。第一代 Mamba 的状态更新形式较复杂，来源于连续时间状态空间模型的离散化。
+由于第一代 Mamba 不能完全化成简单的全矩阵乘法，训练中使用 hardware-aware selective scan&#x2F;scan algorithm 来获得并行效率。
+Mamba-2 的核心更新可写成与 Gated Retention 相近的时间相关衰减形式。这里应理解为”核心递推结构相似”，而不是说完整网络模块的每个细节都相同。
+Mamba 引起关注的原因是：它在一些语言建模实验中取得了可与改进型 Transformer 竞争的效果，同时自回归推理吞吐量更高，尤其适合长序列。
+11. DeltaNet：写入前先擦除冲突记忆
+DeltaNet 不只是整体衰减旧状态，而是先计算当前 Key 所指向的位置已经存了什么：$H_{t-1} k_t$。随后把旧内容向量与目标 $v_t$ 的差异用于更新，实现”先擦除，再写入”。
+它的更新可等价看成对一个局部记忆损失执行一步梯度下降。
+$$
+H_t = H_{t-1} - \beta_t(H_{t-1} k_t - v_t) k_t^\top
+$$
+DeltaNet：擦除旧关联并写入新关联
+$$
+L_t(H) = \frac{1}{2} \| H k_t - v_t \|^2
+$$
+上述更新等价于对该损失执行一步梯度下降
+若把状态矩阵视为参数，那么 DeltaNet 的更新就是测试时的一步梯度下降。Titans 将这一观点扩展为”Learning to Memorize at Test Time”：模型在处理输入时动态更新长期记忆。
+这类方法把序列模型与在线学习联系起来：推理不再只是固定参数的前向传播，部分记忆参数会根据当前样本发生变化。
+12. 应用、边界与研究趋势Mamba&#x2F;Linear-Attention 类模型已从小规模实验扩展到更大的语言模型与多模态模型，说明固定状态路线具有实际可扩展性。
+在视觉任务中，是否需要 Mamba 取决于任务。MambaOut 的讨论表明，图像分类未必需要大范围序列混合，CNN 的局部归纳偏置可能足够；但图像分割等需要全局关系的任务仍可能受益。
+另一个趋势是不从零训练，而是把现有 Transformer 中的 Self-Attention 替换为 Mamba&#x2F;SSM&#x2F;Linear Attention，并尽量迁移原有参数，再进行微调。
+最终问题仍未结束：到未来，Self-Attention 会继续长期占据主导，还是会被混合架构或状态空间模型取代？更现实的答案可能不是单一胜者，而是不同模块根据任务与硬件约束组合使用。
+13. 各式Model（截止当时课件）
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Attention</tag>
+      </tags>
+  </entry>
 </search>
