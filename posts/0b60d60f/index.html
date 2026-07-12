@@ -1,0 +1,715 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 24fall Lecture1》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 24fall Lecture1》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/0b60d60f/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-12T05:37:19.000Z">
+<meta property="article:modified_time" content="2026-07-12T06:07:59.575Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="CoT">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Reasoning">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 24fall Lecture1》课堂笔记",
+  "url": "https://wick-7.github.io/posts/0b60d60f/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-12T05:37:19.000Z",
+  "dateModified": "2026-07-12T06:07:59.575Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/0b60d60f/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 24fall Lecture1》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">17</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 24fall Lecture1》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 24fall Lecture1》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-12T05:37:19.000Z" title="发表于 2026-07-12 13:37:19">2026-07-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-12T06:07:59.575Z" title="更新于 2026-07-12 14:07:59">2026-07-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="LLM-Reasoning：关键思想、方法与局限"><a href="#LLM-Reasoning：关键思想、方法与局限" class="headerlink" title="LLM Reasoning：关键思想、方法与局限"></a>LLM Reasoning：关键思想、方法与局限</h1><h2 id="1-Reasoning-在-LLM-Agent-中的位置"><a href="#1-Reasoning-在-LLM-Agent-中的位置" class="headerlink" title="1. Reasoning 在 LLM Agent 中的位置"></a>1. Reasoning 在 LLM Agent 中的位置</h2><p>传统 LLM 的基本交互形式是：</p>
+<p>$$
+\text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}.
+$$</p>
+<p>LLM Agent 则将 LLM 作为负责 <strong>Reasoning &amp; Planning</strong> 的核心模块，并进一步接入：</p>
+<ul>
+<li>外部环境及其反馈；</li>
+<li>Tool Use；</li>
+<li>Retrieval &#x2F; Knowledge Base；</li>
+<li>Working Memory 与 Long-term Memory；</li>
+<li>多模态感知和具身行动；</li>
+<li>其他智能体与人类。</li>
+</ul>
+<p>因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环：</p>
+<p>$$
+\text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act}
+\rightarrow \text{Receive Feedback} \rightarrow \text{Update}.
+$$</p>
+<p>真实任务通常包含试错、任务分解、工具调用、错误恢复和长程决策。Reasoning 是这一闭环中的基础能力：如果模型无法可靠地分解问题、维持中间状态并根据反馈修正计划，那么工具和记忆模块也难以被有效利用。</p>
+<p><img src="/img/posts/0b60d60f/2026-07-12-13-53-29.png"></p>
+<hr>
+<h2 id="2-为什么需要推理能力"><a href="#2-为什么需要推理能力" class="headerlink" title="2. 为什么需要推理能力"></a>2. 为什么需要推理能力</h2><h3 id="2-1-对-AI-的一个基本期待：从少量样例中学习"><a href="#2-1-对-AI-的一个基本期待：从少量样例中学习" class="headerlink" title="2.1 对 AI 的一个基本期待：从少量样例中学习"></a>2.1 对 AI 的一个基本期待：从少量样例中学习</h3><p>Denny Zhou 对 AI 的一个“较小但关键”的期待是：</p>
+<blockquote>
+<p>AI 应该像人类一样，仅通过少量样例就能理解一个新任务。</p>
+</blockquote>
+<p>传统机器学习长期研究数据高效学习，包括：</p>
+<ul>
+<li>Semi-supervised Learning；</li>
+<li>Bayesian Nonparametrics；</li>
+<li>Kernel Machines；</li>
+<li>Sparsity &#x2F; Low Rank；</li>
+<li>Active Learning。</li>
+</ul>
+<p>但对于一些人类看一两个例子就能掌握的简单规则，普通监督学习仍可能需要大量标注数据。讲者认为，其中缺少的关键能力是 <strong>Reasoning</strong>：</p>
+<blockquote>
+<p>人类能够从少量样例中学习，不只是因为统计归纳能力，更因为人类可以识别规则并执行推理。</p>
+</blockquote>
+<h3 id="2-2-Toy-Example：Last-Letter-Concatenation"><a href="#2-2-Toy-Example：Last-Letter-Concatenation" class="headerlink" title="2.2 Toy Example：Last Letter Concatenation"></a>2.2 Toy Example：Last Letter Concatenation</h3><p>规则：取每个单词的最后一个字母，再将这些字母拼接起来。</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>$Elon Musk$</td>
+<td>$nk$</td>
+</tr>
+<tr>
+<td>$Bill Gates$</td>
+<td>$ls$</td>
+</tr>
+<tr>
+<td>$Barack Obama$</td>
+<td>$ka$</td>
+</tr>
+</tbody></table>
+<p>仅向 LLM 提供输入与输出示例时，模型可能只是在表面上模仿已有映射，未必准确识别内部规则。</p>
+<p>若在 demonstration 中加入显式过程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">The last letter of &quot;Elon&quot; is &quot;n&quot;.</span><br><span class="line">The last letter of &quot;Musk&quot; is &quot;k&quot;.</span><br><span class="line">Concatenating them gives &quot;nk&quot;.</span><br></pre></td></tr></table></figure>
+
+<p>模型就更容易将该过程迁移到新样例上。这个简单例子展示了本节课最核心的结论：</p>
+<blockquote>
+<p>与只给出最终答案相比，展示如何经过若干中间步骤得到答案，可以显著增强少样本泛化能力。</p>
+</blockquote>
+<hr>
+<h2 id="3-核心思想：通过中间步骤得到最终答案"><a href="#3-核心思想：通过中间步骤得到最终答案" class="headerlink" title="3. 核心思想：通过中间步骤得到最终答案"></a>3. 核心思想：通过中间步骤得到最终答案</h2><h3 id="3-1-LLM-的基本生成方式"><a href="#3-1-LLM-的基本生成方式" class="headerlink" title="3.1 LLM 的基本生成方式"></a>3.1 LLM 的基本生成方式</h3><p>LLM 是自回归 next-token prediction 模型。</p>
+<p>推理过程同样可以被写成一个 token 序列。因此，只要训练数据、微调数据或提示示例中包含中间步骤，模型就可以学习生成类似的步骤。</p>
+<h3 id="3-2-中间步骤方法的发展脉络"><a href="#3-2-中间步骤方法的发展脉络" class="headerlink" title="3.2 中间步骤方法的发展脉络"></a>3.2 中间步骤方法的发展脉络</h3><h4 id="1-Training-with-Intermediate-Steps"><a href="#1-Training-with-Intermediate-Steps" class="headerlink" title="1. Training with Intermediate Steps"></a>1. Training with Intermediate Steps</h4><p><img src="/img/posts/0b60d60f/2026-07-12-13-55-34.png"></p>
+<h4 id="2-Fine-tuning-with-Intermediate-Steps"><a href="#2-Fine-tuning-with-Intermediate-Steps" class="headerlink" title="2. Fine-tuning with Intermediate Steps"></a>2. Fine-tuning with Intermediate Steps</h4><p><img src="/img/posts/0b60d60f/2026-07-12-13-56-07.png"></p>
+<h4 id="3-Prompting-with-Intermediate-Steps"><a href="#3-Prompting-with-Intermediate-Steps" class="headerlink" title="3. Prompting with Intermediate Steps"></a>3. Prompting with Intermediate Steps</h4><p>Chain-of-Thought Prompting 不再要求重新训练或微调模型，而是在 few-shot demonstration 中直接展示推理过程，引导大模型继续生成类似的多步推理。</p>
+<h3 id="3-3-真正关键的不是采用哪种接口"><a href="#3-3-真正关键的不是采用哪种接口" class="headerlink" title="3.3 真正关键的不是采用哪种接口"></a>3.3 真正关键的不是采用哪种接口</h3><p><img src="/img/posts/0b60d60f/2026-07-12-13-56-51.png"></p>
+<blockquote>
+<p><strong>Intermediate Steps 很重要。</strong></p>
+</blockquote>
+<p>只要模型接触到带有中间步骤的示例，它就更可能在回答新问题时生成中间步骤。</p>
+<hr>
+<h2 id="4-Chain-of-Thought-Prompting"><a href="#4-Chain-of-Thought-Prompting" class="headerlink" title="4. Chain-of-Thought Prompting"></a>4. Chain-of-Thought Prompting</h2><h3 id="4-1-基本形式"><a href="#4-1-基本形式" class="headerlink" title="4.1 基本形式"></a>4.1 基本形式</h3><p>普通 prompting：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Q: 问题</span><br><span class="line">A: 最终答案</span><br></pre></td></tr></table></figure>
+
+<p>CoT prompting：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Q: 问题</span><br><span class="line">A: 中间推理步骤……因此最终答案是……</span><br></pre></td></tr></table></figure>
+
+<p>其目标不是让模型只模仿答案格式，而是让模型模仿一个逐步计算或推导的过程。</p>
+<h3 id="4-2-CoT-的主要作用"><a href="#4-2-CoT-的主要作用" class="headerlink" title="4.2 CoT 的主要作用"></a>4.2 CoT 的主要作用</h3><p>CoT 特别适用于需要串行计算或组合多个局部结论的任务，例如：</p>
+<ul>
+<li>Arithmetic Reasoning；</li>
+<li>Multi-hop Question Answering；</li>
+<li>Commonsense Reasoning；</li>
+<li>Symbolic Reasoning；</li>
+<li>Planning 与 Tool-use Decision。</li>
+</ul>
+<p>从 Agent 的角度看，中间步骤还可以自然地对应：</p>
+<p>$$
+\text{Task Decomposition}
+\rightarrow
+\text{Subgoal Selection}
+\rightarrow
+\text{Tool Call}
+\rightarrow
+\text{Observation Integration}.
+$$</p>
+<h3 id="4-3-需要注意：CoT-并不等于“模型像人一样思考”"><a href="#4-3-需要注意：CoT-并不等于“模型像人一样思考”" class="headerlink" title="4.3 需要注意：CoT 并不等于“模型像人一样思考”"></a>4.3 需要注意：CoT 并不等于“模型像人一样思考”</h3><p>LLM 本质上仍然是概率式 next-token generator。生成一段语言上连贯的 reasoning path，不保证：</p>
+<ul>
+<li>每一步都真实反映模型内部计算；</li>
+<li>推理过程与最终答案一致；</li>
+<li>推理链没有遗漏或虚构；</li>
+<li>模型能可靠判断自己的答案是否正确。</li>
+</ul>
+<p>因此，CoT 应被视为一种改善推理计算和可观测性的技术，而不能直接等同于可靠、忠实的人类式思考。</p>
+<p><img src="/img/posts/0b60d60f/2026-07-12-13-58-23.png"></p>
+<hr>
+<h2 id="5-Least-to-Most-Prompting：从简单到复杂"><a href="#5-Least-to-Most-Prompting：从简单到复杂" class="headerlink" title="5. Least-to-Most Prompting：从简单到复杂"></a>5. Least-to-Most Prompting：从简单到复杂</h2><p>仅仅要求“逐步思考”还不够，还可以在 demonstration 中加入更加明确的 <strong>reasoning strategy</strong>。</p>
+<h3 id="5-1-核心策略：Decomposition"><a href="#5-1-核心策略：Decomposition" class="headerlink" title="5.1 核心策略：Decomposition"></a>5.1 核心策略：Decomposition</h3><p>Least-to-Most Prompting 将复杂问题拆解为一组由易到难的子问题：</p>
+<p>$$
+Q
+\rightarrow
+(q_1,q_2,\ldots,q_m)
+\rightarrow
+(a_1,a_2,\ldots,a_m)
+\rightarrow
+A.
+$$</p>
+<p>其中，后续子问题可以利用前面已经得到的答案：</p>
+<p>$$
+P(a_i\mid q_i,a_{&lt;i}).
+$$</p>
+<p>例子：</p>
+<blockquote>
+<p>Elsa 有 3 个苹果，Anna 比 Elsa 多 2 个。两人一共有多少苹果？</p>
+</blockquote>
+<p>先分解为：</p>
+<ol>
+<li>Anna 有多少个苹果？</li>
+<li>Elsa 和 Anna 一共有多少个苹果？</li>
+</ol>
+<p>再依次求解：</p>
+<p>$$
+3+2=5,
+$$</p>
+<p>$$
+3+5=8.
+$$</p>
+<h3 id="5-2-为什么能支持-Easy-to-Hard-Generalization"><a href="#5-2-为什么能支持-Easy-to-Hard-Generalization" class="headerlink" title="5.2 为什么能支持 Easy-to-Hard Generalization"></a>5.2 为什么能支持 Easy-to-Hard Generalization</h3><p>普通 few-shot CoT 通常直接展示完整问题和完整推理，而 Least-to-Most 额外教给模型一个可复用的元策略：</p>
+<blockquote>
+<p>先识别依赖关系，再把复杂任务转化为若干局部可解的问题。</p>
+</blockquote>
+<p>这种方式对于 compositional generalization 特别有效：测试问题可以比 demonstration 更长、更复杂，只要它仍由已学会的基本操作组合而成。</p>
+<h3 id="5-3-实验结果"><a href="#5-3-实验结果" class="headerlink" title="5.3 实验结果"></a>5.3 实验结果</h3><ul>
+<li>在 SCAN compositional generalization 任务中，仅使用约 $0.1\%$ 的 demonstration examples，Least-to-Most 取得接近完美的泛化表现。</li>
+<li>在 CFQ Text-to-Code 任务中，Dynamic Least-to-Most 仅使用约 $1\%$ 数据，超过许多使用完整训练集和专门架构的方法。</li>
+</ul>
+<p>Dynamic Least-to-Most 的关键是：不固定使用同一组分解示例，而是根据当前问题动态检索或构造更相关的子问题与示例。</p>
+<p><img src="/img/posts/0b60d60f/2026-07-12-13-59-06.png"><br><img src="/img/posts/0b60d60f/2026-07-12-13-59-17.png"></p>
+<hr>
+<h2 id="6-为什么中间步骤有效"><a href="#6-为什么中间步骤有效" class="headerlink" title="6. 为什么中间步骤有效"></a>6. 为什么中间步骤有效</h2><h3 id="6-1-串行问题需要串行计算"><a href="#6-1-串行问题需要串行计算" class="headerlink" title="6.1 串行问题需要串行计算"></a>6.1 串行问题需要串行计算</h3><p>许多 reasoning tasks 是 inherently serial 的：后一步必须依赖前一步结果，例如多位数加法、长链逻辑推导和多跳规划。</p>
+<p>课程引用的理论工作指出：</p>
+<ul>
+<li>固定深度的 Transformer，如果允许生成足够长的 intermediate reasoning steps，可以解决广泛的串行问题；</li>
+<li>如果要求模型直接输出最终答案，则可能需要非常深的网络，甚至无法完成某些任务。</li>
+</ul>
+<h3 id="6-2-直观理解：把输出长度转化为额外计算时间"><a href="#6-2-直观理解：把输出长度转化为额外计算时间" class="headerlink" title="6.2 直观理解：把输出长度转化为额外计算时间"></a>6.2 直观理解：把输出长度转化为额外计算时间</h3><p>Transformer 的一次前向传播深度有限，但自回归生成允许模型反复执行：</p>
+<p>$$
+\text{Read current state}
+\rightarrow
+\text{produce next intermediate state}.
+$$</p>
+<p>因此，生成 $T$ 个中间 token 可以被直观理解为模型获得了额外的串行计算步数。中间输出既是答案的一部分，也是后续计算可以读取的外部工作记忆。</p>
+<p>这解释了为什么以下方法可能有效：</p>
+<ul>
+<li>让模型 think longer；</li>
+<li>增加更细粒度的中间步骤；</li>
+<li>将复杂搜索交给 MCTS、Search 或其他外部工具；</li>
+<li>在 Agent 中把 reasoning path 展开为多个 action-observation cycles。</li>
+</ul>
+<h3 id="6-3-不能无限延长推理链"><a href="#6-3-不能无限延长推理链" class="headerlink" title="6.3 不能无限延长推理链"></a>6.3 不能无限延长推理链</h3><p>更长的推理不一定始终更好。推理链过长会带来：</p>
+<ul>
+<li>错误累积；</li>
+<li>无关分支增加；</li>
+<li>推理成本与延迟上升；</li>
+<li>生成概率与真正的答案概率不一致。</li>
+</ul>
+<p>因此，还需要选择、验证或聚合多条推理路径。</p>
+<hr>
+<h2 id="7-Zero-shot-CoT-与-Analogical-Reasoning"><a href="#7-Zero-shot-CoT-与-Analogical-Reasoning" class="headerlink" title="7. Zero-shot CoT 与 Analogical Reasoning"></a>7. Zero-shot CoT 与 Analogical Reasoning</h2><h3 id="7-1-Zero-shot-CoT"><a href="#7-1-Zero-shot-CoT" class="headerlink" title="7.1 Zero-shot CoT"></a>7.1 Zero-shot CoT</h3><p>Kojima et al. 发现，只需在问题后添加：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Let&#x27;s think step by step.</span><br></pre></td></tr></table></figure>
+
+<p>就可能触发模型生成分步推理，而不需要 few-shot demonstrations。</p>
+<p>优点：</p>
+<ul>
+<li>使用简单；</li>
+<li>不需要人工准备示例；</li>
+<li>可以快速测试模型是否具备潜在推理能力。</li>
+</ul>
+<p>局限：</p>
+<ul>
+<li>通常弱于高质量 few-shot CoT；</li>
+<li>提示本身没有提供具体的任务策略或相关知识；</li>
+<li>对不同模型、任务和措辞较敏感。</li>
+</ul>
+<h3 id="7-2-LLMs-as-Analogical-Reasoners"><a href="#7-2-LLMs-as-Analogical-Reasoners" class="headerlink" title="7.2 LLMs as Analogical Reasoners"></a>7.2 LLMs as Analogical Reasoners</h3><p>人类解决新问题时，往往会先问：</p>
+<blockquote>
+<p>我是否见过一个相关问题？它使用了什么知识或方法？</p>
+</blockquote>
+<p>Analogical Reasoning 不直接使用一组固定人工示例，而是让模型针对当前问题，自适应生成：</p>
+<ul>
+<li>related problems；</li>
+<li>relevant knowledge；</li>
+<li>useful solution strategies；</li>
+<li>solved exemplars。</li>
+</ul>
+<p>然后再利用这些内容解决原问题。</p>
+<p>其基本流程可表示为：</p>
+<p>$$
+\text{Target Problem}
+\rightarrow
+\text{Generate Related Examples / Knowledge}
+\rightarrow
+\text{Solve Examples}
+\rightarrow
+\text{Transfer Strategy to Target}.
+$$</p>
+<p>与固定 few-shot CoT 相比，它的优势是每个测试问题都可以获得更加相关的上下文，而不是被迫依赖同一组 demonstrations。</p>
+<h3 id="7-3-实验观察"><a href="#7-3-实验观察" class="headerlink" title="7.3 实验观察"></a>7.3 实验观察</h3><p><img src="/img/posts/0b60d60f/2026-07-12-14-00-55.png"></p>
+<p>课程中的结果显示，自生成 exemplars 在 GSM8K、MATH、BIG-bench 和 Codeforces 等任务上，整体优于或匹配普通 zero-shot &#x2F; few-shot CoT。加入 self-generated knowledge 后，部分代码与复杂推理任务还能进一步提升。</p>
+<p>这说明 prompt 中示例的价值不仅取决于数量，还取决于：</p>
+<ul>
+<li>与目标问题的相关性；</li>
+<li>是否包含正确的知识；</li>
+<li>是否展示了可迁移的解题结构。</li>
+</ul>
+<hr>
+<h2 id="8-不依赖显式提示的-CoT-Decoding"><a href="#8-不依赖显式提示的-CoT-Decoding" class="headerlink" title="8. 不依赖显式提示的 CoT Decoding"></a>8. 不依赖显式提示的 CoT Decoding</h2><h3 id="8-1-核心问题"><a href="#8-1-核心问题" class="headerlink" title="8.1 核心问题"></a>8.1 核心问题</h3><p>即使不添加 $Let's think step by step$，预训练 LLM 的概率分布中是否已经存在带推理过程的回答？</p>
+<p>课程给出的答案是：<strong>存在，但 greedy decoding 未必会选中它。</strong></p>
+<h3 id="8-2-Greedy-Decoding-的局限"><a href="#8-2-Greedy-Decoding-的局限" class="headerlink" title="8.2 Greedy Decoding 的局限"></a>8.2 Greedy Decoding 的局限</h3><p>Greedy decoding 每一步都选择当前概率最高的 token：</p>
+<p>$$
+\hat y_t
+=
+\arg\max_{y_t}P(y_t\mid x,y_{&lt;t}).
+$$</p>
+<p>如果答案开头概率最高的 token 直接对应一个短答案，模型可能立即结束，而不会进入一条更长但更可靠的 reasoning path。</p>
+<h3 id="8-3-Chain-of-Thought-Decoding"><a href="#8-3-Chain-of-Thought-Decoding" class="headerlink" title="8.3 Chain-of-Thought Decoding"></a>8.3 Chain-of-Thought Decoding</h3><p>课程中的方法从第一个生成位置的 top-$k$ token 分别展开：</p>
+<ol>
+<li>枚举若干高概率起始 token；</li>
+<li>从每个起始 token 继续解码；</li>
+<li>得到多条直接回答或推理路径；</li>
+<li>比较路径末尾最终答案的置信度，选择更可信的路径。</li>
+</ol>
+<p><img src="/img/posts/0b60d60f/2026-07-12-14-01-59.png"></p>
+<p>例子中，直接生成 $Even.$ 或 $Odd.$ 时，最终答案 token 的置信度并不高；若路径先生成出生年份，再判断奇偶，最终答案的置信度会明显升高。</p>
+<h3 id="8-4-关键结论"><a href="#8-4-关键结论" class="headerlink" title="8.4 关键结论"></a>8.4 关键结论</h3><ol>
+<li>预训练模型内部已经包含逐步推理路径，但标准 greedy decoding 可能无法触发它们。</li>
+<li>有推理过程的路径上，模型对最终答案可能具有更高置信度。</li>
+<li>Prompting 不是激发推理能力的唯一方式，Decoding Strategy 同样重要。</li>
+</ol>
+<p><img src="/img/posts/0b60d60f/2026-07-12-14-02-26.png"></p>
+<p>课程展示的结果中，CoT decoding 在 GSM8K 和 MultiArith 上显著优于 greedy decoding，且在较小的预训练模型上提升尤其明显。</p>
+<hr>
+<h2 id="9-Self-Consistency：从概率角度理解推理"><a href="#9-Self-Consistency：从概率角度理解推理" class="headerlink" title="9. Self-Consistency：从概率角度理解推理"></a>9. Self-Consistency：从概率角度理解推理</h2><h3 id="9-1-单条最优推理路径与最优答案并不一致"><a href="#9-1-单条最优推理路径与最优答案并不一致" class="headerlink" title="9.1 单条最优推理路径与最优答案并不一致"></a>9.1 单条最优推理路径与最优答案并不一致</h3><p>设：</p>
+<ul>
+<li>$x$：问题；</li>
+<li>$r$：reasoning path；</li>
+<li>$a$：final answer。</li>
+</ul>
+<p>普通解码往往近似寻找概率最大的完整序列：</p>
+<p>$$
+(\hat r,\hat a)
+=
+\arg\max_{r,a}P(r,a\mid x).
+$$</p>
+<p>但我们真正关心的是概率最大的最终答案：</p>
+<p>$$
+\hat a
+=
+\arg\max_a P(a\mid x).
+$$</p>
+<p>两者并不等价。某一条完整 reasoning path 可能最常见，但多个不同路径可能共同支持另一个答案。</p>
+<h3 id="9-2-将-reasoning-path-视为-Latent-Variable"><a href="#9-2-将-reasoning-path-视为-Latent-Variable" class="headerlink" title="9.2 将 reasoning path 视为 Latent Variable"></a>9.2 将 reasoning path 视为 Latent Variable</h3><p>最终答案的概率应当对所有可能的推理路径做边缘化：</p>
+<p>$$
+P(a\mid x)
+=
+\sum_r P(r,a\mid x).
+$$</p>
+<p>直接精确求和不可行，因此可以用 sampling 近似。</p>
+<p><img src="/img/posts/0b60d60f/2026-07-12-14-03-01.png"></p>
+<h3 id="9-3-Self-Consistency-的做法"><a href="#9-3-Self-Consistency-的做法" class="headerlink" title="9.3 Self-Consistency 的做法"></a>9.3 Self-Consistency 的做法</h3><p>从模型中采样 $N$ 条推理结果：</p>
+<p>$$
+(r_i,a_i)\sim P(r,a\mid x),
+\qquad i=1,\ldots,N.
+$$</p>
+<p>然后选择出现次数最多的 <strong>最终答案</strong>：</p>
+<p>$$
+\hat a_{\mathrm{SC}}
+=
+\arg\max_a
+\sum_{i=1}^{N}\mathbf{1}(a_i=a).
+$$</p>
+<p>注意：聚合的是 final answer，而不是整条 reasoning path。因为不同的正确推理过程可以得到相同答案。</p>
+<h3 id="9-4-为什么有效"><a href="#9-4-为什么有效" class="headerlink" title="9.4 为什么有效"></a>9.4 为什么有效</h3><p><img src="/img/posts/0b60d60f/2026-07-12-14-03-40.png"></p>
+<p>如果多条相互不同的推理路径都独立得到同一答案，那么该答案的边缘概率往往更高。散点图显示：answer consistency 越高，实际 accuracy 通常也越高；当一致性很高时，答案几乎总是正确。</p>
+<p>Self-Consistency 可以理解为一种 Monte Carlo maximum marginal inference。</p>
+<h3 id="9-5-两个容易混淆的问题"><a href="#9-5-两个容易混淆的问题" class="headerlink" title="9.5 两个容易混淆的问题"></a>9.5 两个容易混淆的问题</h3><h4 id="问题一：直接答案也需要反复采样并多数投票吗？"><a href="#问题一：直接答案也需要反复采样并多数投票吗？" class="headerlink" title="问题一：直接答案也需要反复采样并多数投票吗？"></a>问题一：直接答案也需要反复采样并多数投票吗？</h4><p>对于只输出一个 token 的直接答案，greedy decoding 已经选择了单步概率最大的 token，因此重复采样再多数投票通常不会带来 CoT self-consistency 的同类收益。</p>
+<p>Self-Consistency 的关键在于存在多个不同的 latent reasoning paths，可以通过它们对最终答案进行边缘化。</p>
+<h4 id="问题二：让模型一次生成多个回答，再自称选择“多数答案”是否等价？"><a href="#问题二：让模型一次生成多个回答，再自称选择“多数答案”是否等价？" class="headerlink" title="问题二：让模型一次生成多个回答，再自称选择“多数答案”是否等价？"></a>问题二：让模型一次生成多个回答，再自称选择“多数答案”是否等价？</h4><p>不等价。Self-Consistency 依赖从模型分布中进行多次相对独立的随机采样；让同一次生成中的多个答案相互依赖，不能可靠近似相同的概率边缘化过程。</p>
+<h3 id="9-6-Universal-Self-Consistency"><a href="#9-6-Universal-Self-Consistency" class="headerlink" title="9.6 Universal Self-Consistency"></a>9.6 Universal Self-Consistency</h3><p>对于开放式文本回答，答案可能语义相同但表面形式不同，无法直接进行字符串计数。</p>
+<p>Universal Self-Consistency（USC）让 LLM 比较多个候选回答，识别语义上最一致、最具代表性的答案。它将多数投票从 exact match 扩展到 free-form generation。</p>
+<p><img src="/img/posts/0b60d60f/2026-07-12-14-04-23.png"></p>
+<hr>
+<h2 id="10-LLM-推理的三类重要局限"><a href="#10-LLM-推理的三类重要局限" class="headerlink" title="10. LLM 推理的三类重要局限"></a>10. LLM 推理的三类重要局限</h2><h3 id="10-1-容易被无关上下文干扰"><a href="#10-1-容易被无关上下文干扰" class="headerlink" title="10.1 容易被无关上下文干扰"></a>10.1 容易被无关上下文干扰</h3><p>在一道简单算术题中加入一条与问题无关的信息，模型可能错误地把它纳入计算。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Lucy has $65 in the bank.</span><br><span class="line">She deposits $15 and withdraws $4.</span><br><span class="line">Maria&#x27;s monthly rent is $10.</span><br><span class="line">What is Lucy&#x27;s balance?</span><br></pre></td></tr></table></figure>
+
+<p>正确计算应为：</p>
+<p>$$
+65+15-4=76.
+$$</p>
+<p>但模型可能继续减去无关的 $10$。</p>
+<p>实验结论：</p>
+<ul>
+<li>在 GSM8K 中加入无关上下文，可造成超过 20 个百分点的性能下降；</li>
+<li>加入 $Ignore irrelevant context$ 可以恢复部分性能；</li>
+<li>当无关内容大量增长时，性能仍会明显下降。</li>
+</ul>
+<p>这说明模型没有稳定地区分：</p>
+<p>$$
+\text{Available Information}
+\neq
+\text{Relevant Information}.
+$$</p>
+<p>对 Agent 而言，这一点尤其危险，因为检索结果、网页内容和工具返回中常包含大量噪声。</p>
+<h3 id="10-2-LLM-尚不能可靠地自我纠错"><a href="#10-2-LLM-尚不能可靠地自我纠错" class="headerlink" title="10.2 LLM 尚不能可靠地自我纠错"></a>10.2 LLM 尚不能可靠地自我纠错</h3><p>当初始答案错误时，提示模型 review 可能使其找到错误并修正；但当初始答案正确时，同样的 review 提示也可能诱导模型虚构问题，将正确答案改错。</p>
+<p>因此，单个成功案例不能证明 self-correction 有效。必须同时考虑：</p>
+<ul>
+<li>错误答案被改对的比例；</li>
+<li>正确答案被改错的比例；</li>
+<li>总体准确率是否真正提高；</li>
+<li>是否使用了额外 oracle 信息。</li>
+</ul>
+<h4 id="Oracle-Feedback"><a href="#Oracle-Feedback" class="headerlink" title="Oracle Feedback"></a>Oracle Feedback</h4><p>一些工作只在已知模型答案错误时才要求模型修正，相当于隐含使用了 oracle：</p>
+<p>$$
+\text{Oracle tells model whether correction is needed}.
+$$</p>
+<p>真实部署中，模型通常并不知道自己何时出错。因此，“知道答案错了以后能改”与“能自主判断并纠错”是两个不同能力。</p>
+<h4 id="Multi-LLM-Debate"><a href="#Multi-LLM-Debate" class="headerlink" title="Multi-LLM Debate"></a>Multi-LLM Debate</h4><p>多模型辩论可能生成更多候选答案，但当控制总生成次数后，课程中的实验表明它未能超过更简单的 Self-Consistency。提升可能主要来自更多 samples，而不是 debate 本身。</p>
+<h4 id="Self-Debug：利用可验证反馈"><a href="#Self-Debug：利用可验证反馈" class="headerlink" title="Self-Debug：利用可验证反馈"></a>Self-Debug：利用可验证反馈</h4><p>代码任务中可以运行 unit tests，将测试结果作为外部 oracle：</p>
+<p>$$
+\text{Generate Code}
+\rightarrow
+\text{Run Tests}
+\rightarrow
+\text{Receive Concrete Error}
+\rightarrow
+\text{Revise}.
+$$</p>
+<p>这类 self-debug 比纯语言式反思更可靠，因为模型获得了可验证的环境反馈。</p>
+<h3 id="10-3-Premise-Order-Matters"><a href="#10-3-Premise-Order-Matters" class="headerlink" title="10.3 Premise Order Matters"></a>10.3 Premise Order Matters</h3><p>对同一个问题，仅改变前提或句子的排列顺序，LLM 的推理性能就可能明显下降。</p>
+<h4 id="GSM8K-重排"><a href="#GSM8K-重排" class="headerlink" title="GSM8K 重排"></a>GSM8K 重排</h4><p>原题按事件发生顺序描述：取钱、丢失钞票、支付、资金翻倍、换零钱。若把“丢失钞票”移到句末，模型往往按照文本顺序机械执行，将本应较早发生的事件错误地放到最后计算。</p>
+<p>课程结果显示，重排 GSM8K 句子后，多种 frontier LLM 的求解率下降约 10 个百分点。</p>
+<h4 id="逻辑规则重排"><a href="#逻辑规则重排" class="headerlink" title="逻辑规则重排"></a>逻辑规则重排</h4><p>在由随机词构成的纯逻辑推理任务中：</p>
+<ul>
+<li>当规则按推导时的使用顺序排列，模型表现较好；</li>
+<li>仅随机打乱与 query 相关的规则，就可造成超过 30 个百分点的性能下降。</li>
+</ul>
+<p>这说明模型经常依赖局部的顺序启发式，而不是先构建一个与输入顺序无关的完整逻辑结构。</p>
+<p>对于 RAG 和 Agent，不能假定只要所有必要信息都出现在 context 中，模型就会自动正确组织它们。信息的排序、分组和呈现方式也会影响结果。</p>
+<hr>
+<h2 id="11-对-LLM-Agent-的启示"><a href="#11-对-LLM-Agent-的启示" class="headerlink" title="11. 对 LLM Agent 的启示"></a>11. 对 LLM Agent 的启示</h2><h3 id="11-1-Reasoning-Trace-可以成为-Agent-的工作空间"><a href="#11-1-Reasoning-Trace-可以成为-Agent-的工作空间" class="headerlink" title="11.1 Reasoning Trace 可以成为 Agent 的工作空间"></a>11.1 Reasoning Trace 可以成为 Agent 的工作空间</h3><p>Agent 可以将复杂任务转化为：</p>
+<p>$$
+\text{Goal}
+\rightarrow
+\text{Subgoals}
+\rightarrow
+\text{Actions}
+\rightarrow
+\text{Observations}
+\rightarrow
+\text{Updated Plan}.
+$$</p>
+<p>显式中间状态有助于：</p>
+<ul>
+<li>任务分解；</li>
+<li>工具选择；</li>
+<li>保存阶段性结果；</li>
+<li>处理长程依赖；</li>
+<li>在多个 specialized agents 之间分配子任务。</li>
+</ul>
+<h3 id="11-2-Tool-Use-可以扩展中间计算"><a href="#11-2-Tool-Use-可以扩展中间计算" class="headerlink" title="11.2 Tool Use 可以扩展中间计算"></a>11.2 Tool Use 可以扩展中间计算</h3><p>当纯语言推理过长或不可靠时，可以调用：</p>
+<ul>
+<li>Calculator；</li>
+<li>Search Engine；</li>
+<li>Code Interpreter；</li>
+<li>Database &#x2F; Retriever；</li>
+<li>SAT Solver &#x2F; Theorem Prover；</li>
+<li>Simulator 或 MCTS。</li>
+</ul>
+<p>工具调用相当于将某些 intermediate steps 交给更适合的模块执行。</p>
+<h3 id="11-3-验证器比单纯反思更重要"><a href="#11-3-验证器比单纯反思更重要" class="headerlink" title="11.3 验证器比单纯反思更重要"></a>11.3 验证器比单纯反思更重要</h3><p>可靠的 agentic loop 不应只依赖：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Please review your answer.</span><br></pre></td></tr></table></figure>
+
+<p>更理想的是使用可验证反馈：</p>
+<ul>
+<li>Unit tests；</li>
+<li>Compiler &#x2F; Runtime errors；</li>
+<li>Environment reward；</li>
+<li>Constraint checker；</li>
+<li>Independent verifier；</li>
+<li>Multiple samples + answer aggregation。</li>
+</ul>
+<h3 id="11-4-Context-Engineering-是推理系统的一部分"><a href="#11-4-Context-Engineering-是推理系统的一部分" class="headerlink" title="11.4 Context Engineering 是推理系统的一部分"></a>11.4 Context Engineering 是推理系统的一部分</h3><p>由于 irrelevant context 和 premise order 会影响推理，构建 Agent 时需要：</p>
+<ul>
+<li>过滤无关检索结果；</li>
+<li>对证据进行排序和分组；</li>
+<li>将依赖关系显式化；</li>
+<li>避免把大量原始内容直接塞入 context；</li>
+<li>对长上下文进行结构化摘要；</li>
+<li>区分 facts、rules、observations 与 hypotheses。</li>
+</ul>
+<h3 id="11-5-不应把语言上自然的过程误认为可靠推理"><a href="#11-5-不应把语言上自然的过程误认为可靠推理" class="headerlink" title="11.5 不应把语言上自然的过程误认为可靠推理"></a>11.5 不应把语言上自然的过程误认为可靠推理</h3><p>评估 Agent 时应分别测量：</p>
+<ol>
+<li>最终答案或任务成功率；</li>
+<li>中间步骤是否可执行；</li>
+<li>工具调用是否正确；</li>
+<li>对噪声、重排和长上下文是否鲁棒；</li>
+<li>在没有 oracle 时能否识别错误；</li>
+<li>增加 test-time compute 后是否真正提升，而非仅增加成本。</li>
+</ol>
+<hr>
+<h3 id="本节课最重要的结论"><a href="#本节课最重要的结论" class="headerlink" title="本节课最重要的结论"></a>本节课最重要的结论</h3><ol>
+<li><strong>Intermediate steps 是提升 LLM reasoning 的核心变量。</strong> 它们可以出现在训练、微调、提示或解码阶段。</li>
+<li><strong>Reasoning strategy 也很重要。</strong> Decomposition 和 analogy 往往比泛化的“逐步思考”提示更有效。</li>
+<li><strong>推理链是一种额外计算。</strong> 对 inherently serial problems，生成中间状态可以弥补固定网络深度的限制。</li>
+<li><strong>一条最可能的推理链不等于最可能的答案。</strong> Self-Consistency 通过采样和边缘化多个路径提升最终答案准确率。</li>
+<li><strong>LLM 仍是概率式 token generator，而不是可靠的自主推理者。</strong> 无关上下文、自我纠错和前提顺序都会显著影响表现。</li>
+<li><strong>外部可验证反馈非常关键。</strong> Unit tests、环境反馈和 verifiers 比单纯语言反思更适合构建可靠 Agent。</li>
+<li><strong>研究应从正确的问题与第一性原理出发。</strong> 不要只堆叠复杂 prompt 或 agent workflow，而应明确失败来自模型、上下文、解码、搜索还是验证环节。</li>
+</ol>
+<h3 id="长期目标"><a href="#长期目标" class="headerlink" title="长期目标"></a>长期目标</h3><blockquote>
+<p>自主学会何时分解、何时类比、何时延长推理、何时搜索、何时调用工具、何时验证，同时克服无关上下文、自我纠错和前提顺序等局限。</p>
+</blockquote>
+<hr>
+<h2 id="12-相关论文"><a href="#12-相关论文" class="headerlink" title="12. 相关论文"></a>12. 相关论文</h2><ol>
+<li>Ling et al. <strong>Program Induction by Rationale Generation: Learning to Solve and Explain Algebraic Word Problems.</strong> ACL 2017.</li>
+<li>Cobbe et al. <strong>Training Verifiers to Solve Math Word Problems.</strong> 2021.（GSM8K）</li>
+<li>Nye et al. <strong>Show Your Work: Scratchpads for Intermediate Computation with Language Models.</strong> 2021.</li>
+<li>Wei et al. <strong>Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.</strong> NeurIPS 2022.</li>
+<li>Zhou et al. <strong>Least-to-Most Prompting Enables Complex Reasoning in Large Language Models.</strong> ICLR 2023.</li>
+<li>Kojima et al. <strong>Large Language Models are Zero-Shot Reasoners.</strong> NeurIPS 2022.</li>
+<li>Yasunaga et al. <strong>Large Language Models as Analogical Reasoners.</strong> ICLR 2024.</li>
+<li>Wang and Zhou. <strong>Chain-of-Thought Reasoning Without Prompting.</strong> 2024.</li>
+<li>Wang et al. <strong>Self-Consistency Improves Chain of Thought Reasoning in Language Models.</strong> ICLR 2023.</li>
+<li>Chen et al. <strong>Universal Self-Consistency for Large Language Model Generation.</strong> 2023.</li>
+<li>Shi et al. <strong>Large Language Models Can Be Easily Distracted by Irrelevant Context.</strong> ICML 2023.</li>
+<li>Huang et al. <strong>Large Language Models Cannot Self-Correct Reasoning Yet.</strong> ICLR 2024.</li>
+<li>Chen et al. <strong>Teaching Large Language Models to Self-Debug.</strong> ICLR 2024.</li>
+<li>Chen et al. <strong>Premise Order Matters in Reasoning with Large Language Models.</strong> ICML 2024.</li>
+<li>Li et al. <strong>Chain of Thought Empowers Transformers to Solve Inherently Serial Problems.</strong> ICLR 2024.</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/0b60d60f/">https://wick-7.github.io/posts/0b60d60f/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/Reasoning/">Reasoning</a><a class="post-meta__tags" href="/tags/CoT/">CoT</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Evolution of System Designs from an AI Engineer Perspective从 AI Engineer 的视角观察：  模型算法为什么仍在持续进步； 什么样的 AI 应用能够真正创造价值； 为什么 AI Infra 正在成为企业 IT 的第三大支柱； 为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。   1. Demystify “LLM” and “AGI”1.1 Chinese Typewriter Problem英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 bigram、n-gram，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。 早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。 1.2 BERT...</div></div></div></a><a class="pagination-related" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a><a class="pagination-related" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">《加快语言模型生成速度》课堂笔记</div></div><div class="info-2"><div class="info-item-1">加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。 若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value： $$ q_i=W_Qx_i, \qquad k_i=W_Kx_i, \qquad v_i=W_Vx_i. $$ 对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为： $$ a_{t,i}=\frac{q_t^{\top}k_i}{...</div></div></div></a><a class="pagination-related" href="/posts/fbe93ec0/" title="《生成式人工智慧与机器学习导论25 第六讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第六讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">训练神经网络的各种技巧1. 机器学习的三个步骤 训练模型可以分为三个步骤：  我要什么：定义目标与 Loss Function。 我有哪些选择：决定函数集合，也就是模型架构。 选择一个最好的：通过 Optimization 找到参数。  训练完成后，需要先在 Validation Set 上选择模型和超参数，最后才在 Test Set 上进行一次最终评估。 深度学习的本质，是使用神经网络扩大可选择的函数范围。但函数范围更大，并不代表一定能训练成功，也可能更容易过拟合。  2. 先判断问题出在哪里 2.1 Optimization 问题现象：Training Loss 本身就降不下去。 例如，深层神经网络的表达能力比线性模型更强，但它的 Training Loss 反而高于线性模型。这通常不是 Overfitting，而是没有成功找到神经网络中较好的函数。 此时应该考虑：  更好的 Optimizer； 调整 Learning Rate； Skip Connection； Normalization； 更好的 Initialization 或 Pre-training。  2.2 ...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">17</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#LLM-Reasoning%EF%BC%9A%E5%85%B3%E9%94%AE%E6%80%9D%E6%83%B3%E3%80%81%E6%96%B9%E6%B3%95%E4%B8%8E%E5%B1%80%E9%99%90"><span class="toc-number">1.</span> <span class="toc-text">LLM Reasoning：关键思想、方法与局限</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-Reasoning-%E5%9C%A8-LLM-Agent-%E4%B8%AD%E7%9A%84%E4%BD%8D%E7%BD%AE"><span class="toc-number">1.1.</span> <span class="toc-text">1. Reasoning 在 LLM Agent 中的位置</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E6%8E%A8%E7%90%86%E8%83%BD%E5%8A%9B"><span class="toc-number">1.2.</span> <span class="toc-text">2. 为什么需要推理能力</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%AF%B9-AI-%E7%9A%84%E4%B8%80%E4%B8%AA%E5%9F%BA%E6%9C%AC%E6%9C%9F%E5%BE%85%EF%BC%9A%E4%BB%8E%E5%B0%91%E9%87%8F%E6%A0%B7%E4%BE%8B%E4%B8%AD%E5%AD%A6%E4%B9%A0"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 对 AI 的一个基本期待：从少量样例中学习</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Toy-Example%EF%BC%9ALast-Letter-Concatenation"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 Toy Example：Last Letter Concatenation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3%EF%BC%9A%E9%80%9A%E8%BF%87%E4%B8%AD%E9%97%B4%E6%AD%A5%E9%AA%A4%E5%BE%97%E5%88%B0%E6%9C%80%E7%BB%88%E7%AD%94%E6%A1%88"><span class="toc-number">1.3.</span> <span class="toc-text">3. 核心思想：通过中间步骤得到最终答案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-LLM-%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%94%9F%E6%88%90%E6%96%B9%E5%BC%8F"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 LLM 的基本生成方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E4%B8%AD%E9%97%B4%E6%AD%A5%E9%AA%A4%E6%96%B9%E6%B3%95%E7%9A%84%E5%8F%91%E5%B1%95%E8%84%89%E7%BB%9C"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 中间步骤方法的发展脉络</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Training-with-Intermediate-Steps"><span class="toc-number">1.3.2.1.</span> <span class="toc-text">1. Training with Intermediate Steps</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-Fine-tuning-with-Intermediate-Steps"><span class="toc-number">1.3.2.2.</span> <span class="toc-text">2. Fine-tuning with Intermediate Steps</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-Prompting-with-Intermediate-Steps"><span class="toc-number">1.3.2.3.</span> <span class="toc-text">3. Prompting with Intermediate Steps</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E7%9C%9F%E6%AD%A3%E5%85%B3%E9%94%AE%E7%9A%84%E4%B8%8D%E6%98%AF%E9%87%87%E7%94%A8%E5%93%AA%E7%A7%8D%E6%8E%A5%E5%8F%A3"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 真正关键的不是采用哪种接口</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Chain-of-Thought-Prompting"><span class="toc-number">1.4.</span> <span class="toc-text">4. Chain-of-Thought Prompting</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%9F%BA%E6%9C%AC%E5%BD%A2%E5%BC%8F"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 基本形式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-CoT-%E7%9A%84%E4%B8%BB%E8%A6%81%E4%BD%9C%E7%94%A8"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 CoT 的主要作用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%EF%BC%9ACoT-%E5%B9%B6%E4%B8%8D%E7%AD%89%E4%BA%8E%E2%80%9C%E6%A8%A1%E5%9E%8B%E5%83%8F%E4%BA%BA%E4%B8%80%E6%A0%B7%E6%80%9D%E8%80%83%E2%80%9D"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 需要注意：CoT 并不等于“模型像人一样思考”</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Least-to-Most-Prompting%EF%BC%9A%E4%BB%8E%E7%AE%80%E5%8D%95%E5%88%B0%E5%A4%8D%E6%9D%82"><span class="toc-number">1.5.</span> <span class="toc-text">5. Least-to-Most Prompting：从简单到复杂</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%A0%B8%E5%BF%83%E7%AD%96%E7%95%A5%EF%BC%9ADecomposition"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 核心策略：Decomposition</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%83%BD%E6%94%AF%E6%8C%81-Easy-to-Hard-Generalization"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 为什么能支持 Easy-to-Hard Generalization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E5%AE%9E%E9%AA%8C%E7%BB%93%E6%9E%9C"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 实验结果</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%AD%E9%97%B4%E6%AD%A5%E9%AA%A4%E6%9C%89%E6%95%88"><span class="toc-number">1.6.</span> <span class="toc-text">6. 为什么中间步骤有效</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E4%B8%B2%E8%A1%8C%E9%97%AE%E9%A2%98%E9%9C%80%E8%A6%81%E4%B8%B2%E8%A1%8C%E8%AE%A1%E7%AE%97"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 串行问题需要串行计算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E7%9B%B4%E8%A7%82%E7%90%86%E8%A7%A3%EF%BC%9A%E6%8A%8A%E8%BE%93%E5%87%BA%E9%95%BF%E5%BA%A6%E8%BD%AC%E5%8C%96%E4%B8%BA%E9%A2%9D%E5%A4%96%E8%AE%A1%E7%AE%97%E6%97%B6%E9%97%B4"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 直观理解：把输出长度转化为额外计算时间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E4%B8%8D%E8%83%BD%E6%97%A0%E9%99%90%E5%BB%B6%E9%95%BF%E6%8E%A8%E7%90%86%E9%93%BE"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 不能无限延长推理链</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-Zero-shot-CoT-%E4%B8%8E-Analogical-Reasoning"><span class="toc-number">1.7.</span> <span class="toc-text">7. Zero-shot CoT 与 Analogical Reasoning</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Zero-shot-CoT"><span class="toc-number">1.7.1.</span> <span class="toc-text">7.1 Zero-shot CoT</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-LLMs-as-Analogical-Reasoners"><span class="toc-number">1.7.2.</span> <span class="toc-text">7.2 LLMs as Analogical Reasoners</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E5%AE%9E%E9%AA%8C%E8%A7%82%E5%AF%9F"><span class="toc-number">1.7.3.</span> <span class="toc-text">7.3 实验观察</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E4%B8%8D%E4%BE%9D%E8%B5%96%E6%98%BE%E5%BC%8F%E6%8F%90%E7%A4%BA%E7%9A%84-CoT-Decoding"><span class="toc-number">1.8.</span> <span class="toc-text">8. 不依赖显式提示的 CoT Decoding</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 核心问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Greedy-Decoding-%E7%9A%84%E5%B1%80%E9%99%90"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 Greedy Decoding 的局限</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-Chain-of-Thought-Decoding"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 Chain-of-Thought Decoding</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4-%E5%85%B3%E9%94%AE%E7%BB%93%E8%AE%BA"><span class="toc-number">1.8.4.</span> <span class="toc-text">8.4 关键结论</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Self-Consistency%EF%BC%9A%E4%BB%8E%E6%A6%82%E7%8E%87%E8%A7%92%E5%BA%A6%E7%90%86%E8%A7%A3%E6%8E%A8%E7%90%86"><span class="toc-number">1.9.</span> <span class="toc-text">9. Self-Consistency：从概率角度理解推理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E5%8D%95%E6%9D%A1%E6%9C%80%E4%BC%98%E6%8E%A8%E7%90%86%E8%B7%AF%E5%BE%84%E4%B8%8E%E6%9C%80%E4%BC%98%E7%AD%94%E6%A1%88%E5%B9%B6%E4%B8%8D%E4%B8%80%E8%87%B4"><span class="toc-number">1.9.1.</span> <span class="toc-text">9.1 单条最优推理路径与最优答案并不一致</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E5%B0%86-reasoning-path-%E8%A7%86%E4%B8%BA-Latent-Variable"><span class="toc-number">1.9.2.</span> <span class="toc-text">9.2 将 reasoning path 视为 Latent Variable</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-Self-Consistency-%E7%9A%84%E5%81%9A%E6%B3%95"><span class="toc-number">1.9.3.</span> <span class="toc-text">9.3 Self-Consistency 的做法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-4-%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E6%95%88"><span class="toc-number">1.9.4.</span> <span class="toc-text">9.4 为什么有效</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-5-%E4%B8%A4%E4%B8%AA%E5%AE%B9%E6%98%93%E6%B7%B7%E6%B7%86%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.9.5.</span> <span class="toc-text">9.5 两个容易混淆的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E4%B8%80%EF%BC%9A%E7%9B%B4%E6%8E%A5%E7%AD%94%E6%A1%88%E4%B9%9F%E9%9C%80%E8%A6%81%E5%8F%8D%E5%A4%8D%E9%87%87%E6%A0%B7%E5%B9%B6%E5%A4%9A%E6%95%B0%E6%8A%95%E7%A5%A8%E5%90%97%EF%BC%9F"><span class="toc-number">1.9.5.1.</span> <span class="toc-text">问题一：直接答案也需要反复采样并多数投票吗？</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E4%BA%8C%EF%BC%9A%E8%AE%A9%E6%A8%A1%E5%9E%8B%E4%B8%80%E6%AC%A1%E7%94%9F%E6%88%90%E5%A4%9A%E4%B8%AA%E5%9B%9E%E7%AD%94%EF%BC%8C%E5%86%8D%E8%87%AA%E7%A7%B0%E9%80%89%E6%8B%A9%E2%80%9C%E5%A4%9A%E6%95%B0%E7%AD%94%E6%A1%88%E2%80%9D%E6%98%AF%E5%90%A6%E7%AD%89%E4%BB%B7%EF%BC%9F"><span class="toc-number">1.9.5.2.</span> <span class="toc-text">问题二：让模型一次生成多个回答，再自称选择“多数答案”是否等价？</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-6-Universal-Self-Consistency"><span class="toc-number">1.9.6.</span> <span class="toc-text">9.6 Universal Self-Consistency</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-LLM-%E6%8E%A8%E7%90%86%E7%9A%84%E4%B8%89%E7%B1%BB%E9%87%8D%E8%A6%81%E5%B1%80%E9%99%90"><span class="toc-number">1.10.</span> <span class="toc-text">10. LLM 推理的三类重要局限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E5%AE%B9%E6%98%93%E8%A2%AB%E6%97%A0%E5%85%B3%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B9%B2%E6%89%B0"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 容易被无关上下文干扰</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-LLM-%E5%B0%9A%E4%B8%8D%E8%83%BD%E5%8F%AF%E9%9D%A0%E5%9C%B0%E8%87%AA%E6%88%91%E7%BA%A0%E9%94%99"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 LLM 尚不能可靠地自我纠错</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Oracle-Feedback"><span class="toc-number">1.10.2.1.</span> <span class="toc-text">Oracle Feedback</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Multi-LLM-Debate"><span class="toc-number">1.10.2.2.</span> <span class="toc-text">Multi-LLM Debate</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Self-Debug%EF%BC%9A%E5%88%A9%E7%94%A8%E5%8F%AF%E9%AA%8C%E8%AF%81%E5%8F%8D%E9%A6%88"><span class="toc-number">1.10.2.3.</span> <span class="toc-text">Self-Debug：利用可验证反馈</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-Premise-Order-Matters"><span class="toc-number">1.10.3.</span> <span class="toc-text">10.3 Premise Order Matters</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#GSM8K-%E9%87%8D%E6%8E%92"><span class="toc-number">1.10.3.1.</span> <span class="toc-text">GSM8K 重排</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E9%80%BB%E8%BE%91%E8%A7%84%E5%88%99%E9%87%8D%E6%8E%92"><span class="toc-number">1.10.3.2.</span> <span class="toc-text">逻辑规则重排</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E5%AF%B9-LLM-Agent-%E7%9A%84%E5%90%AF%E7%A4%BA"><span class="toc-number">1.11.</span> <span class="toc-text">11. 对 LLM Agent 的启示</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-Reasoning-Trace-%E5%8F%AF%E4%BB%A5%E6%88%90%E4%B8%BA-Agent-%E7%9A%84%E5%B7%A5%E4%BD%9C%E7%A9%BA%E9%97%B4"><span class="toc-number">1.11.1.</span> <span class="toc-text">11.1 Reasoning Trace 可以成为 Agent 的工作空间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-Tool-Use-%E5%8F%AF%E4%BB%A5%E6%89%A9%E5%B1%95%E4%B8%AD%E9%97%B4%E8%AE%A1%E7%AE%97"><span class="toc-number">1.11.2.</span> <span class="toc-text">11.2 Tool Use 可以扩展中间计算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E9%AA%8C%E8%AF%81%E5%99%A8%E6%AF%94%E5%8D%95%E7%BA%AF%E5%8F%8D%E6%80%9D%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="toc-number">1.11.3.</span> <span class="toc-text">11.3 验证器比单纯反思更重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-Context-Engineering-%E6%98%AF%E6%8E%A8%E7%90%86%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%B8%80%E9%83%A8%E5%88%86"><span class="toc-number">1.11.4.</span> <span class="toc-text">11.4 Context Engineering 是推理系统的一部分</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-5-%E4%B8%8D%E5%BA%94%E6%8A%8A%E8%AF%AD%E8%A8%80%E4%B8%8A%E8%87%AA%E7%84%B6%E7%9A%84%E8%BF%87%E7%A8%8B%E8%AF%AF%E8%AE%A4%E4%B8%BA%E5%8F%AF%E9%9D%A0%E6%8E%A8%E7%90%86"><span class="toc-number">1.11.5.</span> <span class="toc-text">11.5 不应把语言上自然的过程误认为可靠推理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AC%E8%8A%82%E8%AF%BE%E6%9C%80%E9%87%8D%E8%A6%81%E7%9A%84%E7%BB%93%E8%AE%BA"><span class="toc-number">1.11.6.</span> <span class="toc-text">本节课最重要的结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%95%BF%E6%9C%9F%E7%9B%AE%E6%A0%87"><span class="toc-number">1.11.7.</span> <span class="toc-text">长期目标</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-%E7%9B%B8%E5%85%B3%E8%AE%BA%E6%96%87"><span class="toc-number">1.12.</span> <span class="toc-text">12. 相关论文</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记">《CS294-196 24fall Lecture1》课堂笔记</a><time datetime="2026-07-12T05:37:19.000Z" title="发表于 2026-07-12 13:37:19">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记">《CS294-196 25fall Lecture3》课堂笔记</a><time datetime="2026-07-11T14:28:47.000Z" title="发表于 2026-07-11 22:28:47">2026-07-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记">《CS294-196 25fall Lecture2》课堂笔记</a><time datetime="2026-07-11T11:30:07.000Z" title="发表于 2026-07-11 19:30:07">2026-07-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记">《CS294-196 25fall Lecture1》课堂笔记</a><time datetime="2026-07-10T15:26:02.000Z" title="发表于 2026-07-10 23:26:02">2026-07-10</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</a><time datetime="2026-07-06T05:18:54.000Z" title="发表于 2026-07-06 13:18:54">2026-07-06</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
