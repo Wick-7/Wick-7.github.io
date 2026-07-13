@@ -1,0 +1,1085 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 24fall Lecture3》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 24fall Lecture3》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/8cc0f36c/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-12T14:02:09.000Z">
+<meta property="article:modified_time" content="2026-07-13T04:49:39.487Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="AutoGen">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Multi-Agent">
+<meta property="article:tag" content="RAG">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 24fall Lecture3》课堂笔记",
+  "url": "https://wick-7.github.io/posts/8cc0f36c/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-12T14:02:09.000Z",
+  "dateModified": "2026-07-13T04:49:39.487Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/8cc0f36c/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 24fall Lecture3》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">13</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">21</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 24fall Lecture3》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 24fall Lecture3》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-12T14:02:09.000Z" title="发表于 2026-07-12 22:02:09">2026-07-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-13T04:49:39.487Z" title="更新于 2026-07-13 12:49:39">2026-07-13</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Agentic-AI-Frameworks-AutoGen-Multimodal-Knowledge-Assistant"><a href="#Agentic-AI-Frameworks-AutoGen-Multimodal-Knowledge-Assistant" class="headerlink" title="Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant"></a>Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant</h1><p>由两个相互衔接的部分组成：</p>
+<ol>
+<li><p><strong>Agentic AI Frameworks &amp; AutoGen</strong></p>
+<ul>
+<li>为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems；</li>
+<li>如何用统一的 Agent 抽象组织 LLM、工具与人类；</li>
+<li>AutoGen 如何以 <strong>multi-agent conversation programming</strong> 为核心实现复杂工作流。</li>
+</ul>
+</li>
+<li><p><strong>Multimodal Knowledge Assistant</strong></p>
+<ul>
+<li>为什么 Basic RAG 无法支撑真正的企业级知识助手；</li>
+<li>如何处理含有文本、表格、图片、图表和复杂版式的文档；</li>
+<li>如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection；</li>
+<li>如何把 Agent workflow 部署成可扩展的生产系统。</li>
+</ul>
+</li>
+</ol>
+<p>两部分共同说明：</p>
+<blockquote>
+<p>Agent 应用不只是“调用一个更强的 LLM”，而是围绕模型构建数据、工具、记忆、控制流、验证和人机协作等完整系统。</p>
+</blockquote>
+<hr>
+<h1 id="Part-I：Agentic-AI-Frameworks-AutoGen"><a href="#Part-I：Agentic-AI-Frameworks-AutoGen" class="headerlink" title="Part I：Agentic AI Frameworks &amp; AutoGen"></a>Part I：Agentic AI Frameworks &amp; AutoGen</h1><h2 id="1-从-Generative-AI-到-Agentic-AI"><a href="#1-从-Generative-AI-到-Agentic-AI" class="headerlink" title="1. 从 Generative AI 到 Agentic AI"></a>1. 从 Generative AI 到 Agentic AI</h2><p><img src="/img/posts/8cc0f36c/2026-07-12-22-24-32.png"></p>
+<p>Agentic AI 的典型应用包括：</p>
+<ul>
+<li>Personal assistant；</li>
+<li>Autonomous robot；</li>
+<li>Gaming agent；</li>
+<li>Science agent；</li>
+<li>Web agent；</li>
+<li>Software engineering agent。</li>
+</ul>
+<p>这里“Agent”并不是一个全新的概念。个人助手、机器人和游戏智能体早已存在。真正的新变化来自 LLM：</p>
+<ol>
+<li>Agent 能够通过自然语言理解高层目标；</li>
+<li>Agent 可以在很少或没有专门训练的情况下迁移到新任务；</li>
+<li>Agent 可以调用代码、搜索、数据库和 API；</li>
+<li>Agent 可以通过多轮交互完成长链条任务；</li>
+<li>多个 Agent 可以承担不同角色并协作。</li>
+</ol>
+<hr>
+<h2 id="2-Agentic-AI-的三类价值"><a href="#2-Agentic-AI-的三类价值" class="headerlink" title="2. Agentic AI 的三类价值"></a>2. Agentic AI 的三类价值</h2><p>Chi Wang 将 Agentic AI 的价值概括为三个方面。</p>
+<h3 id="2-1-Useful-Interface：更自然的人机接口"><a href="#2-1-Useful-Interface：更自然的人机接口" class="headerlink" title="2.1 Useful Interface：更自然的人机接口"></a>2.1 Useful Interface：更自然的人机接口</h3><p>用户不需要提供底层操作步骤，只需要用自然语言说明目标：</p>
+<blockquote>
+<p>“构建一个能够搜索并下载 Hugging Face 模型的网站。”</p>
+</blockquote>
+<p>Agent 可以自行：</p>
+<ul>
+<li>分析任务；</li>
+<li>查找资料；</li>
+<li>安装依赖；</li>
+<li>创建文件；</li>
+<li>编写与执行代码；</li>
+<li>根据错误信息修复程序。</li>
+</ul>
+<p>因此，自然语言不再只是聊天接口，也可以成为一种高层编程接口。</p>
+<h3 id="2-2-Strong-Capability：以较少人工监督完成复杂任务"><a href="#2-2-Strong-Capability：以较少人工监督完成复杂任务" class="headerlink" title="2.2 Strong Capability：以较少人工监督完成复杂任务"></a>2.2 Strong Capability：以较少人工监督完成复杂任务</h3><p>传统的单次 LLM 调用通常只能生成一次回答，而 Agent workflow 可以：</p>
+<ul>
+<li>连续执行多个步骤；</li>
+<li>根据环境反馈调整计划；</li>
+<li>在失败后重试；</li>
+<li>调用外部工具完成模型本身不擅长的任务；</li>
+<li>通过验证 Agent 或程序检查中间结果。</li>
+</ul>
+<h3 id="2-3-Useful-Architecture：新的软件架构"><a href="#2-3-Useful-Architecture：新的软件架构" class="headerlink" title="2.3 Useful Architecture：新的软件架构"></a>2.3 Useful Architecture：新的软件架构</h3><p>Agentic AI 也是一种新的软件组织方式。</p>
+<p>传统程序通常明确编写每一条控制逻辑；Agentic program 则可以将系统划分为多个角色：</p>
+<ul>
+<li>每个角色处理相对明确的子任务；</li>
+<li>角色之间通过自然语言或结构化消息协作；</li>
+<li>Agent 内部还可以嵌套其他 Agent；</li>
+<li>人类、LLM 和工具都可以作为工作流中的参与者。</li>
+</ul>
+<p>因此，Agent 不仅是“更智能的聊天机器人”，还可能成为复杂软件系统的模块化构件。</p>
+<hr>
+<h2 id="3-供应链优化案例：Commander、Writer-与-Safeguard"><a href="#3-供应链优化案例：Commander、Writer-与-Safeguard" class="headerlink" title="3. 供应链优化案例：Commander、Writer 与 Safeguard"></a>3. 供应链优化案例：Commander、Writer 与 Safeguard</h2><p><img src="/img/posts/8cc0f36c/2026-07-13-10-38-39.png"></p>
+<p>课程使用供应链优化问题说明 Multi-Agent Workflow：</p>
+<blockquote>
+<p>如果禁止 supplier 1 向 roastery 2 发货，运营成本会发生怎样的变化？</p>
+</blockquote>
+<p>单独询问 ChatGPT 很难完成该任务，因为它需要：</p>
+<ul>
+<li>理解用户的业务约束；</li>
+<li>修改已有优化模型；</li>
+<li>生成 Python 代码；</li>
+<li>判断代码是否安全；</li>
+<li>执行代码并读取结果；</li>
+<li>将数值结果解释为自然语言。</li>
+</ul>
+<p>AutoGen 将任务拆分给多个 Agent。</p>
+<h3 id="3-1-角色定义"><a href="#3-1-角色定义" class="headerlink" title="3.1 角色定义"></a>3.1 角色定义</h3><table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>主要职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>User</td>
+<td>提交业务问题</td>
+</tr>
+<tr>
+<td>Commander</td>
+<td>协调任务和嵌套对话，执行安全代码</td>
+</tr>
+<tr>
+<td>Writer</td>
+<td>理解问题、生成或修改优化代码、解释执行结果</td>
+</tr>
+<tr>
+<td>Safeguard</td>
+<td>检查代码是否安全、是否允许执行</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-执行流程"><a href="#3-2-执行流程" class="headerlink" title="3.2 执行流程"></a>3.2 执行流程</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">User 提问</span><br><span class="line">   ↓</span><br><span class="line">Commander 启动与 Writer 的 nested chat</span><br><span class="line">   ↓</span><br><span class="line">Writer 生成修改优化约束的代码</span><br><span class="line">   ↓</span><br><span class="line">Commander 暂停当前对话，启动与 Safeguard 的 nested chat</span><br><span class="line">   ↓</span><br><span class="line">Safeguard 判断代码是否安全</span><br><span class="line">   ↓</span><br><span class="line">若安全：Commander 执行代码</span><br><span class="line">若不安全：拒绝执行并返回反馈</span><br><span class="line">   ↓</span><br><span class="line">执行结果或错误信息返回 Writer</span><br><span class="line">   ↓</span><br><span class="line">Writer 修正代码或生成最终解释</span><br><span class="line">   ↓</span><br><span class="line">Commander 将最终回答返回 User</span><br></pre></td></tr></table></figure>
+
+<p>如果代码执行失败，错误信息会再次反馈给 Writer，使其修改代码。整个流程可以重复，直到回答完成或达到 timeout。</p>
+<h3 id="3-3-AutoGen-风格的核心代码结构"><a href="#3-3-AutoGen-风格的核心代码结构" class="headerlink" title="3.3 AutoGen 风格的核心代码结构"></a>3.3 AutoGen 风格的核心代码结构</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">writer = Writer(<span class="string">&quot;writer&quot;</span>, llm_config=llm_config)</span><br><span class="line">safeguard = AssistantAgent(<span class="string">&quot;safeguard&quot;</span>, llm_config=llm_config)</span><br><span class="line">commander = Commander(<span class="string">&quot;commander&quot;</span>, llm_config=llm_config)</span><br><span class="line">user = UserProxyAgent(<span class="string">&quot;user&quot;</span>)</span><br><span class="line"></span><br><span class="line">commander.register_nested_chats(</span><br><span class="line">    writer_chat_queue,</span><br><span class="line">    trigger=<span class="string">&quot;user&quot;</span>,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">commander.register_nested_chats(</span><br><span class="line">    safeguard_chat_queue,</span><br><span class="line">    trigger=<span class="string">&quot;writer&quot;</span>,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">result = user.initiate_chat(</span><br><span class="line">    commander,</span><br><span class="line">    message=<span class="string">&quot;What if we prohibit shipping from supplier 1 to roastery 2?&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>这里最重要的并非具体 API，而是 Agentic Programming 的基本步骤：</p>
+<ol>
+<li><strong>Define agents</strong>：定义参与者及其能力；</li>
+<li><strong>Define interaction patterns</strong>：定义哪些 Agent 在什么条件下交互；</li>
+<li><strong>Initiate conversation</strong>：发送初始任务，其余步骤由工作流推进。</li>
+</ol>
+<hr>
+<h2 id="4-为什么要使用-Multi-Agent"><a href="#4-为什么要使用-Multi-Agent" class="headerlink" title="4. 为什么要使用 Multi-Agent"></a>4. 为什么要使用 Multi-Agent</h2><h3 id="4-1-通过自然迭代提升质量"><a href="#4-1-通过自然迭代提升质量" class="headerlink" title="4.1 通过自然迭代提升质量"></a>4.1 通过自然迭代提升质量</h3><p>多个 Agent 可以不断审阅和修正彼此的输出：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">生成 → 批评 → 修改 → 验证 → 再修改</span><br></pre></td></tr></table></figure>
+
+<p>相比让单个 Agent 一次完成所有事情，迭代过程更容易发现错误。</p>
+<h3 id="4-2-Divide-and-Conquer"><a href="#4-2-Divide-and-Conquer" class="headerlink" title="4.2 Divide and Conquer"></a>4.2 Divide and Conquer</h3><p>复杂任务可以拆分为相对简单的子任务：</p>
+<ul>
+<li>Writer 只负责生成代码；</li>
+<li>Safeguard 只负责安全检查；</li>
+<li>Commander 只负责协调与执行。</li>
+</ul>
+<p>当任务更复杂或模型能力较弱时，合理分工通常更重要。</p>
+<p>这并不意味着 Agent 越多越好，而是说明：</p>
+<blockquote>
+<p>当一个角色被要求同时完成生成、检查、推理和执行等多种职责时，任务分解可能提高可靠性。</p>
+</blockquote>
+<h3 id="4-3-Grounding-与-Validation"><a href="#4-3-Grounding-与-Validation" class="headerlink" title="4.3 Grounding 与 Validation"></a>4.3 Grounding 与 Validation</h3><p>Agent 不一定由 LLM 驱动，也可以由以下组件实现：</p>
+<ul>
+<li>Python function；</li>
+<li>数据库查询器；</li>
+<li>规则系统；</li>
+<li>优化求解器；</li>
+<li>安全检查器；</li>
+<li>人类专家。</li>
+</ul>
+<p>这使得系统可以利用外部知识与确定性程序弥补 LLM 的不足。</p>
+<h3 id="4-4-模块化与可维护性"><a href="#4-4-模块化与可维护性" class="headerlink" title="4.4 模块化与可维护性"></a>4.4 模块化与可维护性</h3><p>如果需要替换 Safeguard，可以：</p>
+<ul>
+<li>将 GPT-4 换成较小模型；</li>
+<li>改用静态代码分析工具；</li>
+<li>改为人工审核；</li>
+<li>同时组合多种审核机制。</li>
+</ul>
+<p>其他 Agent 不需要发生大规模变化。模块化设计有利于：</p>
+<ul>
+<li>理解；</li>
+<li>调试；</li>
+<li>维护；</li>
+<li>扩展；</li>
+<li>快速实验；</li>
+<li>Human-in-the-loop。</li>
+</ul>
+<hr>
+<h2 id="5-一个-Agent-Framework-应满足什么要求"><a href="#5-一个-Agent-Framework-应满足什么要求" class="headerlink" title="5. 一个 Agent Framework 应满足什么要求"></a>5. 一个 Agent Framework 应满足什么要求</h2><p>一个通用的 Agentic AI Framework 需要同时满足四类需求：</p>
+<ol>
+<li><strong>Intuitive unified agentic abstraction</strong></li>
+<li><strong>Flexible multi-agent orchestration</strong></li>
+<li><strong>Effective implementation of agentic design patterns</strong></li>
+<li><strong>Support diverse application needs</strong></li>
+</ol>
+<h3 id="5-1-Unified-Agentic-Abstraction"><a href="#5-1-Unified-Agentic-Abstraction" class="headerlink" title="5.1 Unified Agentic Abstraction"></a>5.1 Unified Agentic Abstraction</h3><p>系统需要统一抽象不同实体：</p>
+<ul>
+<li>不同厂商的 LLM；</li>
+<li>搜索、代码执行和数据库工具；</li>
+<li>不同角色的人类；</li>
+<li>专用程序；</li>
+<li>由其他 Agent 组合形成的复合 Agent。</li>
+</ul>
+<h3 id="5-2-Multi-Agent-Orchestration-的关键设计维度"><a href="#5-2-Multi-Agent-Orchestration-的关键设计维度" class="headerlink" title="5.2 Multi-Agent Orchestration 的关键设计维度"></a>5.2 Multi-Agent Orchestration 的关键设计维度</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>一端</th>
+<th>另一端</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>流程</td>
+<td>Static</td>
+<td>Dynamic</td>
+</tr>
+<tr>
+<td>控制语言</td>
+<td>Natural Language</td>
+<td>Programming Language</td>
+</tr>
+<tr>
+<td>上下文</td>
+<td>Context Sharing</td>
+<td>Context Isolation</td>
+</tr>
+<tr>
+<td>关系</td>
+<td>Cooperation</td>
+<td>Competition</td>
+</tr>
+<tr>
+<td>管理</td>
+<td>Centralized</td>
+<td>Decentralized</td>
+</tr>
+<tr>
+<td>人类参与</td>
+<td>Automation</td>
+<td>Intervention</td>
+</tr>
+</tbody></table>
+<p>这些维度之间没有统一的最优选择。</p>
+<p>例如：</p>
+<ul>
+<li>对高风险金融操作，可能需要静态流程和明确审批；</li>
+<li>对开放式研究问题，可能需要动态规划；</li>
+<li>对隐私数据，不同 Agent 之间应隔离上下文；</li>
+<li>对创意生成，可以让多个 Agent 竞争并由 Reviewer 选择；</li>
+<li>对长流程任务，需要允许人类随时接管。</li>
+</ul>
+<h3 id="5-3-Agentic-Design-Patterns"><a href="#5-3-Agentic-Design-Patterns" class="headerlink" title="5.3 Agentic Design Patterns"></a>5.3 Agentic Design Patterns</h3><p>通用框架需要支持：</p>
+<ul>
+<li>Conversation；</li>
+<li>Prompting 与 Reasoning；</li>
+<li>Tool Use；</li>
+<li>Planning；</li>
+<li>Reflection；</li>
+<li>Chain-of-Thought &#x2F; Tree-of-Thought；</li>
+<li>多模型与多模态；</li>
+<li>Memory；</li>
+<li>Human-in-the-loop；</li>
+<li>Multi-Agent Collaboration。</li>
+</ul>
+<p>AutoGen 的设计选择是：</p>
+<blockquote>
+<p>以 Conversation 作为最核心的统一机制，再由对话组合出其他 Agent pattern。</p>
+</blockquote>
+<hr>
+<h2 id="6-AutoGen-的核心抽象"><a href="#6-AutoGen-的核心抽象" class="headerlink" title="6. AutoGen 的核心抽象"></a>6. AutoGen 的核心抽象</h2><p>AutoGen 是一个用于构建 Agentic AI 的编程框架。它最初在 FLAML 项目内部发展，之后成为独立项目。</p>
+<p>课程将 AutoGen 的使用方式压缩为两步：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-41-58.png"></p>
+<p>对应两个核心概念：</p>
+<h3 id="6-1-Conversable-Agent"><a href="#6-1-Conversable-Agent" class="headerlink" title="6.1 Conversable Agent"></a>6.1 Conversable Agent</h3><p>Conversable Agent 可以由不同后端驱动：</p>
+<ul>
+<li>LLM；</li>
+<li>Tool；</li>
+<li>Human input；</li>
+<li>Code executor；</li>
+<li>多种能力的组合。</li>
+</ul>
+<p>Agent 的关键不只是“调用某个模型”，而是：</p>
+<ul>
+<li>能够接收消息；</li>
+<li>根据消息执行内部逻辑；</li>
+<li>生成回复或动作；</li>
+<li>与其他 Agent 持续交流。</li>
+</ul>
+<h3 id="6-2-Conversation-Program"><a href="#6-2-Conversation-Program" class="headerlink" title="6.2 Conversation Program"></a>6.2 Conversation Program</h3><p>Conversation Program 定义 Agent 如何交互，包括：</p>
+<ul>
+<li>谁先说话；</li>
+<li>下一条消息发送给谁；</li>
+<li>对话什么时候结束；</li>
+<li>是否触发嵌套对话；</li>
+<li>如何总结子对话；</li>
+<li>哪些 Agent 可以成为下一位 Speaker；</li>
+<li>何时执行工具或请求人类输入。</li>
+</ul>
+<p>Agent 本身和对话模式分离，使同一个 Agent 可以在不同工作流中复用。</p>
+<hr>
+<h2 id="7-AutoGen-中的典型-Conversation-Patterns"><a href="#7-AutoGen-中的典型-Conversation-Patterns" class="headerlink" title="7. AutoGen 中的典型 Conversation Patterns"></a>7. AutoGen 中的典型 Conversation Patterns</h2><h3 id="7-1-Two-Agent-Reflection"><a href="#7-1-Two-Agent-Reflection" class="headerlink" title="7.1 Two-Agent Reflection"></a>7.1 Two-Agent Reflection</h3><p>最简单的结构是 Writer 与 Critic：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-42-57.png"></p>
+<p>它实现了 Reflection：</p>
+<ul>
+<li>Writer 负责主要生成任务；</li>
+<li>Critic 负责定位问题；</li>
+<li>多轮对话逐步提升结果。</li>
+</ul>
+<p>这种结构比在一个 Prompt 中同时要求“写作并自我批评”具有更清晰的职责分离。</p>
+<hr>
+<h3 id="7-2-Nested-Chat：把复合系统封装为一个-Agent"><a href="#7-2-Nested-Chat：把复合系统封装为一个-Agent" class="headerlink" title="7.2 Nested Chat：把复合系统封装为一个 Agent"></a>7.2 Nested Chat：把复合系统封装为一个 Agent</h3><p>如果单一 Critic 不够，可以在 Critic 内部启动多个 Reviewer：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-43-11.png"></p>
+<p>从 Writer 的视角看，它仍然只是在与一个 Critic 对话；但 Critic 内部实际上运行了多个 Agent。</p>
+<p>这体现了 AutoGen 的递归组合能力：</p>
+<blockquote>
+<p>一个 Agent 可以通过内部 Multi-Agent Conversation 扩展自身能力，再以统一接口对外提供服务。</p>
+</blockquote>
+<hr>
+<h3 id="7-3-Tool-Use：Conversational-Chess"><a href="#7-3-Tool-Use：Conversational-Chess" class="headerlink" title="7.3 Tool Use：Conversational Chess"></a>7.3 Tool Use：Conversational Chess</h3><p>如果仅让两个 LLM 直接下棋，它们可能生成非法棋步。</p>
+<p>解决方法是加入 Chessboard Agent：</p>
+<ul>
+<li>LLM Agent 提议棋步并进行对话；</li>
+<li>Chessboard Agent 调用 Python chess library；</li>
+<li>工具判断棋步是否合法；</li>
+<li>非法棋步被拒绝；</li>
+<li>LLM 根据反馈重新生成。</li>
+</ul>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-43-46.png"></p>
+<p>工具不需要承担开放式推理，而负责提供确定性约束和环境反馈。</p>
+<hr>
+<h3 id="7-4-Group-Chat：动态任务规划"><a href="#7-4-Group-Chat：动态任务规划" class="headerlink" title="7.4 Group Chat：动态任务规划"></a>7.4 Group Chat：动态任务规划</h3><p>对于复杂任务，可以设置多个不同角色的 Agent，并放入 Group Chat。</p>
+<p>Group Chat Manager 负责：</p>
+<ul>
+<li>观察当前进展；</li>
+<li>选择下一位 Speaker；</li>
+<li>根据任务状态调整交互顺序；</li>
+<li>控制何时结束。</li>
+</ul>
+<p>为了兼顾自主性与可控性，可以设置 Speaker Transition：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-44-33.png"></p>
+<p>这种机制介于完全静态的流程图和完全自由的 LLM 决策之间：</p>
+<ul>
+<li>LLM 保留一定动态选择能力；</li>
+<li>开发者通过约束防止工作流偏离合理范围。</li>
+</ul>
+<hr>
+<h2 id="8-AutoGen-应用案例"><a href="#8-AutoGen-应用案例" class="headerlink" title="8. AutoGen 应用案例"></a>8. AutoGen 应用案例</h2><h3 id="8-1-Science-Agents"><a href="#8-1-Science-Agents" class="headerlink" title="8.1 Science Agents"></a>8.1 Science Agents</h3><p>SciAgents 等工作还可以结合 Knowledge Graph，在不同科学概念之间寻找潜在连接。</p>
+<h3 id="8-2-Web-Agent：Agent-E"><a href="#8-2-Web-Agent：Agent-E" class="headerlink" title="8.2 Web Agent：Agent-E"></a>8.2 Web Agent：Agent-E</h3><p>Agent-E 使用分层 Agent team 完成网页任务，例如：</p>
+<ul>
+<li>预订航班；</li>
+<li>填写医疗表格；</li>
+<li>浏览复杂网页；</li>
+<li>基于 HTML DOM 执行操作。</li>
+</ul>
+<p>它使用规划 Agent 和 Web Browsing Agent 协作。</p>
+<h3 id="8-3-企业应用"><a href="#8-3-企业应用" class="headerlink" title="8.3 企业应用"></a>8.3 企业应用</h3><p>社区应用覆盖：</p>
+<ul>
+<li>Software development；</li>
+<li>Research；</li>
+<li>Consulting；</li>
+<li>Data processing；</li>
+<li>Finance；</li>
+<li>Health；</li>
+<li>Education；</li>
+<li>Construction；</li>
+<li>Web automation。</li>
+</ul>
+<p>这些案例的共同特点是：</p>
+<ul>
+<li>任务无法通过一次模型调用解决；</li>
+<li>需要多个专用能力；</li>
+<li>需要验证、重试和错误恢复；</li>
+<li>需要在性能、成本、延迟与人工参与之间平衡。</li>
+</ul>
+<hr>
+<h2 id="9-AutoBuild-与-Adaptive-Build"><a href="#9-AutoBuild-与-Adaptive-Build" class="headerlink" title="9. AutoBuild 与 Adaptive Build"></a>9. AutoBuild 与 Adaptive Build</h2><p>即使框架能够执行 Multi-Agent Workflow，开发者仍需要回答：</p>
+<blockquote>
+<p>对当前任务，应该创建哪些 Agent？这些 Agent 应如何连接？</p>
+</blockquote>
+<h3 id="9-1-AutoBuild"><a href="#9-1-AutoBuild" class="headerlink" title="9.1 AutoBuild"></a>9.1 AutoBuild</h3><p>AutoBuild 的基本流程：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-46-21.png"></p>
+<p>也就是说，系统不仅执行 Agent workflow，还开始辅助设计 Agent workflow。</p>
+<h3 id="9-2-Adaptive-Build"><a href="#9-2-Adaptive-Build" class="headerlink" title="9.2 Adaptive Build"></a>9.2 Adaptive Build</h3><p>Adaptive Build 进一步让 Agent team 随任务动态变化：</p>
+<ol>
+<li>将复杂任务分解为多个步骤；</li>
+<li>为当前步骤选择或创建最合适的 Agent；</li>
+<li>执行该步骤；</li>
+<li>根据新状态决定下一步需要什么 Agent；</li>
+<li>将新 Agent 加入 Agent library，供未来复用。</li>
+</ol>
+<p>因此，Agent topology 不再一定是预先固定的，而可以在运行过程中调整。</p>
+<hr>
+<h2 id="10-AutoGen-的开放问题"><a href="#10-AutoGen-的开放问题" class="headerlink" title="10. AutoGen 的开放问题"></a>10. AutoGen 的开放问题</h2><p>设计 Agent workflow 不是单纯最大化准确率，而是多目标优化问题。</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-47-24.png"></p>
+<h1 id="Part-II：Building-a-Multimodal-Knowledge-Assistant"><a href="#Part-II：Building-a-Multimodal-Knowledge-Assistant" class="headerlink" title="Part II：Building a Multimodal Knowledge Assistant"></a>Part II：Building a Multimodal Knowledge Assistant</h1><h2 id="11-从-RAG-系统到-Knowledge-Assistant"><a href="#11-从-RAG-系统到-Knowledge-Assistant" class="headerlink" title="11. 从 RAG 系统到 Knowledge Assistant"></a>11. 从 RAG 系统到 Knowledge Assistant</h2><p>Jerry Liu 将 Knowledge Assistant 的目标定义为：</p>
+<blockquote>
+<p>接收不同复杂度的任务，在企业数据上完成检索、推理、生成与行动，并返回适合任务的输出。</p>
+</blockquote>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-10-54-04.png"></p>
+<p>可能的输入包括：</p>
+<ul>
+<li>简单事实问题；</li>
+<li>复杂问题；</li>
+<li>多文档比较；</li>
+<li>Research task；</li>
+<li>数据分析请求；</li>
+<li>行动请求。</li>
+</ul>
+<p>可能的输出包括：</p>
+<ul>
+<li>Short answer；</li>
+<li>Structured output；</li>
+<li>Research report；</li>
+<li>Slide deck；</li>
+<li>数据分析结果；</li>
+<li>Tool action。</li>
+</ul>
+<p>这意味着 Knowledge Assistant 不能只做“从向量数据库检索五个片段，然后生成一段答案”。</p>
+<hr>
+<h2 id="12-Basic-RAG"><a href="#12-Basic-RAG" class="headerlink" title="12. Basic RAG"></a>12. Basic RAG</h2><h3 id="12-1-基本流程"><a href="#12-1-基本流程" class="headerlink" title="12.1 基本流程"></a>12.1 基本流程</h3><p><img src="/img/posts/8cc0f36c/2026-07-13-12-16-18.png"></p>
+<p>设文档被切分为若干文本块：</p>
+<p>$$
+D=\{c_1,c_2,\ldots,c_n\}.
+$$</p>
+<p>使用 Embedding Model 得到向量：</p>
+<p>$$
+e_i=f_{\text{emb}}(c_i),\qquad e_q=f_{\text{emb}}(q).
+$$</p>
+<p>根据相似度检索 Top-$k$：</p>
+<p>$$
+R_k(q)
+=
+\operatorname{TopK}_{c_i\in D}
+\operatorname{sim}(e_q,e_i).
+$$</p>
+<p>最后将问题和检索结果放入 LLM：</p>
+<p>$$
+y=\operatorname{LLM}\big(q,R_k(q)\big).
+$$</p>
+<h3 id="12-2-Basic-RAG-的四个主要问题"><a href="#12-2-Basic-RAG-的四个主要问题" class="headerlink" title="12.2 Basic RAG 的四个主要问题"></a>12.2 Basic RAG 的四个主要问题</h3><h4 id="1-Naive-Data-Processing"><a href="#1-Naive-Data-Processing" class="headerlink" title="1. Naive Data Processing"></a>1. Naive Data Processing</h4><p>固定按照 500 或 1000 tokens 切分文本，通常忽略：</p>
+<ul>
+<li>表格结构；</li>
+<li>图片；</li>
+<li>图表；</li>
+<li>标题层级；</li>
+<li>页眉和页脚；</li>
+<li>多栏排版；</li>
+<li>一个语义单元跨越多个 Chunk 的情况。</li>
+</ul>
+<h4 id="2-Poor-Query-Understanding-Planning"><a href="#2-Poor-Query-Understanding-Planning" class="headerlink" title="2. Poor Query Understanding &#x2F; Planning"></a>2. Poor Query Understanding &#x2F; Planning</h4><p>用户的复杂问题可能需要：</p>
+<ul>
+<li>拆分子问题；</li>
+<li>检索多个文档；</li>
+<li>先检索再比较；</li>
+<li>汇总整个文档；</li>
+<li>迭代补充证据。</li>
+</ul>
+<p>Basic RAG 直接将原始 Query 用于一次检索，缺乏规划。</p>
+<h4 id="3-No-Tool-Use"><a href="#3-No-Tool-Use" class="headerlink" title="3. No Tool Use"></a>3. No Tool Use</h4><p>Basic RAG 一般不能：</p>
+<ul>
+<li>查询 SQL；</li>
+<li>运行 Python；</li>
+<li>调用 API；</li>
+<li>进行数据分析；</li>
+<li>发送邮件或执行其他行动。</li>
+</ul>
+<h4 id="4-Stateless-No-Memory"><a href="#4-Stateless-No-Memory" class="headerlink" title="4. Stateless &#x2F; No Memory"></a>4. Stateless &#x2F; No Memory</h4><p>每次问答彼此独立：</p>
+<ul>
+<li>不记住用户偏好；</li>
+<li>不记住此前检索到的信息；</li>
+<li>不维护长期任务状态；</li>
+<li>无法形成个性化知识助手。</li>
+</ul>
+<hr>
+<h2 id="13-更好的-Knowledge-Assistant：四个组成部分"><a href="#13-更好的-Knowledge-Assistant：四个组成部分" class="headerlink" title="13. 更好的 Knowledge Assistant：四个组成部分"></a>13. 更好的 Knowledge Assistant：四个组成部分</h2><p>课程提出四个核心方向：</p>
+<ol>
+<li><strong>High-quality Multimodal RAG</strong></li>
+</ol>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-18-06.png"></p>
+<ol start="2">
+<li><strong>Complex Output Generation</strong></li>
+</ol>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-18-18.png"></p>
+<ol start="3">
+<li><strong>Agentic Reasoning over Complex Inputs</strong></li>
+</ol>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-18-35.png"></p>
+<ol start="4">
+<li><strong>Scalable Full-stack Application</strong></li>
+</ol>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-18-45.png"></p>
+<hr>
+<h2 id="14-数据质量是系统的基础"><a href="#14-数据质量是系统的基础" class="headerlink" title="14. 数据质量是系统的基础"></a>14. 数据质量是系统的基础</h2><blockquote>
+<p>Any LLM App is only as good as your data.</p>
+</blockquote>
+<p>即使模型很强，如果输入给模型的数据已经被错误解析，模型仍然难以生成可靠答案。</p>
+<p>生产级 LLM 应用中的 ETL for LLM 主要包括：</p>
+<ul>
+<li>Parsing；</li>
+<li>Chunking；</li>
+<li>Indexing。</li>
+</ul>
+<p>复杂文档常见问题：</p>
+<ul>
+<li>Embedded tables；</li>
+<li>Charts and images；</li>
+<li>Irregular layouts；</li>
+<li>Headers &#x2F; footers；</li>
+<li>Scanned pages；</li>
+<li>多栏排版；</li>
+<li>文本和视觉元素互相引用。</li>
+</ul>
+<p>这些内容广泛存在于：</p>
+<ul>
+<li>年报和 10-K；</li>
+<li>研究论文；</li>
+<li>PowerPoint；</li>
+<li>Excel；</li>
+<li>表单；</li>
+<li>咨询报告；</li>
+<li>法律和财务文档。</li>
+</ul>
+<hr>
+<h2 id="15-LLM-Native-Document-Parser"><a href="#15-LLM-Native-Document-Parser" class="headerlink" title="15. LLM-Native Document Parser"></a>15. LLM-Native Document Parser</h2><p>理想的 GenAI-native Parser 应当把复杂文档转换为适合下游应用的结构化节点。</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-19-56.png"></p>
+<h3 id="15-1-Requirements"><a href="#15-1-Requirements" class="headerlink" title="15.1 Requirements"></a>15.1 Requirements</h3><ul>
+<li>准确解析表格，并生成文本或半结构化表示；</li>
+<li>将正文切分为语义连贯的 Chunk；</li>
+<li>提取图片、图表和 Diagram；</li>
+<li>为视觉元素生成结构化信息或 Image Chunk；</li>
+<li>自动提取 Metadata；</li>
+<li>保留不同元素之间的层级和引用关系。</li>
+</ul>
+<h3 id="15-2-Non-Requirements"><a href="#15-2-Non-Requirements" class="headerlink" title="15.2 Non-Requirements"></a>15.2 Non-Requirements</h3><p>对于 RAG 和 Agent 应用，并不一定需要：</p>
+<ul>
+<li>为每个元素生成极其详细的 JSON；</li>
+<li>精确恢复每个字符的 Bounding Box；</li>
+<li>完整重建文档编辑格式。</li>
+</ul>
+<p>Parser 的目标不是复刻 PDF 编辑器，而是生成适合检索、理解和推理的表示。</p>
+<h2 id="16-Advanced-Parsing-Advanced-Indexing"><a href="#16-Advanced-Parsing-Advanced-Indexing" class="headerlink" title="16. Advanced Parsing + Advanced Indexing"></a>16. Advanced Parsing + Advanced Indexing</h2><p>直接对原始表格和图片做 Embedding 往往并不理想。</p>
+<p>更有效的方法是：</p>
+<ol>
+<li>将文档解析为 Text、Table、Image、Diagram 等 Source Element；</li>
+<li>为每个 Source Element 生成一个或多个文本表示；</li>
+<li>对这些文本表示建立索引；</li>
+<li>检索到文本表示后，沿 Metadata 找回原始 Source Element；</li>
+<li>将真正的文本、表格或图片交给 Multimodal LLM。</li>
+</ol>
+<p>设原始元素为 $x_i$，为其生成多个可检索表示：</p>
+<p>$$
+g(x_i)=\{r_{i1},r_{i2},\ldots,r_{im}\}.
+$$</p>
+<p>每个表示保留对原始元素的引用：</p>
+<p>$$
+r_{ij}\longrightarrow x_i.
+$$</p>
+<p>查询时先检索表示：</p>
+<p>$$
+\mathcal R(q)
+=
+\operatorname{TopK}_{r_{ij}}
+\operatorname{sim}\big(f(q),f(r_{ij})\big),
+$$</p>
+<p>再取得其对应的 Source Element：</p>
+<p>$$
+\mathcal C(q)
+=
+\{\operatorname{source}(r)\mid r\in\mathcal R(q)\}.
+$$</p>
+<p>这种方法的优势：</p>
+<ul>
+<li>用成熟的 Text Embedding 检索；</li>
+<li>一个表格或图片可以有多个语义描述；</li>
+<li>最终仍将原始图片或表格交给 Multimodal LLM；</li>
+<li>可以做 Hierarchical &#x2F; Recursive Retrieval。</li>
+</ul>
+<hr>
+<h2 id="17-Multimodal-RAG-Pipeline"><a href="#17-Multimodal-RAG-Pipeline" class="headerlink" title="17. Multimodal RAG Pipeline"></a>17. Multimodal RAG Pipeline</h2><h3 id="17-1-Indexing"><a href="#17-1-Indexing" class="headerlink" title="17.1 Indexing"></a>17.1 Indexing</h3><ol>
+<li>使用 Parser 将文档拆分为 Text Chunk 和 Image Chunk；</li>
+<li>通过 Metadata 将文本表示与图片关联；</li>
+<li>对文本 Chunk 或图片的文本描述做 Embedding；</li>
+<li>将它们写入 Vector Index。</li>
+</ol>
+<h3 id="17-2-Retrieval"><a href="#17-2-Retrieval" class="headerlink" title="17.2 Retrieval"></a>17.2 Retrieval</h3><ol>
+<li>使用 Query Embedding 检索相关文本表示；</li>
+<li>根据 Metadata 找回对应图片或表格；</li>
+<li>同时将 Text 和 Image 输入 Multimodal LLM；</li>
+<li>由模型进行最终 Synthesis。</li>
+</ol>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Source Document</span><br><span class="line">   ↓</span><br><span class="line">LlamaParse</span><br><span class="line">   ↓</span><br><span class="line">Text Chunks + Image Chunks</span><br><span class="line">   ↓</span><br><span class="line">Text Representations / Metadata Links</span><br><span class="line">   ↓</span><br><span class="line">Vector Index</span><br><span class="line">   ↓</span><br><span class="line">Retrieve Text Representations</span><br><span class="line">   ↓</span><br><span class="line">Dereference Original Text / Image</span><br><span class="line">   ↓</span><br><span class="line">Multimodal LLM</span><br><span class="line">   ↓</span><br><span class="line">Response</span><br></pre></td></tr></table></figure>
+
+<p>“Multimodal RAG”不只是对图片使用 CLIP Embedding。另一条常见路径是：</p>
+<ul>
+<li>使用视觉模型为图片生成多个文字描述；</li>
+<li>对文字描述建索引；</li>
+<li>检索后把原图送给 Multimodal LLM。</li>
+</ul>
+<hr>
+<h2 id="18-从-Chat-Response-到-Complex-Output-Generation"><a href="#18-从-Chat-Response-到-Complex-Output-Generation" class="headerlink" title="18. 从 Chat Response 到 Complex Output Generation"></a>18. 从 Chat Response 到 Complex Output Generation</h2><p>企业用户常常不只需要一段聊天回答，而希望系统生成可直接使用的产物：</p>
+<ul>
+<li>Report；</li>
+<li>Slide deck；</li>
+<li>Structured JSON；</li>
+<li>Code repository；</li>
+<li>数据分析结果；</li>
+<li>表格；</li>
+<li>Tool action。</li>
+</ul>
+<p>这会显著提高 Agent 应用的潜在价值，因为它节省的不只是“搜索信息”的时间，还可能自动完成知识工作的部分流程。</p>
+<p>但 Action-taking 和复杂输出也带来风险：</p>
+<ul>
+<li>输出必须更加可靠；</li>
+<li>执行动作可能产生真实后果；</li>
+<li>系统需要明确权限边界；</li>
+<li>需要 Human-in-the-loop 建立信任；</li>
+<li>需要保留来源、日志和中间状态。</li>
+</ul>
+<hr>
+<h2 id="19-为什么复杂问题需要-Agentic-RAG"><a href="#19-为什么复杂问题需要-Agentic-RAG" class="headerlink" title="19. 为什么复杂问题需要 Agentic RAG"></a>19. 为什么复杂问题需要 Agentic RAG</h2><p>Naive RAG 适合 Pointed Question，例如：</p>
+<blockquote>
+<p>某个具体指标是多少？</p>
+</blockquote>
+<p>但难以处理以下问题。</p>
+<h3 id="19-1-Summarization-Question"><a href="#19-1-Summarization-Question" class="headerlink" title="19.1 Summarization Question"></a>19.1 Summarization Question</h3><blockquote>
+<p>总结整份公司 10-K 年报。</p>
+</blockquote>
+<p>这需要覆盖整份文档，而不是只取与 Query 最相似的五个 Chunk。</p>
+<h3 id="19-2-Comparison-Question"><a href="#19-2-Comparison-Question" class="headerlink" title="19.2 Comparison Question"></a>19.2 Comparison Question</h3><blockquote>
+<p>比较候选人 A 和候选人 B 的开源贡献。</p>
+</blockquote>
+<p>这需要分别检索两个实体，并按照共同维度进行比较。</p>
+<h3 id="19-3-Multi-Part-Question"><a href="#19-3-Multi-Part-Question" class="headerlink" title="19.3 Multi-Part Question"></a>19.3 Multi-Part Question</h3><blockquote>
+<p>分析文章 A 中支持 X 的论据和文章 B 中支持 Y 的论据，按照内部 Style Guide 生成表格，再给出结论。</p>
+</blockquote>
+<p>该任务同时包含：</p>
+<ul>
+<li>多源检索；</li>
+<li>信息抽取；</li>
+<li>结构化生成；</li>
+<li>规则遵循；</li>
+<li>综合推理。</li>
+</ul>
+<h3 id="19-4-Research-Task"><a href="#19-4-Research-Task" class="headerlink" title="19.4 Research Task"></a>19.4 Research Task</h3><blockquote>
+<p>生成当前 supervised fine-tuning 技术的研究综述。</p>
+</blockquote>
+<p>这需要：</p>
+<ul>
+<li>Query Planning；</li>
+<li>多轮 Retrieval；</li>
+<li>去重与筛选；</li>
+<li>证据整合；</li>
+<li>报告规划；</li>
+<li>引用管理；</li>
+<li>Review。</li>
+</ul>
+<p>因此需要在 RAG 之上增加 Agent reasoning layer。</p>
+<hr>
+<h2 id="20-Agent-的能力从简单到高级"><a href="#20-Agent-的能力从简单到高级" class="headerlink" title="20. Agent 的能力从简单到高级"></a>20. Agent 的能力从简单到高级</h2><p><img src="/img/posts/8cc0f36c/2026-07-13-12-24-30.png"></p>
+<h3 id="20-1-ReAct"><a href="#20-1-ReAct" class="headerlink" title="20.1 ReAct"></a>20.1 ReAct</h3><p>ReAct 在每一步交替进行：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Thought → Action → Observation → Thought → ...</span><br></pre></td></tr></table></figure>
+
+<p>它不需要一次规划完整流程，而是根据最新观察决定下一步。</p>
+<h3 id="20-2-Preplanning-DAG"><a href="#20-2-Preplanning-DAG" class="headerlink" title="20.2 Preplanning &#x2F; DAG"></a>20.2 Preplanning &#x2F; DAG</h3><p>另一类方法先生成任务依赖图：</p>
+<p>$$
+G=(V,E),
+$$</p>
+<p>其中：</p>
+<ul>
+<li>$V$ 表示子任务；</li>
+<li>$E$ 表示依赖关系。</li>
+</ul>
+<p>能够并行执行的节点可以同时运行，之后根据结果 Replan。</p>
+<h3 id="20-3-Memory"><a href="#20-3-Memory" class="headerlink" title="20.3 Memory"></a>20.3 Memory</h3><p>Memory 可以保存：</p>
+<ul>
+<li>用户偏好；</li>
+<li>历史对话；</li>
+<li>中间检索结果；</li>
+<li>任务状态；</li>
+<li>已尝试但失败的方法；</li>
+<li>长期知识。</li>
+</ul>
+<h3 id="20-4-Query-Decomposition"><a href="#20-4-Query-Decomposition" class="headerlink" title="20.4 Query Decomposition"></a>20.4 Query Decomposition</h3><p>复杂 Query 可以拆解为：</p>
+<p>$$
+q\longrightarrow \{q_1,q_2,\ldots,q_m\}.
+$$</p>
+<p>子问题可以串行或并行执行，再进行聚合：</p>
+<p>$$
+y=\operatorname{Synthesize}\big(y_1,y_2,\ldots,y_m\big).
+$$</p>
+<hr>
+<h2 id="21-Agentic-RAG"><a href="#21-Agentic-RAG" class="headerlink" title="21. Agentic RAG"></a>21. Agentic RAG</h2><p>Agentic RAG 的关键观点是：</p>
+<blockquote>
+<p>每一个 Data Interface 都可以被视为 Tool，Agent 决定何时、为何以及如何调用这些 Tool。</p>
+</blockquote>
+<p>例如：</p>
+<ul>
+<li>Vector RAG Tool；</li>
+<li>SQL Tool；</li>
+<li>Web Search Tool；</li>
+<li>Python Tool；</li>
+<li>Document Summary Tool；</li>
+<li>Table Analysis Tool；</li>
+<li>Image Understanding Tool。</li>
+</ul>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">User Task</span><br><span class="line">   ↓</span><br><span class="line">Agent Reasoning Layer</span><br><span class="line">   ├── Query Planning</span><br><span class="line">   ├── Tool Selection</span><br><span class="line">   ├── Memory</span><br><span class="line">   └── Reflection</span><br><span class="line">   ↓</span><br><span class="line">RAG / SQL / Web / Python / Other Tools</span><br><span class="line">   ↓</span><br><span class="line">Observation</span><br><span class="line">   ↓</span><br><span class="line">Agent 更新计划</span><br><span class="line">   ↓</span><br><span class="line">Response</span><br></pre></td></tr></table></figure>
+
+<p>与 Basic RAG 的区别：</p>
+<table>
+<thead>
+<tr>
+<th>Basic RAG</th>
+<th>Agentic RAG</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Query 直接进入 Retriever</td>
+<td>Agent 先理解并规划 Query</td>
+</tr>
+<tr>
+<td>固定调用一次检索</td>
+<td>可多次调用不同 Tool</td>
+</tr>
+<tr>
+<td>固定 Top-$k$</td>
+<td>可根据中间结果调整检索</td>
+</tr>
+<tr>
+<td>无记忆</td>
+<td>可维护状态和 Memory</td>
+</tr>
+<tr>
+<td>只生成答案</td>
+<td>可生成报告或执行动作</td>
+</tr>
+<tr>
+<td>无自我检查</td>
+<td>可加入 Reflection &#x2F; Validation</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="22-Constrained-Flow-与-Unconstrained-Flow"><a href="#22-Constrained-Flow-与-Unconstrained-Flow" class="headerlink" title="22. Constrained Flow 与 Unconstrained Flow"></a>22. Constrained Flow 与 Unconstrained Flow</h2><h3 id="22-1-Constrained-Flow"><a href="#22-1-Constrained-Flow" class="headerlink" title="22.1 Constrained Flow"></a>22.1 Constrained Flow</h3><p>开发者预先规定主要控制逻辑：</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-26-52.png"></p>
+<p>特点：</p>
+<ul>
+<li>More reliable；</li>
+<li>Less expressive；</li>
+<li>更容易测试；</li>
+<li>成本和延迟更可控；</li>
+<li>适合明确的生产场景。</li>
+</ul>
+<h3 id="22-2-Unconstrained-Flow"><a href="#22-2-Unconstrained-Flow" class="headerlink" title="22.2 Unconstrained Flow"></a>22.2 Unconstrained Flow</h3><p>Agent Orchestrator 自主决定：</p>
+<ul>
+<li>调用什么工具；</li>
+<li>调用顺序；</li>
+<li>是否循环；</li>
+<li>何时结束；</li>
+<li>是否重新规划。</li>
+</ul>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-27-06.png"></p>
+<p>特点：</p>
+<ul>
+<li>More expressive；</li>
+<li>能处理更多未预见任务；</li>
+<li>Less reliable；</li>
+<li>更容易产生循环或偏离目标；</li>
+<li>Token 和工具成本较高。</li>
+</ul>
+<h3 id="22-3-实践中的选择"><a href="#22-3-实践中的选择" class="headerlink" title="22.3 实践中的选择"></a>22.3 实践中的选择</h3><p>课程给出的经验是：</p>
+<ul>
+<li>不要因为“Agent 更自主”就默认选择完全开放流程；</li>
+<li>生产场景常从较约束的 Workflow 开始；</li>
+<li>只在确实需要动态决策的局部开放自主性；</li>
+<li>ReAct 初始可只提供约 4～5 个 Tool；</li>
+<li>Tool 数量过多会增加选择难度、Prompt 长度和错误率。</li>
+</ul>
+<p>因此更合理的设计通常是：</p>
+<blockquote>
+<p>用代码确定不可违反的边界，用 LLM 处理难以穷举的语义决策。</p>
+</blockquote>
+<hr>
+<h2 id="23-Multimodal-Report-Generation"><a href="#23-Multimodal-Report-Generation" class="headerlink" title="23. Multimodal Report Generation"></a>23. Multimodal Report Generation</h2><p>课程给出的示例架构包含 Researcher 与 Writer。</p>
+<p><img src="/img/posts/8cc0f36c/2026-07-13-12-31-19.png"></p>
+<h3 id="24-1-Researcher"><a href="#24-1-Researcher" class="headerlink" title="24.1 Researcher"></a>24.1 Researcher</h3><p>Researcher 负责：</p>
+<ul>
+<li>分析任务；</li>
+<li>调用 RAG；</li>
+<li>检索文本、图片和表格；</li>
+<li>将相关证据放入 Data Cache；</li>
+<li>保留来源与 Metadata。</li>
+</ul>
+<h3 id="24-2-Writer"><a href="#24-2-Writer" class="headerlink" title="24.2 Writer"></a>24.2 Writer</h3><p>Writer 读取 Data Cache，生成结构化输出：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">  TextBlock(...),</span><br><span class="line">  ImageBlock(...),</span><br><span class="line">  TableBlock(...),</span><br><span class="line">  TextBlock(...)</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>最终结果可以是文本和图片交错的报告，甚至进一步生成 Slide Deck。</p>
+<h3 id="24-3-Reviewer（可选）"><a href="#24-3-Reviewer（可选）" class="headerlink" title="24.3 Reviewer（可选）"></a>24.3 Reviewer（可选）</h3><p>Reviewer 可以检查：</p>
+<ul>
+<li>内容是否覆盖任务；</li>
+<li>引用是否支持结论；</li>
+<li>图片是否与段落相关；</li>
+<li>格式是否符合要求；</li>
+<li>是否遗漏关键证据；</li>
+<li>是否存在幻觉。</li>
+</ul>
+<p>这一结构与 AutoGen 的 Writer–Critic &#x2F; Nested Review 非常相似，说明不同框架背后的系统思想具有共通性。</p>
+<hr>
+<h2 id="24-Running-Agents-in-Production"><a href="#24-Running-Agents-in-Production" class="headerlink" title="24. Running Agents in Production"></a>24. Running Agents in Production</h2><p>Agent prototype 通常始于 Jupyter Notebook，但生产系统还需要解决：</p>
+<ul>
+<li>Encapsulation and reuse；</li>
+<li>标准化 Agent 通信接口；</li>
+<li>多用户和多 Session；</li>
+<li>Agent 数量扩展；</li>
+<li>Human-in-the-loop；</li>
+<li>Debugging 和 Observability；</li>
+<li>权限、安全和资源管理。</li>
+</ul>
+<h3 id="25-1-Microservice-化"><a href="#25-1-Microservice-化" class="headerlink" title="25.1 Microservice 化"></a>25.1 Microservice 化</h3><p>可以将每个 Agent Workflow 封装为 Service API：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Agent 1 Service</span><br><span class="line">Agent 2 Service</span><br><span class="line">Agent 3 Service</span><br><span class="line">       ↕</span><br><span class="line">Central Message Queue</span><br><span class="line">       ↕</span><br><span class="line">Orchestrator / Control Plane</span><br><span class="line">       ↕</span><br><span class="line">User / Human-in-the-loop</span><br></pre></td></tr></table></figure>
+
+<h3 id="25-2-llama-deploy-的思路"><a href="#25-2-llama-deploy-的思路" class="headerlink" title="25.2 llama-deploy 的思路"></a>25.2 llama-deploy 的思路</h3><ul>
+<li>将 Agent workflow 部署为 Microservice；</li>
+<li>每个 Workflow 暴露服务接口；</li>
+<li>Agent 通过中心 Message Queue 通信；</li>
+<li>支持分布式 Tool Execution；</li>
+<li>将 Human-in-the-loop 也实现为服务；</li>
+<li>支持 Docker Compose 与 Kubernetes。</li>
+</ul>
+<h3 id="25-3-Human-in-the-loop"><a href="#25-3-Human-in-the-loop" class="headerlink" title="25.3 Human-in-the-loop"></a>25.3 Human-in-the-loop</h3><p>Agent 在信息不足或风险较高时可以暂停：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Agent 请求澄清</span><br><span class="line">   ↓</span><br><span class="line">服务保存当前状态并等待</span><br><span class="line">   ↓</span><br><span class="line">用户提供反馈</span><br><span class="line">   ↓</span><br><span class="line">Agent 从原状态继续执行</span><br></pre></td></tr></table></figure>
+
+<p>这比“失败后从头运行”更适合长任务，也有助于逐步建立用户信任。</p>
+<hr>
+<h2 id="25-核心结论"><a href="#25-核心结论" class="headerlink" title="25. 核心结论"></a>25. 核心结论</h2><ol>
+<li><strong>未来 AI 应用的单位可能不再是单一模型，而是 Compound AI System。</strong></li>
+<li><strong>Agentic AI 同时是一种交互方式、自动化能力和软件架构。</strong></li>
+<li><strong>Multi-Agent 的价值来自合理分工、迭代、Grounding 和 Validation，而不是单纯增加 Agent 数量。</strong></li>
+<li><strong>AutoGen 用 Conversable Agent 与 Conversation Program 统一 LLM、工具和人类。</strong></li>
+<li><strong>Nested Chat 使一个 Agent 能够由内部 Agent team 递归构成。</strong></li>
+<li><strong>Group Chat 在动态规划与流程约束之间提供折中。</strong></li>
+<li><strong>Basic RAG 的上限通常首先受数据解析与检索质量限制。</strong></li>
+<li><strong>Multimodal RAG 需要保存文本、表格、图片及其关联关系。</strong></li>
+<li><strong>Agentic RAG 将数据接口视为 Tool，由 Agent 进行 Query Planning、Tool Selection、Memory 和 Reflection。</strong></li>
+<li><strong>生产系统通常更偏好“受约束的 Agent 自主性”，而不是完全自由的循环。</strong></li>
+<li><strong>真正的 Agent 部署还需要 Message Queue、Service API、Observability、状态管理和 Human-in-the-loop。</strong></li>
+<li><strong>Agent workflow 的设计本质上是在质量、成本、延迟、可靠性和人工投入之间进行权衡。</strong></li>
+</ol>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/8cc0f36c/">https://wick-7.github.io/posts/8cc0f36c/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/AutoGen/">AutoGen</a><a class="post-meta__tags" href="/tags/RAG/">RAG</a><a class="post-meta__tags" href="/tags/Multi-Agent/">Multi-Agent</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Evolution of System Designs from an AI Engineer Perspective从 AI Engineer 的视角观察：  模型算法为什么仍在持续进步； 什么样的 AI 应用能够真正创造价值； 为什么 AI Infra 正在成为企业 IT 的第三大支柱； 为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。   1. Demystify “LLM” and “AGI”1.1 Chinese Typewriter Problem英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 bigram、n-gram，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。 早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。 1.2 BERT...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/5fbccec5/" title="《加快语言模型生成速度》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-04</div><div class="info-item-2">《加快语言模型生成速度》课堂笔记</div></div><div class="info-2"><div class="info-item-1">加快语言模型的生成速度：Inference 加速1. 核心要点语言模型的推理加速并不是“凭空变快”。分析一种加速技术时，应始终追问三个问题：  是否改变原有 Attention 的计算结果或范围？ 是否需要为该方法重新训练或定制模型？ 为了加速，还付出了什么代价？ 例如额外显存、额外计算、模型能力下降或算法复杂度上升。  2. 语言模型推论回顾2.1 Autoregressive Generation语言模型本质上在做“文字接龙”：给定前面的 token，预测下一个 token；新生成的 token 又会被放回输入，继续预测下一个 token。 若输入 token 的表示为 $x_i$，Self-Attention 首先生成 Query、Key 和 Value： $$ q_i=W_Qx_i, \qquad k_i=W_Kx_i, \qquad v_i=W_Vx_i. $$ 对于位置 $t$，Causal Self-Attention 只能关注当前位置及其以前的 token。标准 Attention score 为： $$ a_{t,i}=\frac{q_t^{\top}k_i}{...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">13</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">21</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Agentic-AI-Frameworks-AutoGen-Multimodal-Knowledge-Assistant"><span class="toc-number">1.</span> <span class="toc-text">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-I%EF%BC%9AAgentic-AI-Frameworks-AutoGen"><span class="toc-number">2.</span> <span class="toc-text">Part I：Agentic AI Frameworks &amp; AutoGen</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%BB%8E-Generative-AI-%E5%88%B0-Agentic-AI"><span class="toc-number">2.1.</span> <span class="toc-text">1. 从 Generative AI 到 Agentic AI</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-Agentic-AI-%E7%9A%84%E4%B8%89%E7%B1%BB%E4%BB%B7%E5%80%BC"><span class="toc-number">2.2.</span> <span class="toc-text">2. Agentic AI 的三类价值</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-Useful-Interface%EF%BC%9A%E6%9B%B4%E8%87%AA%E7%84%B6%E7%9A%84%E4%BA%BA%E6%9C%BA%E6%8E%A5%E5%8F%A3"><span class="toc-number">2.2.1.</span> <span class="toc-text">2.1 Useful Interface：更自然的人机接口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Strong-Capability%EF%BC%9A%E4%BB%A5%E8%BE%83%E5%B0%91%E4%BA%BA%E5%B7%A5%E7%9B%91%E7%9D%A3%E5%AE%8C%E6%88%90%E5%A4%8D%E6%9D%82%E4%BB%BB%E5%8A%A1"><span class="toc-number">2.2.2.</span> <span class="toc-text">2.2 Strong Capability：以较少人工监督完成复杂任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Useful-Architecture%EF%BC%9A%E6%96%B0%E7%9A%84%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84"><span class="toc-number">2.2.3.</span> <span class="toc-text">2.3 Useful Architecture：新的软件架构</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BE%9B%E5%BA%94%E9%93%BE%E4%BC%98%E5%8C%96%E6%A1%88%E4%BE%8B%EF%BC%9ACommander%E3%80%81Writer-%E4%B8%8E-Safeguard"><span class="toc-number">2.3.</span> <span class="toc-text">3. 供应链优化案例：Commander、Writer 与 Safeguard</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E8%A7%92%E8%89%B2%E5%AE%9A%E4%B9%89"><span class="toc-number">2.3.1.</span> <span class="toc-text">3.1 角色定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="toc-number">2.3.2.</span> <span class="toc-text">3.2 执行流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-AutoGen-%E9%A3%8E%E6%A0%BC%E7%9A%84%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81%E7%BB%93%E6%9E%84"><span class="toc-number">2.3.3.</span> <span class="toc-text">3.3 AutoGen 风格的核心代码结构</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BD%BF%E7%94%A8-Multi-Agent"><span class="toc-number">2.4.</span> <span class="toc-text">4. 为什么要使用 Multi-Agent</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E9%80%9A%E8%BF%87%E8%87%AA%E7%84%B6%E8%BF%AD%E4%BB%A3%E6%8F%90%E5%8D%87%E8%B4%A8%E9%87%8F"><span class="toc-number">2.4.1.</span> <span class="toc-text">4.1 通过自然迭代提升质量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Divide-and-Conquer"><span class="toc-number">2.4.2.</span> <span class="toc-text">4.2 Divide and Conquer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Grounding-%E4%B8%8E-Validation"><span class="toc-number">2.4.3.</span> <span class="toc-text">4.3 Grounding 与 Validation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E6%A8%A1%E5%9D%97%E5%8C%96%E4%B8%8E%E5%8F%AF%E7%BB%B4%E6%8A%A4%E6%80%A7"><span class="toc-number">2.4.4.</span> <span class="toc-text">4.4 模块化与可维护性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%80%E4%B8%AA-Agent-Framework-%E5%BA%94%E6%BB%A1%E8%B6%B3%E4%BB%80%E4%B9%88%E8%A6%81%E6%B1%82"><span class="toc-number">2.5.</span> <span class="toc-text">5. 一个 Agent Framework 应满足什么要求</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-Unified-Agentic-Abstraction"><span class="toc-number">2.5.1.</span> <span class="toc-text">5.1 Unified Agentic Abstraction</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-Multi-Agent-Orchestration-%E7%9A%84%E5%85%B3%E9%94%AE%E8%AE%BE%E8%AE%A1%E7%BB%B4%E5%BA%A6"><span class="toc-number">2.5.2.</span> <span class="toc-text">5.2 Multi-Agent Orchestration 的关键设计维度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Agentic-Design-Patterns"><span class="toc-number">2.5.3.</span> <span class="toc-text">5.3 Agentic Design Patterns</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-AutoGen-%E7%9A%84%E6%A0%B8%E5%BF%83%E6%8A%BD%E8%B1%A1"><span class="toc-number">2.6.</span> <span class="toc-text">6. AutoGen 的核心抽象</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-Conversable-Agent"><span class="toc-number">2.6.1.</span> <span class="toc-text">6.1 Conversable Agent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-Conversation-Program"><span class="toc-number">2.6.2.</span> <span class="toc-text">6.2 Conversation Program</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-AutoGen-%E4%B8%AD%E7%9A%84%E5%85%B8%E5%9E%8B-Conversation-Patterns"><span class="toc-number">2.7.</span> <span class="toc-text">7. AutoGen 中的典型 Conversation Patterns</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Two-Agent-Reflection"><span class="toc-number">2.7.1.</span> <span class="toc-text">7.1 Two-Agent Reflection</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-Nested-Chat%EF%BC%9A%E6%8A%8A%E5%A4%8D%E5%90%88%E7%B3%BB%E7%BB%9F%E5%B0%81%E8%A3%85%E4%B8%BA%E4%B8%80%E4%B8%AA-Agent"><span class="toc-number">2.7.2.</span> <span class="toc-text">7.2 Nested Chat：把复合系统封装为一个 Agent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-Tool-Use%EF%BC%9AConversational-Chess"><span class="toc-number">2.7.3.</span> <span class="toc-text">7.3 Tool Use：Conversational Chess</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-Group-Chat%EF%BC%9A%E5%8A%A8%E6%80%81%E4%BB%BB%E5%8A%A1%E8%A7%84%E5%88%92"><span class="toc-number">2.7.4.</span> <span class="toc-text">7.4 Group Chat：动态任务规划</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-AutoGen-%E5%BA%94%E7%94%A8%E6%A1%88%E4%BE%8B"><span class="toc-number">2.8.</span> <span class="toc-text">8. AutoGen 应用案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-Science-Agents"><span class="toc-number">2.8.1.</span> <span class="toc-text">8.1 Science Agents</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Web-Agent%EF%BC%9AAgent-E"><span class="toc-number">2.8.2.</span> <span class="toc-text">8.2 Web Agent：Agent-E</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E4%BC%81%E4%B8%9A%E5%BA%94%E7%94%A8"><span class="toc-number">2.8.3.</span> <span class="toc-text">8.3 企业应用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-AutoBuild-%E4%B8%8E-Adaptive-Build"><span class="toc-number">2.9.</span> <span class="toc-text">9. AutoBuild 与 Adaptive Build</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-AutoBuild"><span class="toc-number">2.9.1.</span> <span class="toc-text">9.1 AutoBuild</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-Adaptive-Build"><span class="toc-number">2.9.2.</span> <span class="toc-text">9.2 Adaptive Build</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-AutoGen-%E7%9A%84%E5%BC%80%E6%94%BE%E9%97%AE%E9%A2%98"><span class="toc-number">2.10.</span> <span class="toc-text">10. AutoGen 的开放问题</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Part-II%EF%BC%9ABuilding-a-Multimodal-Knowledge-Assistant"><span class="toc-number">3.</span> <span class="toc-text">Part II：Building a Multimodal Knowledge Assistant</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E4%BB%8E-RAG-%E7%B3%BB%E7%BB%9F%E5%88%B0-Knowledge-Assistant"><span class="toc-number">3.1.</span> <span class="toc-text">11. 从 RAG 系统到 Knowledge Assistant</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-Basic-RAG"><span class="toc-number">3.2.</span> <span class="toc-text">12. Basic RAG</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-%E5%9F%BA%E6%9C%AC%E6%B5%81%E7%A8%8B"><span class="toc-number">3.2.1.</span> <span class="toc-text">12.1 基本流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-Basic-RAG-%E7%9A%84%E5%9B%9B%E4%B8%AA%E4%B8%BB%E8%A6%81%E9%97%AE%E9%A2%98"><span class="toc-number">3.2.2.</span> <span class="toc-text">12.2 Basic RAG 的四个主要问题</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-Naive-Data-Processing"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">1. Naive Data Processing</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-Poor-Query-Understanding-Planning"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">2. Poor Query Understanding &#x2F; Planning</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-No-Tool-Use"><span class="toc-number">3.2.2.3.</span> <span class="toc-text">3. No Tool Use</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#4-Stateless-No-Memory"><span class="toc-number">3.2.2.4.</span> <span class="toc-text">4. Stateless &#x2F; No Memory</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-%E6%9B%B4%E5%A5%BD%E7%9A%84-Knowledge-Assistant%EF%BC%9A%E5%9B%9B%E4%B8%AA%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86"><span class="toc-number">3.3.</span> <span class="toc-text">13. 更好的 Knowledge Assistant：四个组成部分</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-%E6%95%B0%E6%8D%AE%E8%B4%A8%E9%87%8F%E6%98%AF%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%9F%BA%E7%A1%80"><span class="toc-number">3.4.</span> <span class="toc-text">14. 数据质量是系统的基础</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-LLM-Native-Document-Parser"><span class="toc-number">3.5.</span> <span class="toc-text">15. LLM-Native Document Parser</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#15-1-Requirements"><span class="toc-number">3.5.1.</span> <span class="toc-text">15.1 Requirements</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#15-2-Non-Requirements"><span class="toc-number">3.5.2.</span> <span class="toc-text">15.2 Non-Requirements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Advanced-Parsing-Advanced-Indexing"><span class="toc-number">3.6.</span> <span class="toc-text">16. Advanced Parsing + Advanced Indexing</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-Multimodal-RAG-Pipeline"><span class="toc-number">3.7.</span> <span class="toc-text">17. Multimodal RAG Pipeline</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#17-1-Indexing"><span class="toc-number">3.7.1.</span> <span class="toc-text">17.1 Indexing</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-2-Retrieval"><span class="toc-number">3.7.2.</span> <span class="toc-text">17.2 Retrieval</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E4%BB%8E-Chat-Response-%E5%88%B0-Complex-Output-Generation"><span class="toc-number">3.8.</span> <span class="toc-text">18. 从 Chat Response 到 Complex Output Generation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%A4%8D%E6%9D%82%E9%97%AE%E9%A2%98%E9%9C%80%E8%A6%81-Agentic-RAG"><span class="toc-number">3.9.</span> <span class="toc-text">19. 为什么复杂问题需要 Agentic RAG</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#19-1-Summarization-Question"><span class="toc-number">3.9.1.</span> <span class="toc-text">19.1 Summarization Question</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-2-Comparison-Question"><span class="toc-number">3.9.2.</span> <span class="toc-text">19.2 Comparison Question</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-3-Multi-Part-Question"><span class="toc-number">3.9.3.</span> <span class="toc-text">19.3 Multi-Part Question</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#19-4-Research-Task"><span class="toc-number">3.9.4.</span> <span class="toc-text">19.4 Research Task</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#20-Agent-%E7%9A%84%E8%83%BD%E5%8A%9B%E4%BB%8E%E7%AE%80%E5%8D%95%E5%88%B0%E9%AB%98%E7%BA%A7"><span class="toc-number">3.10.</span> <span class="toc-text">20. Agent 的能力从简单到高级</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#20-1-ReAct"><span class="toc-number">3.10.1.</span> <span class="toc-text">20.1 ReAct</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-2-Preplanning-DAG"><span class="toc-number">3.10.2.</span> <span class="toc-text">20.2 Preplanning &#x2F; DAG</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-3-Memory"><span class="toc-number">3.10.3.</span> <span class="toc-text">20.3 Memory</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-4-Query-Decomposition"><span class="toc-number">3.10.4.</span> <span class="toc-text">20.4 Query Decomposition</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#21-Agentic-RAG"><span class="toc-number">3.11.</span> <span class="toc-text">21. Agentic RAG</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#22-Constrained-Flow-%E4%B8%8E-Unconstrained-Flow"><span class="toc-number">3.12.</span> <span class="toc-text">22. Constrained Flow 与 Unconstrained Flow</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#22-1-Constrained-Flow"><span class="toc-number">3.12.1.</span> <span class="toc-text">22.1 Constrained Flow</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-2-Unconstrained-Flow"><span class="toc-number">3.12.2.</span> <span class="toc-text">22.2 Unconstrained Flow</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#22-3-%E5%AE%9E%E8%B7%B5%E4%B8%AD%E7%9A%84%E9%80%89%E6%8B%A9"><span class="toc-number">3.12.3.</span> <span class="toc-text">22.3 实践中的选择</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#23-Multimodal-Report-Generation"><span class="toc-number">3.13.</span> <span class="toc-text">23. Multimodal Report Generation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#24-1-Researcher"><span class="toc-number">3.13.1.</span> <span class="toc-text">24.1 Researcher</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#24-2-Writer"><span class="toc-number">3.13.2.</span> <span class="toc-text">24.2 Writer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#24-3-Reviewer%EF%BC%88%E5%8F%AF%E9%80%89%EF%BC%89"><span class="toc-number">3.13.3.</span> <span class="toc-text">24.3 Reviewer（可选）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#24-Running-Agents-in-Production"><span class="toc-number">3.14.</span> <span class="toc-text">24. Running Agents in Production</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#25-1-Microservice-%E5%8C%96"><span class="toc-number">3.14.1.</span> <span class="toc-text">25.1 Microservice 化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#25-2-llama-deploy-%E7%9A%84%E6%80%9D%E8%B7%AF"><span class="toc-number">3.14.2.</span> <span class="toc-text">25.2 llama-deploy 的思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#25-3-Human-in-the-loop"><span class="toc-number">3.14.3.</span> <span class="toc-text">25.3 Human-in-the-loop</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#25-%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">3.15.</span> <span class="toc-text">25. 核心结论</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记">《CS294-196 24fall Lecture3》课堂笔记</a><time datetime="2026-07-12T14:02:09.000Z" title="发表于 2026-07-12 22:02:09">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记">《CS294-196 24fall Lecture2》课堂笔记</a><time datetime="2026-07-12T08:16:01.000Z" title="发表于 2026-07-12 16:16:01">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记">《CS294-196 24fall Lecture1》课堂笔记</a><time datetime="2026-07-12T05:37:19.000Z" title="发表于 2026-07-12 13:37:19">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记">《CS294-196 25fall Lecture3》课堂笔记</a><time datetime="2026-07-11T14:28:47.000Z" title="发表于 2026-07-11 22:28:47">2026-07-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记">《CS294-196 25fall Lecture2》课堂笔记</a><time datetime="2026-07-11T11:30:07.000Z" title="发表于 2026-07-11 19:30:07">2026-07-11</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
