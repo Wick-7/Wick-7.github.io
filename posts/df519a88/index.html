@@ -1,0 +1,1031 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 24fall Lecture5》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Compound AI Systems &amp; DSPy Framework1. 课程主线现在使用大语言模型快速搭建一个令人印象深刻的 Demo 已经非常容易，但将一个单体语言模型（Monolithic LM）变成可靠、可控、可调试、可持续改进的 AI 系统仍然很困难。 这节课的核心观点是：  与其把所有任务都交给一个黑盒 LM，不如把系统写成一个由多个专门模块组成的程序，并进一步让这些模块的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 24fall Lecture5》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/df519a88/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Compound AI Systems &amp; DSPy Framework1. 课程主线现在使用大语言模型快速搭建一个令人印象深刻的 Demo 已经非常容易，但将一个单体语言模型（Monolithic LM）变成可靠、可控、可调试、可持续改进的 AI 系统仍然很困难。 这节课的核心观点是：  与其把所有任务都交给一个黑盒 LM，不如把系统写成一个由多个专门模块组成的程序，并进一步让这些模块的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-14T04:11:39.000Z">
+<meta property="article:modified_time" content="2026-07-14T04:57:22.320Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Compound-AI">
+<meta property="article:tag" content="DSPy">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Prompting">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 24fall Lecture5》课堂笔记",
+  "url": "https://wick-7.github.io/posts/df519a88/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-14T04:11:39.000Z",
+  "dateModified": "2026-07-14T04:57:22.320Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/df519a88/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 24fall Lecture5》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 24fall Lecture5》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 24fall Lecture5》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-14T04:11:39.000Z" title="发表于 2026-07-14 12:11:39">2026-07-14</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-14T04:57:22.320Z" title="更新于 2026-07-14 12:57:22">2026-07-14</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Compound-AI-Systems-DSPy-Framework"><a href="#Compound-AI-Systems-DSPy-Framework" class="headerlink" title="Compound AI Systems &amp; DSPy Framework"></a>Compound AI Systems &amp; DSPy Framework</h1><h2 id="1-课程主线"><a href="#1-课程主线" class="headerlink" title="1. 课程主线"></a>1. 课程主线</h2><p>现在使用大语言模型快速搭建一个令人印象深刻的 Demo 已经非常容易，但将一个单体语言模型（Monolithic LM）变成<strong>可靠、可控、可调试、可持续改进的 AI 系统</strong>仍然很困难。</p>
+<p>这节课的核心观点是：</p>
+<blockquote>
+<p>与其把所有任务都交给一个黑盒 LM，不如把系统写成一个由多个专门模块组成的程序，并进一步让这些模块的提示词、示例乃至模型权重根据任务指标自动优化。</p>
+</blockquote>
+<p>这对应两个重要概念：</p>
+<ol>
+<li><strong>Compound AI System</strong>：使用 LM 作为专门组件的模块化程序。</li>
+<li><strong>DSPy</strong>：以声明式方式编写 LM 程序，并通过 Optimizer 将程序编译为适配具体模型和任务的高质量实现。</li>
+</ol>
+<hr>
+<h2 id="Part-I：为什么需要-Compound-AI-Systems"><a href="#Part-I：为什么需要-Compound-AI-Systems" class="headerlink" title="Part I：为什么需要 Compound AI Systems"></a>Part I：为什么需要 Compound AI Systems</h2><h2 id="2-单体-LM-的问题"><a href="#2-单体-LM-的问题" class="headerlink" title="2. 单体 LM 的问题"></a>2. 单体 LM 的问题</h2><p>语言模型的流畅性既是优势，也是风险来源。模型即使产生了错误答案或有 Bug 的代码，也可能表现得非常自信，使错误难以被发现。</p>
+<p>所有 AI 系统都会犯错，真正的问题在于：单体 LM 的内部行为高度耦合，因此很难完成以下工作：</p>
+<ul>
+<li><strong>Control</strong>：约束系统以规定方式执行任务；</li>
+<li><strong>Debug</strong>：定位错误来自知识、推理、检索还是工具调用；</li>
+<li><strong>Improve</strong>：只修改系统中的一个局部组件；</li>
+<li><strong>Attribute</strong>：解释答案依据了什么信息；</li>
+<li><strong>Scale computation</strong>：在测试时系统化地投入更多计算。</li>
+</ul>
+<p>如果系统只是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">User Input → Large Language Model → Final Answer</span><br></pre></td></tr></table></figure>
+
+<p>开发者通常只能不断修改一整段 Prompt，或者等待更强的新模型发布。</p>
+<hr>
+<h2 id="3-Compound-AI-System-的定义"><a href="#3-Compound-AI-System-的定义" class="headerlink" title="3. Compound AI System 的定义"></a>3. Compound AI System 的定义</h2><p><strong>Compound AI Systems</strong> 是将 LM 作为专门组件使用的模块化程序：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Input</span><br><span class="line">  ↓</span><br><span class="line">多个 LM / Retriever / Tool / Verifier / Ranker 模块</span><br><span class="line">  ↓</span><br><span class="line">程序控制流</span><br><span class="line">  ↓</span><br><span class="line">Output</span><br></pre></td></tr></table></figure>
+
+<p>其中，LM 不再直接等价于整个应用，而可能只负责：</p>
+<ul>
+<li>生成检索 Query；</li>
+<li>对问题进行分解；</li>
+<li>根据证据生成答案；</li>
+<li>调用工具；</li>
+<li>检查事实；</li>
+<li>对多个候选结果排序；</li>
+<li>反思并修正答案。</li>
+</ul>
+<p>系统能力来自<strong>模型能力与程序结构的组合</strong>。</p>
+<hr>
+<h2 id="4-Compound-AI-Systems-的典型例子"><a href="#4-Compound-AI-Systems-的典型例子" class="headerlink" title="4. Compound AI Systems 的典型例子"></a>4. Compound AI Systems 的典型例子</h2><h3 id="4-1-Retrieval-Augmented-Generation"><a href="#4-1-Retrieval-Augmented-Generation" class="headerlink" title="4.1 Retrieval-Augmented Generation"></a>4.1 Retrieval-Augmented Generation</h3><p>单体方案：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-17-09.png"></p>
+<p>RAG 方案：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-17-33.png"></p>
+<p>RAG 带来两个直接优势：</p>
+<ul>
+<li><strong>Transparency</strong>：可以查看检索到了哪些文档，并检查答案是否有依据；</li>
+<li><strong>Efficiency</strong>：不再要求 LM 将全部知识存储在参数中，可以把知识交给外部语料库。</li>
+</ul>
+<p>如果答案错误，可以进一步判断：</p>
+<ul>
+<li>Retriever 找错了材料；</li>
+<li>Retriever 找对了材料，但 LM 推理错误；</li>
+<li>LM 忽略了相关证据；</li>
+<li>证据本身不充分或存在冲突。</li>
+</ul>
+<p>这种可分解性是单体 LM 难以提供的。</p>
+<hr>
+<h3 id="4-2-Multi-Hop-RAG"><a href="#4-2-Multi-Hop-RAG" class="headerlink" title="4.2 Multi-Hop RAG"></a>4.2 Multi-Hop RAG</h3><p>某些问题不能通过一次检索回答。例如：</p>
+<blockquote>
+<p>David Gregory 继承的城堡有多少层？</p>
+</blockquote>
+<p>系统可能需要：</p>
+<ol>
+<li>先检索 David Gregory 继承了哪座城堡；</li>
+<li>得到城堡名称；</li>
+<li>再检索该城堡有多少层；</li>
+<li>根据多条证据生成最终答案。</li>
+</ol>
+<p>因此系统可以写成循环：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-19-34.png"></p>
+<p>这种结构使开发者能够明确控制：</p>
+<ul>
+<li>检索多少步；</li>
+<li>每步取多少文档；</li>
+<li>什么情况下停止；</li>
+<li>如何压缩已有证据；</li>
+<li>最终答案必须满足哪些约束。</li>
+</ul>
+<hr>
+<h3 id="4-3-Compositional-Report-Generation"><a href="#4-3-Compositional-Report-Generation" class="headerlink" title="4.3 Compositional Report Generation"></a>4.3 Compositional Report Generation</h3><p>以 STORM 为例，生成一篇带引用、类似 Wikipedia 的长文章，可以被拆解为：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-20-11.png"></p>
+<p>相比让一个 LM 一次性“写一篇完整报告”，每个模块的任务范围更明确，因而更容易获得稳定结果。</p>
+<hr>
+<h3 id="4-4-Inference-Time-Scaling"><a href="#4-4-Inference-Time-Scaling" class="headerlink" title="4.4 Inference-Time Scaling"></a>4.4 Inference-Time Scaling</h3><p><img src="/img/posts/df519a88/2026-07-14-12-21-08.png"></p>
+<p>Compound AI Systems 还允许在推理阶段投入更多计算，例如：</p>
+<ul>
+<li>Best-of-N；</li>
+<li>Chain-of-Thought；</li>
+<li>Program-of-Thought；</li>
+<li>ReAct；</li>
+<li>Reflexion；</li>
+<li>多候选生成与排序；</li>
+<li>测试、执行、反思、修改代码。</li>
+</ul>
+<p>以 AlphaCodium 一类代码生成系统为例，它不会只调用一次 LM，而是可能：</p>
+<ol>
+<li>分析题目；</li>
+<li>分析公开测试；</li>
+<li>生成多个方案；</li>
+<li>生成额外测试；</li>
+<li>执行候选代码；</li>
+<li>根据运行结果反思；</li>
+<li>迭代得到最终答案。</li>
+</ol>
+<p>这里的关键不是单次调用的模型突然更强，而是系统能够<strong>有组织地搜索更好的输出</strong>。</p>
+<hr>
+<h2 id="5-为什么使用-Compound-AI-Systems"><a href="#5-为什么使用-Compound-AI-Systems" class="headerlink" title="5. 为什么使用 Compound AI Systems"></a>5. 为什么使用 Compound AI Systems</h2><p>课程总结了五个核心理由：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-21-55.png"></p>
+<p>但模块化系统也引出了新的问题：<strong>每个模块究竟应该怎样 Prompt？</strong></p>
+<hr>
+<h2 id="Part-II：现有-Prompt-based-系统的问题"><a href="#Part-II：现有-Prompt-based-系统的问题" class="headerlink" title="Part II：现有 Prompt-based 系统的问题"></a>Part II：现有 Prompt-based 系统的问题</h2><h2 id="6-“Stringly-Typed”-Compound-AI-Systems"><a href="#6-“Stringly-Typed”-Compound-AI-Systems" class="headerlink" title="6. “Stringly-Typed” Compound AI Systems"></a>6. “Stringly-Typed” Compound AI Systems</h2><p>许多系统在架构图上非常模块化，但在代码内部仍依赖几千甚至上万 Token 的手写 Prompt。</p>
+<p>一个 Prompt 往往同时耦合了五种本应独立的职责：</p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Signature</strong></td>
+<td>定义模块的核心输入到输出行为</td>
+</tr>
+<tr>
+<td><strong>Predictor</strong></td>
+<td>定义实现该行为所采用的推理策略</td>
+</tr>
+<tr>
+<td><strong>Adapter</strong></td>
+<td>负责输入格式化、输出解析和类型转换</td>
+</tr>
+<tr>
+<td><strong>Metrics &#x2F; Assertions</strong></td>
+<td>定义任务目标、约束和正确性标准</td>
+</tr>
+<tr>
+<td><strong>Optimizer</strong></td>
+<td>找到适合某个模型和任务的指令、示例或权重</td>
+</tr>
+</tbody></table>
+<p>例如，一段 Prompt 可能同时描述：</p>
+<ul>
+<li>输入字段是什么；</li>
+<li>输出格式是什么；</li>
+<li>应该逐步思考；</li>
+<li>可以使用哪些工具；</li>
+<li>不允许产生哪些内容；</li>
+<li>必须如何引用；</li>
+<li>遇到格式错误时如何重试；</li>
+<li>给出哪些 few-shot examples；</li>
+<li>使用什么措辞才能让某个特定模型表现更好。</li>
+</ul>
+<p>这种实现被称为过于 <strong>stringly-typed</strong>：</p>
+<blockquote>
+<p>系统的核心架构与具体 Prompt 措辞、模型习惯、数据集细节和格式约定混在了一起。</p>
+</blockquote>
+<p>后果包括：</p>
+<ul>
+<li>更换模型后，原 Prompt 可能失效；</li>
+<li>增加一个模块后，需要重新调整整个 Prompt Chain；</li>
+<li>更换任务指标后，旧 Prompt 不再合适；</li>
+<li>论文中的 Prompt 难以迁移到真实业务；</li>
+<li>开发过程依赖大量不可复现的手工试错。</li>
+</ul>
+<hr>
+<h2 id="7-从-Prompt-Engineering-转向-Programming"><a href="#7-从-Prompt-Engineering-转向-Programming" class="headerlink" title="7. 从 Prompt Engineering 转向 Programming"></a>7. 从 Prompt Engineering 转向 Programming</h2><p>课程提出一个类比：</p>
+<ul>
+<li>高级程序语言描述“程序要做什么”；</li>
+<li>编译器根据底层硬件生成具体机器代码；</li>
+<li>开发者不需要为每种 CPU 手写汇编。</li>
+</ul>
+<p>同理，LM 系统也可以：</p>
+<ol>
+<li>用高层抽象描述系统结构与模块行为；</li>
+<li>通过 Optimizer 针对具体 LM、数据与指标生成合适的 Prompt 或权重；</li>
+<li>在更换模型时重新编译，而不是重写整个系统。</li>
+</ol>
+<p>这就是 DSPy 的基本愿景：</p>
+<blockquote>
+<p>将 Compound AI Systems 表示为普通程序，其中包含具有模糊自然语言类型、能够从数据中学习行为的模块。</p>
+</blockquote>
+<hr>
+<h2 id="Part-III：DSPy-的核心抽象"><a href="#Part-III：DSPy-的核心抽象" class="headerlink" title="Part III：DSPy 的核心抽象"></a>Part III：DSPy 的核心抽象</h2><h2 id="8-什么是-LM-Program"><a href="#8-什么是-LM-Program" class="headerlink" title="8. 什么是 LM Program"></a>8. 什么是 LM Program</h2><p>设一个 LM 程序为：</p>
+<p>$$
+\Phi:\mathcal{X}\rightarrow\mathcal{Y},
+$$</p>
+<p>其中输入与输出都可以是自然语言对象。</p>
+<p>程序执行过程中会调用若干 LM 模块：</p>
+<p>$$
+M_1,M_2,\ldots,M_{|M|}.
+$$</p>
+<p>每个模块可以写成：</p>
+<p>$$
+M_i:\mathcal{X}_i\rightarrow\mathcal{Y}_i,
+$$</p>
+<p>并通过自然语言定义：</p>
+<ul>
+<li>可选的子任务描述；</li>
+<li>输入字段及其语义；</li>
+<li>输出字段及其语义。</li>
+</ul>
+<p>与普通 Python 函数不同，这些模块并没有完全确定的实现。其具体行为需要由 Adapter、Predictor 和 Optimizer 转化为 LM 调用。</p>
+<hr>
+<h2 id="9-Signature：描述做什么"><a href="#9-Signature：描述做什么" class="headerlink" title="9. Signature：描述做什么"></a>9. Signature：描述做什么</h2><p>Signature 只声明输入与输出行为，而不规定具体 Prompt 写法。</p>
+<p>例如：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&quot;question -&gt; answer&quot;</span></span><br><span class="line"><span class="string">&quot;context, question -&gt; query&quot;</span></span><br><span class="line"><span class="string">&quot;claims -&gt; verdicts: list[bool]&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>它们表达的是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">输入是什么 → 输出是什么</span><br></pre></td></tr></table></figure>
+
+<p>而不是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">你是一位专业助手，请仔细阅读……</span><br><span class="line">首先……</span><br><span class="line">然后……</span><br><span class="line">务必按照以下格式……</span><br></pre></td></tr></table></figure>
+
+<p>例如事实核查模块：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-30-07.png"></p>
+<p>它表示：</p>
+<ul>
+<li>输入：一组 <code>claims</code>；</li>
+<li>输出：对应的布尔判断列表 <code>verdicts</code>；</li>
+<li>使用 <code>ChainOfThought</code> 作为推理策略。</li>
+</ul>
+<p>Signature 可以看作自然语言程序中的<strong>函数接口</strong>。</p>
+<hr>
+<h2 id="10-Predictor-Module：规定如何实现-Signature"><a href="#10-Predictor-Module：规定如何实现-Signature" class="headerlink" title="10. Predictor &#x2F; Module：规定如何实现 Signature"></a>10. Predictor &#x2F; Module：规定如何实现 Signature</h2><p>Signature 描述“做什么”，Predictor 或 Module 描述“采用什么通用推理策略”。</p>
+<p>常见形式包括：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dspy.Predict(...)</span><br><span class="line">dspy.ChainOfThought(...)</span><br><span class="line">dspy.ProgramOfThought(...)</span><br></pre></td></tr></table></figure>
+
+<p>可以类比神经网络中的层：</p>
+<ul>
+<li>Signature 类似输入输出维度；</li>
+<li><code>Predict</code>、<code>ChainOfThought</code> 等类似可组合的层类型；</li>
+<li>Optimizer 则负责为这些模块寻找具体可执行参数。</li>
+</ul>
+<p>关键点是：<code>ChainOfThought</code> 不再是一段为某个任务手写的 Prompt，而成为可以作用于任意兼容 Signature 的可组合策略。</p>
+<hr>
+<h2 id="11-Adapter：在抽象与具体模型之间转换"><a href="#11-Adapter：在抽象与具体模型之间转换" class="headerlink" title="11. Adapter：在抽象与具体模型之间转换"></a>11. Adapter：在抽象与具体模型之间转换</h2><p>Adapter 负责把 Signature 和 Predictor 转换为具体模型能够处理的输入格式，并将模型输出解析回结构化字段。</p>
+<p>例如：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-33-12.png"></p>
+<p>Adapter 负责的内容包括：</p>
+<ul>
+<li>选择 Chat 或 Instruct 格式；</li>
+<li>排列输入字段；</li>
+<li>告诉模型输出哪些字段；</li>
+<li>解析结构化输出；</li>
+<li>转换类型；</li>
+<li>必要时处理格式错误。</li>
+</ul>
+<p>这个基础 Prompt 不一定已经最优，但可以作为编译和优化的起点。</p>
+<hr>
+<h2 id="12-Metric-与-Assertion"><a href="#12-Metric-与-Assertion" class="headerlink" title="12. Metric 与 Assertion"></a>12. Metric 与 Assertion</h2><p>DSPy 需要一个系统级目标判断程序表现是否良好。</p>
+<p>Metric 可以是：</p>
+<ul>
+<li>Exact Match；</li>
+<li>F1；</li>
+<li>检索是否包含目标文档；</li>
+<li>代码是否通过测试；</li>
+<li>输出是否满足格式；</li>
+<li>基于 rubric 的 LM Judge；</li>
+<li>另一个 DSPy 程序给出的评分。</li>
+</ul>
+<p>Assertion 则可用于表达系统行为约束，例如：</p>
+<ul>
+<li>答案必须有引用；</li>
+<li>Query 不得为空；</li>
+<li>生成 SQL 必须能够执行；</li>
+<li>输出不能包含不存在的页面。</li>
+</ul>
+<p>重要的是：DSPy 不要求为每个中间模块提供标签。通常只需要对最终系统输出进行评分。</p>
+<hr>
+<h2 id="13-Optimizer：编译-LM-Program"><a href="#13-Optimizer：编译-LM-Program" class="headerlink" title="13. Optimizer：编译 LM Program"></a>13. Optimizer：编译 LM Program</h2><p><img src="/img/posts/df519a88/2026-07-14-12-33-54.png"></p>
+<p>它可能优化：</p>
+<ul>
+<li>每个模块的 Instruction；</li>
+<li>每个模块的 few-shot demonstrations；</li>
+<li>模型权重；</li>
+<li>多个模块之间的组合配置。</li>
+</ul>
+<p>因此，DSPy 中的“编译”不是传统意义上的机器代码生成，而是：</p>
+<blockquote>
+<p>根据任务数据与评价指标，为声明式 LM 程序寻找更合适的执行参数。</p>
+</blockquote>
+<hr>
+<h2 id="Part-IV：Multi-Hop-RAG-的-DSPy-表示"><a href="#Part-IV：Multi-Hop-RAG-的-DSPy-表示" class="headerlink" title="Part IV：Multi-Hop RAG 的 DSPy 表示"></a>Part IV：Multi-Hop RAG 的 DSPy 表示</h2><h2 id="14-示例程序"><a href="#14-示例程序" class="headerlink" title="14. 示例程序"></a>14. 示例程序</h2><p>课件中的 Multi-Hop RAG 可以写成：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">MultiHop</span>(dspy.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="variable language_">self</span>.generate_query = dspy.ChainOfThought(</span><br><span class="line">            <span class="string">&quot;context, question -&gt; query&quot;</span></span><br><span class="line">        )</span><br><span class="line">        <span class="variable language_">self</span>.generate_answer = dspy.ChainOfThought(</span><br><span class="line">            <span class="string">&quot;context, question -&gt; answer&quot;</span></span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, question</span>):</span><br><span class="line">        context = []</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> hop <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">2</span>):</span><br><span class="line">            query = <span class="variable language_">self</span>.generate_query(</span><br><span class="line">                context=context,</span><br><span class="line">                question=question</span><br><span class="line">            ).query</span><br><span class="line"></span><br><span class="line">            context += dspy.Retrieve(k=<span class="number">3</span>)(</span><br><span class="line">                query</span><br><span class="line">            ).passages</span><br><span class="line"></span><br><span class="line">        answer = <span class="variable language_">self</span>.generate_answer(</span><br><span class="line">            context=context,</span><br><span class="line">            question=question</span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> answer</span><br></pre></td></tr></table></figure>
+
+<h3 id="14-1-init-：定义-LM-调用"><a href="#14-1-init-：定义-LM-调用" class="headerlink" title="14.1 __init__：定义 LM 调用"></a>14.1 <code>__init__</code>：定义 LM 调用</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.generate_query</span><br><span class="line"><span class="variable language_">self</span>.generate_answer</span><br></pre></td></tr></table></figure>
+
+<p>声明了系统中有哪些可学习的 LM 模块。</p>
+<h3 id="14-2-forward：定义程序控制流"><a href="#14-2-forward：定义程序控制流" class="headerlink" title="14.2 forward：定义程序控制流"></a>14.2 <code>forward</code>：定义程序控制流</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> hop <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">2</span>):</span><br></pre></td></tr></table></figure>
+
+<p>普通 Python 负责定义：</p>
+<ul>
+<li>循环；</li>
+<li>分支；</li>
+<li>异常；</li>
+<li>工具调用；</li>
+<li>模块之间的数据流。</li>
+</ul>
+<p>这部分属于稳定的<strong>系统架构</strong>。</p>
+<h3 id="14-3-Signature：定义模块职责"><a href="#14-3-Signature：定义模块职责" class="headerlink" title="14.3 Signature：定义模块职责"></a>14.3 Signature：定义模块职责</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&quot;context, question -&gt; query&quot;</span></span><br><span class="line"><span class="string">&quot;context, question -&gt; answer&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>分别表示：</p>
+<ul>
+<li>根据已有上下文和问题生成下一次检索 Query；</li>
+<li>根据最终上下文和问题生成答案。</li>
+</ul>
+<h3 id="14-4-Module：定义推理策略"><a href="#14-4-Module：定义推理策略" class="headerlink" title="14.4 Module：定义推理策略"></a>14.4 Module：定义推理策略</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dspy.ChainOfThought(...)</span><br></pre></td></tr></table></figure>
+
+<p>表示采用 Chain-of-Thought 风格实现该 Signature，但开发者不需要手写一整套 CoT Prompt。</p>
+<hr>
+<h2 id="15-为什么这个表示重要"><a href="#15-为什么这个表示重要" class="headerlink" title="15. 为什么这个表示重要"></a>15. 为什么这个表示重要</h2><p>程序结构与模块实现被分离：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">稳定部分：程序架构</span><br><span class="line">    - 两跳检索</span><br><span class="line">    - 每跳取 3 个 passages</span><br><span class="line">    - 最后统一回答</span><br><span class="line"></span><br><span class="line">可优化部分：模块行为</span><br><span class="line">    - 如何生成 Query</span><br><span class="line">    - 如何使用 Context</span><br><span class="line">    - 使用哪些 Instructions</span><br><span class="line">    - 使用哪些 Demonstrations</span><br><span class="line">    - 是否微调权重</span><br></pre></td></tr></table></figure>
+
+<p>开发者可以增加一个模块、修改循环次数或改变 Metric，然后重新编译，而不必重新人工调整所有 Prompt。</p>
+<hr>
+<h2 id="Part-V：DSPy-的优化问题"><a href="#Part-V：DSPy-的优化问题" class="headerlink" title="Part V：DSPy 的优化问题"></a>Part V：DSPy 的优化问题</h2><h2 id="16-形式化目标"><a href="#16-形式化目标" class="headerlink" title="16. 形式化目标"></a>16. 形式化目标</h2><p>对每个模块 $M_i$，需要确定：</p>
+<ol>
+<li>具体 Prompt 字符串 $\Pi_i$；</li>
+<li>可选的模型权重 $\Theta_i$。</li>
+</ol>
+<p>设训练集为：</p>
+<p>$$
+\mathcal{X}
+=
+\left\{
+(x_1,m_1),\ldots,
+(x_{|\mathcal{X}|},m_{|\mathcal{X}|})
+\right\},
+$$</p>
+<p>其中：</p>
+<ul>
+<li>$x$ 是程序输入；</li>
+<li>$m$ 是标签、提示或其他评价所需的 metadata；</li>
+<li>$\mu:\mathcal{Y}\times\mathcal{M}\rightarrow\mathbb{R}$ 是评分函数。</li>
+</ul>
+<p>DSPy 希望求解：</p>
+<p>$$
+\arg\max_{\Theta,\Pi}
+\frac{1}{|\mathcal{X}|}
+\sum_{(x,m)\in\mathcal{X}}
+\mu\left(
+\Phi_{\Theta,\Pi}(x),m
+\right).
+$$</p>
+<p>这里优化的是<strong>整个程序的最终指标</strong>，而不是要求每个中间模块都有监督信号。</p>
+<hr>
+<h2 id="17-为什么这个问题困难"><a href="#17-为什么这个问题困难" class="headerlink" title="17. 为什么这个问题困难"></a>17. 为什么这个问题困难</h2><h3 id="17-1-没有端到端梯度"><a href="#17-1-没有端到端梯度" class="headerlink" title="17.1 没有端到端梯度"></a>17.1 没有端到端梯度</h3><p>程序中可能包含：</p>
+<ul>
+<li>检索器；</li>
+<li>搜索引擎；</li>
+<li>Python 控制流；</li>
+<li>外部 API；</li>
+<li>代码执行；</li>
+<li>Calculator；</li>
+<li>非可微分工具。</li>
+</ul>
+<p>因此不能简单地像训练普通神经网络那样反向传播。</p>
+<h3 id="17-2-没有中间标签"><a href="#17-2-没有中间标签" class="headerlink" title="17.2 没有中间标签"></a>17.2 没有中间标签</h3><p>开发者通常只有最终答案标签，却不知道：</p>
+<ul>
+<li>第一次 Query 应该是什么；</li>
+<li>第二次 Query 应该是什么；</li>
+<li>哪条 Passage 最关键；</li>
+<li>中间 Reasoning 应该怎样写。</li>
+</ul>
+<p>如果每增加一个模块都需要重新人工标注中间数据，模块化开发的优势就会消失。</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-38-25.png"></p>
+<h3 id="17-3-Prompt-是巨大离散空间"><a href="#17-3-Prompt-是巨大离散空间" class="headerlink" title="17.3 Prompt 是巨大离散空间"></a>17.3 Prompt 是巨大离散空间</h3><p>所有可能字符串构成的搜索空间几乎不可穷举，且不同模块的 Prompt 会相互影响。</p>
+<h3 id="17-4-Credit-Assignment"><a href="#17-4-Credit-Assignment" class="headerlink" title="17.4 Credit Assignment"></a>17.4 Credit Assignment</h3><p>当程序最终得分变化时，需要判断：</p>
+<ul>
+<li>是 Query Generator 改善了；</li>
+<li>是 Answer Generator 改善了；</li>
+<li>是两个修改的组合有效；</li>
+<li>还是一个局部改进破坏了下游模块的假设。</li>
+</ul>
+<hr>
+<h2 id="18-课程中的优化假设"><a href="#18-课程中的优化假设" class="headerlink" title="18. 课程中的优化假设"></a>18. 课程中的优化假设</h2><p>课件主要考虑以下现实约束：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-37-08.png"></p>
+<p>课件聚焦于优化：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Instructions + Few-shot Demonstrations</span><br></pre></td></tr></table></figure>
+
+<p>但 DSPy 的统一接口同样可以扩展到模型微调。</p>
+<hr>
+<h2 id="Part-VI：DSPy-Optimizer-的通用流程"><a href="#Part-VI：DSPy-Optimizer-的通用流程" class="headerlink" title="Part VI：DSPy Optimizer 的通用流程"></a>Part VI：DSPy Optimizer 的通用流程</h2><h2 id="19-三个基本步骤"><a href="#19-三个基本步骤" class="headerlink" title="19. 三个基本步骤"></a>19. 三个基本步骤</h2><p>多数 DSPy Optimizer 可以概括为：</p>
+<h3 id="Step-1：由-Adapter-构造基础-Prompt"><a href="#Step-1：由-Adapter-构造基础-Prompt" class="headerlink" title="Step 1：由 Adapter 构造基础 Prompt"></a>Step 1：由 Adapter 构造基础 Prompt</h3><p>根据 Signature 和 Module 自动生成零样本基础实现。</p>
+<h3 id="Step-2：通过-Rejection-Sampling-生成模块示例"><a href="#Step-2：通过-Rejection-Sampling-生成模块示例" class="headerlink" title="Step 2：通过 Rejection Sampling 生成模块示例"></a>Step 2：通过 Rejection Sampling 生成模块示例</h3><p>在训练输入上执行整个程序，并记录每个模块的输入与输出 trajectory。</p>
+<p>如果最终 Metric 判断这次运行表现良好，则保留整条 trajectory。</p>
+<h3 id="Step-3：利用成功示例更新程序"><a href="#Step-3：利用成功示例更新程序" class="headerlink" title="Step 3：利用成功示例更新程序"></a>Step 3：利用成功示例更新程序</h3><p>成功轨迹可以被用于：</p>
+<ul>
+<li><strong>Automatic few-shot prompting</strong>；</li>
+<li><strong>Instruction induction</strong>；</li>
+<li><strong>Multi-stage fine-tuning</strong>。</li>
+</ul>
+<p>课件中对应的代表方法包括：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dspy.BootstrapFewShotWithRandomSearch</span><br><span class="line">dspy.MIPROv2</span><br><span class="line">dspy.BootstrapFinetune</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="Part-VII：Bootstrap-Few-Shot"><a href="#Part-VII：Bootstrap-Few-Shot" class="headerlink" title="Part VII：Bootstrap Few-Shot"></a>Part VII：Bootstrap Few-Shot</h2><h2 id="20-基本思想：从系统成功轨迹中自动构造示例"><a href="#20-基本思想：从系统成功轨迹中自动构造示例" class="headerlink" title="20. 基本思想：从系统成功轨迹中自动构造示例"></a>20. 基本思想：从系统成功轨迹中自动构造示例</h2><p>假设程序包含：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Query Generator 1</span><br><span class="line">Query Generator 2</span><br><span class="line">Answer Generator</span><br></pre></td></tr></table></figure>
+
+<p>对于一个训练问题，执行完整程序并记录：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Module 1 Input → Search Query 1</span><br><span class="line">Module 1 Input → Search Query 2</span><br><span class="line">Module 2 Input → Final Answer</span><br></pre></td></tr></table></figure>
+
+<p>如果最终答案通过 Metric，则可以把这条 trajectory 看作“曾经成功过的行为”。</p>
+<p>虽然我们没有 Query 的人工标签，但成功轨迹给出了自动生成的中间伪监督信号。</p>
+<hr>
+<h2 id="21-Bootstrap-Few-Shot-流程"><a href="#21-Bootstrap-Few-Shot-流程" class="headerlink" title="21. Bootstrap Few-Shot 流程"></a>21. Bootstrap Few-Shot 流程</h2><p><img src="/img/posts/df519a88/2026-07-14-12-40-05.png"></p>
+<p>例如 Query Generator 的一个 demonstration 可以包括：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-40-18.png"></p>
+<p>Answer Generator 则获得自己的输入输出示例。</p>
+<hr>
+<h2 id="22-为什么叫-Bootstrapping"><a href="#22-为什么叫-Bootstrapping" class="headerlink" title="22. 为什么叫 Bootstrapping"></a>22. 为什么叫 Bootstrapping</h2><p>它并不是从人工标注的中间步骤开始，而是：</p>
+<ol>
+<li>用当前不完美的程序运行任务；</li>
+<li>从其中筛出成功案例；</li>
+<li>用成功案例改善程序；</li>
+<li>改进后的程序又可能产生更好的案例。</li>
+</ol>
+<p>这是一种“系统从自身成功行为中学习”的过程。</p>
+<hr>
+<h2 id="23-Random-Search"><a href="#23-Random-Search" class="headerlink" title="23. Random Search"></a>23. Random Search</h2><p>不同成功 demonstrations 的组合效果可能差异很大。</p>
+<p>因此 <code>BootstrapFewShotWithRandomSearch</code> 会：</p>
+<ol>
+<li>生成多个 demonstration candidates；</li>
+<li>为每个模块随机选择不同的示例子集；</li>
+<li>将组合后的程序在 Validation Set 上评估；</li>
+<li>保存得分最高的配置。</li>
+</ol>
+<p>注意，单个示例能够带来的效果不是固定的。示例会与：</p>
+<ul>
+<li>其他 demonstrations；</li>
+<li>模块 Instruction；</li>
+<li>上下游模块；</li>
+<li>具体 LM</li>
+</ul>
+<p>发生交互。</p>
+<hr>
+<h2 id="24-Bootstrap-Few-Shot-的优缺点"><a href="#24-Bootstrap-Few-Shot-的优缺点" class="headerlink" title="24. Bootstrap Few-Shot 的优缺点"></a>24. Bootstrap Few-Shot 的优缺点</h2><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ul>
+<li>不需要中间人工标签；</li>
+<li>实现简单；</li>
+<li>在很多任务中收益非常明显；</li>
+<li>直接利用整个系统的成功行为；</li>
+<li>可与更强 Teacher Model、Ensemble 或后续微调组合。</li>
+</ul>
+<h3 id="局限"><a href="#局限" class="headerlink" title="局限"></a>局限</h3><ul>
+<li>成功轨迹不代表每个中间步骤都真正正确；</li>
+<li>demonstrations 的选择非常敏感；</li>
+<li>搜索过程可能对小 Validation Set 过拟合；</li>
+<li>少数示例不一定能表达复杂的条件规则。</li>
+</ul>
+<p>课程实验的一个重要结论是：</p>
+<blockquote>
+<p>在许多任务中，自动构造并选择好的 demonstrations 是最稳定、最关键的优化手段之一，即 “Show, don’t tell”。</p>
+</blockquote>
+<hr>
+<h2 id="Part-VIII：OPRO-与-Instruction-Optimization"><a href="#Part-VIII：OPRO-与-Instruction-Optimization" class="headerlink" title="Part VIII：OPRO 与 Instruction Optimization"></a>Part VIII：OPRO 与 Instruction Optimization</h2><h2 id="25-OPRO：Optimization-through-Prompting"><a href="#25-OPRO：Optimization-through-Prompting" class="headerlink" title="25. OPRO：Optimization through Prompting"></a>25. OPRO：Optimization through Prompting</h2><p>OPRO 的思想是让另一个 LM 扮演 <strong>Proposer LM</strong>：</p>
+<ol>
+<li>给它已有 Instructions 及对应分数；</li>
+<li>让它归纳哪些指令效果更好；</li>
+<li>提议新的 Instruction；</li>
+<li>评估新 Instruction；</li>
+<li>将结果加入历史并继续迭代。</li>
+</ol>
+<p><img src="/img/posts/df519a88/2026-07-14-12-41-33.png"></p>
+<p>可以将其理解为让 LM 在离散 Prompt 空间中进行迭代搜索。</p>
+<hr>
+<h2 id="26-将-OPRO-扩展到多模块程序"><a href="#26-将-OPRO-扩展到多模块程序" class="headerlink" title="26. 将 OPRO 扩展到多模块程序"></a>26. 将 OPRO 扩展到多模块程序</h2><h3 id="26-1-Coordinate-Ascent-OPRO"><a href="#26-1-Coordinate-Ascent-OPRO" class="headerlink" title="26.1 Coordinate-Ascent OPRO"></a>26.1 Coordinate-Ascent OPRO</h3><p><img src="/img/posts/df519a88/2026-07-14-12-43-31.png"></p>
+<p>最直接的方法是坐标上升：</p>
+<ol>
+<li>固定其他模块；</li>
+<li>只优化模块 1；</li>
+<li>选择模块 1 的最佳指令并固定；</li>
+<li>再优化模块 2；</li>
+<li>循环执行。</li>
+</ol>
+<p>问题在于：</p>
+<ul>
+<li>每评估一个局部候选，都必须运行整个程序；</li>
+<li>计算开销高；</li>
+<li>贪心地固定局部最优不一定得到全局最优；</li>
+<li>模块之间存在强交互。</li>
+</ul>
+<p>课件将其复杂度概括为较昂贵的：</p>
+<p>$$
+O(ND^2M),
+$$</p>
+<p>其中具体变量含义取决于搜索设置，但核心含义是：模块数、候选数和评估成本会快速放大总体开销。</p>
+<hr>
+<h3 id="26-2-Module-Level-OPRO"><a href="#26-2-Module-Level-OPRO" class="headerlink" title="26.2 Module-Level OPRO"></a>26.2 Module-Level OPRO</h3><p><img src="/img/posts/df519a88/2026-07-14-12-44-16.png"></p>
+<p>另一种做法是放弃显式逐模块 Credit Assignment，直接并行或联合修改多个模块的 Instructions。</p>
+<p>优点：</p>
+<ul>
+<li>比坐标上升便宜；</li>
+<li>能尝试联合改变多个模块。</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>Proposer LM 面临更复杂的提案任务；</li>
+<li>不容易知道最终提升应归因于哪个模块；</li>
+<li>如果缺少上下文，模型可能提出与程序角色不匹配的指令。</li>
+</ul>
+<hr>
+<h2 id="27-Grounding-Instruction-Proposals"><a href="#27-Grounding-Instruction-Proposals" class="headerlink" title="27. Grounding Instruction Proposals"></a>27. Grounding Instruction Proposals</h2><p>仅把一个模糊 Signature 交给 Proposer LM 通常不够。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">context, question -&gt; query</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>query</code> 可能是：</p>
+<ul>
+<li>Web Search Query；</li>
+<li>SQL Query；</li>
+<li>向量数据库 Query；</li>
+<li>某个本地 Retriever 的 Query。</li>
+</ul>
+<p>要生成高质量 Instruction，Proposer 必须理解模块在整个程序中的真实职责。</p>
+<p>课件提出将以下信息作为 Grounding：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-45-32.png"></p>
+<h3 id="27-1-Instruction-与分数历史"><a href="#27-1-Instruction-与分数历史" class="headerlink" title="27.1 Instruction 与分数历史"></a>27.1 Instruction 与分数历史</h3><p>让 Proposer 观察：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Instruction A → Score</span><br><span class="line">Instruction B → Score</span><br><span class="line">Instruction C → Score</span><br></pre></td></tr></table></figure>
+
+<p>以归纳有效模式。</p>
+<h3 id="27-2-Bootstrapped-Demonstrations"><a href="#27-2-Bootstrapped-Demonstrations" class="headerlink" title="27.2 Bootstrapped Demonstrations"></a>27.2 Bootstrapped Demonstrations</h3><p>提供该模块过去成功的输入输出轨迹，使 Proposer 看到实际任务行为。</p>
+<h3 id="27-3-Dataset-Summary"><a href="#27-3-Dataset-Summary" class="headerlink" title="27.3 Dataset Summary"></a>27.3 Dataset Summary</h3><p>用 LM 汇总训练数据的整体特征，例如：</p>
+<ul>
+<li>是否是事实型问答；</li>
+<li>问题覆盖哪些主题；</li>
+<li>输出偏向简短答案还是详细解释；</li>
+<li>是否存在特殊规则。</li>
+</ul>
+<h3 id="27-4-Program-Summary"><a href="#27-4-Program-Summary" class="headerlink" title="27.4 Program Summary"></a>27.4 Program Summary</h3><p>让 LM 阅读程序代码并总结：</p>
+<ul>
+<li>整体任务是什么；</li>
+<li>系统有多少阶段；</li>
+<li>当前模块位于哪里；</li>
+<li>当前模块的输出将被谁使用。</li>
+</ul>
+<h3 id="27-5-Proposal-Tips"><a href="#27-5-Proposal-Tips" class="headerlink" title="27.5 Proposal Tips"></a>27.5 Proposal Tips</h3><p>加入用于提高候选多样性的元提示，例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Be creative.</span><br><span class="line">Keep the instruction clear and concise.</span><br><span class="line">Make the instruction informative and descriptive.</span><br></pre></td></tr></table></figure>
+
+<p>这些内容由优化器统一管理，不需要每位应用开发者重复手写。</p>
+<hr>
+<h2 id="Part-IX：MIPRO"><a href="#Part-IX：MIPRO" class="headerlink" title="Part IX：MIPRO"></a>Part IX：MIPRO</h2><h2 id="28-MIPRO-的目标"><a href="#28-MIPRO-的目标" class="headerlink" title="28. MIPRO 的目标"></a>28. MIPRO 的目标</h2><p><strong>MIPRO</strong>：Multi-prompt Instruction PRoposal Optimizer。</p>
+<p>它试图同时解决：</p>
+<ol>
+<li><strong>Prompt Proposal</strong>：如何提出高质量 Instructions；</li>
+<li><strong>Credit Assignment</strong>：如何判断跨模块配置中的哪些选择有效；</li>
+<li><strong>Joint Optimization</strong>：如何联合优化 Instructions 与 Demonstrations。</li>
+</ol>
+<hr>
+<h2 id="29-MIPRO-的三个步骤"><a href="#29-MIPRO-的三个步骤" class="headerlink" title="29. MIPRO 的三个步骤"></a>29. MIPRO 的三个步骤</h2><h3 id="Step-1：Bootstrap-Task-Demonstrations"><a href="#Step-1：Bootstrap-Task-Demonstrations" class="headerlink" title="Step 1：Bootstrap Task Demonstrations"></a>Step 1：Bootstrap Task Demonstrations</h3><p>运行当前程序，通过 Rejection Sampling 收集成功轨迹，并构造各模块的 demonstration candidates。</p>
+<h3 id="Step-2：Propose-Instruction-Candidates"><a href="#Step-2：Propose-Instruction-Candidates" class="headerlink" title="Step 2：Propose Instruction Candidates"></a>Step 2：Propose Instruction Candidates</h3><p>使用内部 LM Program 生成多个 Instruction 候选，并利用：</p>
+<ul>
+<li>Dataset Summary；</li>
+<li>Program Summary；</li>
+<li>Bootstrapped Demonstrations；</li>
+<li>历史 Instructions 与分数；</li>
+<li>Proposal Tips</li>
+</ul>
+<p>对候选生成过程进行 Grounding。</p>
+<h3 id="Step-3：Bayesian-Optimization"><a href="#Step-3：Bayesian-Optimization" class="headerlink" title="Step 3：Bayesian Optimization"></a>Step 3：Bayesian Optimization</h3><p>每个模块都有多个离散选项：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Module 1:</span><br><span class="line">  Instruction 1.A / 1.B / 1.C</span><br><span class="line">  Demo Set 1.A / 1.B / 1.C</span><br><span class="line"></span><br><span class="line">Module 2:</span><br><span class="line">  Instruction 2.A / 2.B / 2.C</span><br><span class="line">  Demo Set 2.A / 2.B / 2.C</span><br></pre></td></tr></table></figure>
+
+<p>所有组合构成巨大的离散搜索空间，不能全部穷举。</p>
+<p>MIPRO 使用 Bayesian Surrogate Model 学习：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">程序配置 → 预期任务分数</span><br></pre></td></tr></table></figure>
+
+<p>然后利用 Acquisition Function 选择更值得尝试的配置。</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-47-07.png"></p>
+<hr>
+<h2 id="30-Bayesian-Search-的迭代过程"><a href="#30-Bayesian-Search-的迭代过程" class="headerlink" title="30. Bayesian Search 的迭代过程"></a>30. Bayesian Search 的迭代过程</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">选择一组 Instructions + Demo Sets</span><br><span class="line">               ↓</span><br><span class="line">构造新的 LM Program</span><br><span class="line">               ↓</span><br><span class="line">在 Validation Minibatch 上评估</span><br><span class="line">               ↓</span><br><span class="line">得到 Score</span><br><span class="line">               ↓</span><br><span class="line">更新 Surrogate Model</span><br><span class="line">               ↓</span><br><span class="line">选择下一组更有希望的配置</span><br></pre></td></tr></table></figure>
+
+<p>为了节省成本：</p>
+<ul>
+<li>多数 Trial 只在小型 Minibatch 上评估；</li>
+<li>每隔若干 Trial 在完整 Validation Set 上评估；</li>
+<li>最终返回完整验证得分最好的程序配置。</li>
+</ul>
+<p>Surrogate Model 随着 Trial 增多逐步学习哪些模块组合更可能取得高分，因此通常比完全随机搜索更高效。</p>
+<hr>
+<h2 id="31-MIPRO-与前两种方法的关系"><a href="#31-MIPRO-与前两种方法的关系" class="headerlink" title="31. MIPRO 与前两种方法的关系"></a>31. MIPRO 与前两种方法的关系</h2><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>优化对象</th>
+<th>Proposal</th>
+<th>Credit Assignment</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bootstrap Few-Shot</td>
+<td>Demonstrations</td>
+<td>从成功轨迹中构造</td>
+<td>通过系统级 Metric 和搜索间接完成</td>
+</tr>
+<tr>
+<td>OPRO 扩展</td>
+<td>Instructions</td>
+<td>Proposer LM</td>
+<td>坐标上升或弱化显式归因</td>
+</tr>
+<tr>
+<td>MIPRO</td>
+<td>Instructions + Demonstrations</td>
+<td>Grounded LM Program</td>
+<td>Bayesian Surrogate Model</td>
+</tr>
+</tbody></table>
+<p>MIPRO 不是只让 LM 猜一个“更好的 Prompt”，而是把候选生成与组合搜索分开：</p>
+<ul>
+<li>LM 擅长提出自然语言候选；</li>
+<li>Bayesian Optimization 擅长在有限预算下搜索离散组合。</li>
+</ul>
+<hr>
+<h2 id="Part-X：实验结果与经验结论"><a href="#Part-X：实验结果与经验结论" class="headerlink" title="Part X：实验结果与经验结论"></a>Part X：实验结果与经验结论</h2><h2 id="32-Multi-Hop-QA-示例"><a href="#32-Multi-Hop-QA-示例" class="headerlink" title="32. Multi-Hop QA 示例"></a>32. Multi-Hop QA 示例</h2><p>课件在 HotPotQA 风格的 Multi-Hop RAG 上给出了结果：</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-48-42.png"></p>
+<p>这个表格体现了两个独立的提升来源：</p>
+<ol>
+<li><strong>程序架构更好</strong>：Direct Prediction → RAG → Multi-Hop；</li>
+<li><strong>同一架构被更好地编译</strong>：Unoptimized → Optimized。</li>
+</ol>
+<p>因此不能只比较底层模型，还应同时考虑：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Model × Program Architecture × Optimization</span><br></pre></td></tr></table></figure>
+
+<p>课件还展示了：使用 <code>BootstrapFinetune</code> 从约 200 个答案开始，可以把 MultiHop 程序编译进较小的 T5-770M，并取得有竞争力的结果。</p>
+<p>其含义不是“小模型天然优于大模型”，而是：</p>
+<blockquote>
+<p>一个经过任务化程序设计与优化的小模型系统，可能超过结构简单、未经优化的大模型调用。</p>
+</blockquote>
+<hr>
+<h2 id="33-LangProBe-中的主要发现"><a href="#33-LangProBe-中的主要发现" class="headerlink" title="33. LangProBe 中的主要发现"></a>33. LangProBe 中的主要发现</h2><h3 id="33-1-Instruction-Optimization-通常有效"><a href="#33-1-Instruction-Optimization-通常有效" class="headerlink" title="33.1 Instruction Optimization 通常有效"></a>33.1 Instruction Optimization 通常有效</h3><p><img src="/img/posts/df519a88/2026-07-14-12-51-04.png"></p>
+<p>相比 Adapter 自动生成的基础 Signature Prompt，优化 Instructions 经常能够提升结果。</p>
+<p>但：</p>
+<ul>
+<li>并不存在对所有任务都最好的 Instruction Proposal 方法；</li>
+<li>在数据很少时可能过拟合；</li>
+<li>只优化 Instructions 的收益并不总是稳定。</li>
+</ul>
+<h3 id="33-2-Bootstrapped-Demonstrations-非常关键"><a href="#33-2-Bootstrapped-Demonstrations-非常关键" class="headerlink" title="33.2 Bootstrapped Demonstrations 非常关键"></a>33.2 Bootstrapped Demonstrations 非常关键</h3><p><img src="/img/posts/df519a88/2026-07-14-12-51-24.png"></p>
+<p>优化 demonstrations 往往带来更明显、更稳定的提升。</p>
+<p><img src="/img/posts/df519a88/2026-07-14-12-51-43.png"></p>
+<p>不同 demonstration sets 即使来自相同的 Bootstrapping 流程，效果也可能差异巨大：</p>
+<ul>
+<li>某些组合低于 Zero-shot；</li>
+<li>某些组合显著超过基础系统。</li>
+</ul>
+<p>为什么不同 demonstrations 会产生如此大的差异，仍是值得研究的问题。</p>
+<h3 id="33-3-MIPRO-经常最有效"><a href="#33-3-MIPRO-经常最有效" class="headerlink" title="33.3 MIPRO 经常最有效"></a>33.3 MIPRO 经常最有效</h3><p><img src="/img/posts/df519a88/2026-07-14-12-51-58.png"></p>
+<p>同时优化：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Instructions + Demonstrations</span><br></pre></td></tr></table></figure>
+
+<p>通常比只优化其中一项更强。</p>
+<h3 id="33-4-条件规则多时-Instruction-更重要"><a href="#33-4-条件规则多时-Instruction-更重要" class="headerlink" title="33.4 条件规则多时 Instruction 更重要"></a>33.4 条件规则多时 Instruction 更重要</h3><p><img src="/img/posts/df519a88/2026-07-14-12-52-13.png"></p>
+<p>当任务包含多个相互隔离的条件规则时，少量 demonstrations 很难完整覆盖所有情形。</p>
+<p>例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">若满足条件 A，执行规则 1；</span><br><span class="line">若满足条件 B，执行规则 2；</span><br><span class="line">超过阈值 T 后采用规则 3；</span><br><span class="line">其他情况采用规则 4。</span><br></pre></td></tr></table></figure>
+
+<p>几个示例未必能够明确表达：</p>
+<ul>
+<li>所有规则；</li>
+<li>精确阈值；</li>
+<li>每个规则的适用范围。</li>
+</ul>
+<p>这时自然语言 Instruction 更适合显式描述完整规则，因此 Instruction Optimization 的收益更明显。</p>
+<hr>
+<h2 id="Part-XI：如何理解-DSPy"><a href="#Part-XI：如何理解-DSPy" class="headerlink" title="Part XI：如何理解 DSPy"></a>Part XI：如何理解 DSPy</h2><h2 id="34-DSPy-不是简单的-Prompt-Template-Library"><a href="#34-DSPy-不是简单的-Prompt-Template-Library" class="headerlink" title="34. DSPy 不是简单的 Prompt Template Library"></a>34. DSPy 不是简单的 Prompt Template Library</h2><p>DSPy 的重点不是把 Prompt 放进更整洁的字符串模板，而是分离：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Task Interface       → Signature</span><br><span class="line">Inference Strategy   → Module / Predictor</span><br><span class="line">Serialization        → Adapter</span><br><span class="line">Objective            → Metric / Assertion</span><br><span class="line">Task Adaptation       → Optimizer</span><br><span class="line">System Architecture  → Python Program</span><br></pre></td></tr></table></figure>
+
+<p>如果只是把长 Prompt 写进一个类，却没有分离这些职责，仍然没有解决 portability 和 optimization 的问题。</p>
+<hr>
+<h2 id="35-DSPy-与神经网络编程的类比"><a href="#35-DSPy-与神经网络编程的类比" class="headerlink" title="35. DSPy 与神经网络编程的类比"></a>35. DSPy 与神经网络编程的类比</h2><table>
+<thead>
+<tr>
+<th>神经网络</th>
+<th>DSPy &#x2F; LM Program</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tensor Shape</td>
+<td>Signature</td>
+</tr>
+<tr>
+<td>Layer</td>
+<td>Predictor &#x2F; Module</td>
+</tr>
+<tr>
+<td>Forward Pass</td>
+<td>Python Program Logic</td>
+</tr>
+<tr>
+<td>Loss Function</td>
+<td>Metric</td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>DSPy Optimizer</td>
+</tr>
+<tr>
+<td>Weights</td>
+<td>Instructions、Demonstrations、LM Weights</td>
+</tr>
+<tr>
+<td>Training</td>
+<td>Compile</td>
+</tr>
+<tr>
+<td>Hardware &#x2F; Backend</td>
+<td>具体 LM 或 API</td>
+</tr>
+</tbody></table>
+<p>这个类比并不意味着 DSPy 可以直接使用梯度，而是强调相同的软件工程思想：</p>
+<blockquote>
+<p>先声明结构和目标，再由通用优化方法寻找实现参数。</p>
+</blockquote>
+<hr>
+<h2 id="36-对-Agent-的意义"><a href="#36-对-Agent-的意义" class="headerlink" title="36. 对 Agent 的意义"></a>36. 对 Agent 的意义</h2><p>Agent 本质上通常就是一种 Compound AI System：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Observe</span><br><span class="line">  ↓</span><br><span class="line">Reason / Plan</span><br><span class="line">  ↓</span><br><span class="line">Select Tool</span><br><span class="line">  ↓</span><br><span class="line">Act</span><br><span class="line">  ↓</span><br><span class="line">Read Observation</span><br><span class="line">  ↓</span><br><span class="line">Update State</span><br><span class="line">  ↓</span><br><span class="line">Repeat or Finish</span><br></pre></td></tr></table></figure>
+
+<p>Agent 开发中的许多难题都可以重新表述为 LM Program Optimization：</p>
+<ul>
+<li>Tool Selector 应如何描述工具；</li>
+<li>Planner 应输出什么结构；</li>
+<li>Memory 模块保留哪些内容；</li>
+<li>Critic 在什么情况下要求重试；</li>
+<li>哪些 demonstrations 适合某个模块；</li>
+<li>如何用最终任务成功率优化整个 trajectory。</li>
+</ul>
+<p>DSPy 的价值在于让研究重点从：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">怎样手工写一段更玄学的 Prompt？</span><br></pre></td></tr></table></figure>
+
+<p>转向：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">怎样设计更合理的程序结构、模块接口、评价指标和优化算法？</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="Part-XII：课程总结"><a href="#Part-XII：课程总结" class="headerlink" title="Part XII：课程总结"></a>Part XII：课程总结</h2><h2 id="37-Natural-Language-Programming"><a href="#37-Natural-Language-Programming" class="headerlink" title="37. Natural Language Programming"></a>37. Natural Language Programming</h2><ol>
+<li>程序化系统往往比单独使用模型更准确、更可控、更透明，有时也更高效。</li>
+<li>开发者应该描述声明式程序，而不是过早绑定具体实现细节。</li>
+<li>高层 Optimizer 可以自动构造 Prompt、Demonstrations 或模型权重。</li>
+<li>系统开发的主要精力应放在：<ul>
+<li>模块是否合理；</li>
+<li>模块如何连接；</li>
+<li>Metric 是否真正对应目标；</li>
+<li>程序架构是否适合任务。</li>
+</ul>
+</li>
+</ol>
+<p><img src="/img/posts/df519a88/2026-07-14-12-53-40.png"></p>
+<hr>
+<h2 id="38-Natural-Language-Optimization"><a href="#38-Natural-Language-Optimization" class="headerlink" title="38. Natural Language Optimization"></a>38. Natural Language Optimization</h2><ol>
+<li>在许多任务上，自动 Bootstrap 高质量 Demonstrations 非常重要：<blockquote>
+<p><strong>Show, don’t tell.</strong></p>
+</blockquote>
+</li>
+<li>在 Demonstrations 基础上生成更好的 Instructions 是可行的；</li>
+<li>当任务包含大量条件规则时，Instructions 尤其重要；</li>
+<li>高质量 Instruction Proposal 需要充分 Grounding；</li>
+<li>多模块优化需要明确、有效的 Credit Assignment；</li>
+<li>当前尚不存在适用于所有任务的最佳优化算法。</li>
+</ol>
+<hr>
+<h2 id="39-开放研究愿景"><a href="#39-开放研究愿景" class="headerlink" title="39. 开放研究愿景"></a>39. 开放研究愿景</h2><p>课程最后强调，AI 进步不应只依赖：</p>
+<ul>
+<li>更大但更不透明的单体模型；</li>
+<li>针对某个版本模型的临时 Prompt 技巧；</li>
+<li>很快失效的 ad-hoc synthetic data 方法。</li>
+</ul>
+<p>另一条开放研究路线是：</p>
+<ol>
+<li>设计边界明确的 Compound AI Programs；</li>
+<li>研究可复用的 inference-time strategies；</li>
+<li>研究通用 Predictor 和 Adapter；</li>
+<li>研究新的自然语言程序 Optimizer；</li>
+<li>通过模块化贡献，让不同研究成果可以组合。</li>
+</ol>
+<p>这种模块化研究方式类似于神经网络发展过程中，Attention、Transformer、Convolution 等组件由不同研究者分别提出，最后共同推动整个领域前进。</p>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/df519a88/">https://wick-7.github.io/posts/df519a88/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/DSPy/">DSPy</a><a class="post-meta__tags" href="/tags/Compound-AI/">Compound-AI</a><a class="post-meta__tags" href="/tags/Prompting/">Prompting</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/71390b19/" title="《CS294-196 24fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 24fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Enterprise GenAI Trends &amp; AI Agents0. 课程主线这节课不是深入讲某一种 Agent 算法，而是从企业应用视角回答三个问题：  为什么 Generative AI 在近几年快速爆发？ 企业采用大模型时，技术与产品形态正在发生什么变化？ 要把基础模型变成可用的 AI Agent，需要哪些关键组件？  课程后半部分将 Agent 应用的核心能力归纳为四块：  Fine-tuning &#x2F; 模型适配：让通用模型更适合具体任务； Distillation &#x2F; 蒸馏：把大模型能力压缩到更小、更快的模型； Grounding &#x2F; 外部知识对齐：结合 Search、RAG 和可信数据，提高事实性； Function Calling &#x2F; Tool Use：调用外部函数与系统，让模型能够执行真实动作。  可以把整节课概括为： 1234567891011Foundation Model      ↓企业选择模型与平台      ↓适配任务：Prompt / Fine-tuning / Distillation      ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Evolution of System Designs from an AI Engineer Perspective从 AI Engineer 的视角观察：  模型算法为什么仍在持续进步； 什么样的 AI 应用能够真正创造价值； 为什么 AI Infra 正在成为企业 IT 的第三大支柱； 为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。   1. Demystify “LLM” and “AGI”1.1 Chinese Typewriter Problem英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 bigram、n-gram，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。 早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。 1.2 BERT...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">这是我的个人博客</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Compound-AI-Systems-DSPy-Framework"><span class="toc-number">1.</span> <span class="toc-text">Compound AI Systems &amp; DSPy Framework</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%AF%BE%E7%A8%8B%E4%B8%BB%E7%BA%BF"><span class="toc-number">1.1.</span> <span class="toc-text">1. 课程主线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-I%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-Compound-AI-Systems"><span class="toc-number">1.2.</span> <span class="toc-text">Part I：为什么需要 Compound AI Systems</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%8D%95%E4%BD%93-LM-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.3.</span> <span class="toc-text">2. 单体 LM 的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Compound-AI-System-%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="toc-number">1.4.</span> <span class="toc-text">3. Compound AI System 的定义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Compound-AI-Systems-%E7%9A%84%E5%85%B8%E5%9E%8B%E4%BE%8B%E5%AD%90"><span class="toc-number">1.5.</span> <span class="toc-text">4. Compound AI Systems 的典型例子</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-Retrieval-Augmented-Generation"><span class="toc-number">1.5.1.</span> <span class="toc-text">4.1 Retrieval-Augmented Generation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Multi-Hop-RAG"><span class="toc-number">1.5.2.</span> <span class="toc-text">4.2 Multi-Hop RAG</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Compositional-Report-Generation"><span class="toc-number">1.5.3.</span> <span class="toc-text">4.3 Compositional Report Generation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-Inference-Time-Scaling"><span class="toc-number">1.5.4.</span> <span class="toc-text">4.4 Inference-Time Scaling</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8-Compound-AI-Systems"><span class="toc-number">1.6.</span> <span class="toc-text">5. 为什么使用 Compound AI Systems</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-II%EF%BC%9A%E7%8E%B0%E6%9C%89-Prompt-based-%E7%B3%BB%E7%BB%9F%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.7.</span> <span class="toc-text">Part II：现有 Prompt-based 系统的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E2%80%9CStringly-Typed%E2%80%9D-Compound-AI-Systems"><span class="toc-number">1.8.</span> <span class="toc-text">6. “Stringly-Typed” Compound AI Systems</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E4%BB%8E-Prompt-Engineering-%E8%BD%AC%E5%90%91-Programming"><span class="toc-number">1.9.</span> <span class="toc-text">7. 从 Prompt Engineering 转向 Programming</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-III%EF%BC%9ADSPy-%E7%9A%84%E6%A0%B8%E5%BF%83%E6%8A%BD%E8%B1%A1"><span class="toc-number">1.10.</span> <span class="toc-text">Part III：DSPy 的核心抽象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E4%BB%80%E4%B9%88%E6%98%AF-LM-Program"><span class="toc-number">1.11.</span> <span class="toc-text">8. 什么是 LM Program</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Signature%EF%BC%9A%E6%8F%8F%E8%BF%B0%E5%81%9A%E4%BB%80%E4%B9%88"><span class="toc-number">1.12.</span> <span class="toc-text">9. Signature：描述做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-Predictor-Module%EF%BC%9A%E8%A7%84%E5%AE%9A%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0-Signature"><span class="toc-number">1.13.</span> <span class="toc-text">10. Predictor &#x2F; Module：规定如何实现 Signature</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-Adapter%EF%BC%9A%E5%9C%A8%E6%8A%BD%E8%B1%A1%E4%B8%8E%E5%85%B7%E4%BD%93%E6%A8%A1%E5%9E%8B%E4%B9%8B%E9%97%B4%E8%BD%AC%E6%8D%A2"><span class="toc-number">1.14.</span> <span class="toc-text">11. Adapter：在抽象与具体模型之间转换</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-Metric-%E4%B8%8E-Assertion"><span class="toc-number">1.15.</span> <span class="toc-text">12. Metric 与 Assertion</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-Optimizer%EF%BC%9A%E7%BC%96%E8%AF%91-LM-Program"><span class="toc-number">1.16.</span> <span class="toc-text">13. Optimizer：编译 LM Program</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-IV%EF%BC%9AMulti-Hop-RAG-%E7%9A%84-DSPy-%E8%A1%A8%E7%A4%BA"><span class="toc-number">1.17.</span> <span class="toc-text">Part IV：Multi-Hop RAG 的 DSPy 表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-%E7%A4%BA%E4%BE%8B%E7%A8%8B%E5%BA%8F"><span class="toc-number">1.18.</span> <span class="toc-text">14. 示例程序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#14-1-init-%EF%BC%9A%E5%AE%9A%E4%B9%89-LM-%E8%B0%83%E7%94%A8"><span class="toc-number">1.18.1.</span> <span class="toc-text">14.1 __init__：定义 LM 调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-2-forward%EF%BC%9A%E5%AE%9A%E4%B9%89%E7%A8%8B%E5%BA%8F%E6%8E%A7%E5%88%B6%E6%B5%81"><span class="toc-number">1.18.2.</span> <span class="toc-text">14.2 forward：定义程序控制流</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-3-Signature%EF%BC%9A%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9D%97%E8%81%8C%E8%B4%A3"><span class="toc-number">1.18.3.</span> <span class="toc-text">14.3 Signature：定义模块职责</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#14-4-Module%EF%BC%9A%E5%AE%9A%E4%B9%89%E6%8E%A8%E7%90%86%E7%AD%96%E7%95%A5"><span class="toc-number">1.18.4.</span> <span class="toc-text">14.4 Module：定义推理策略</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%AA%E8%A1%A8%E7%A4%BA%E9%87%8D%E8%A6%81"><span class="toc-number">1.19.</span> <span class="toc-text">15. 为什么这个表示重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-V%EF%BC%9ADSPy-%E7%9A%84%E4%BC%98%E5%8C%96%E9%97%AE%E9%A2%98"><span class="toc-number">1.20.</span> <span class="toc-text">Part V：DSPy 的优化问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-%E5%BD%A2%E5%BC%8F%E5%8C%96%E7%9B%AE%E6%A0%87"><span class="toc-number">1.21.</span> <span class="toc-text">16. 形式化目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E4%B8%AA%E9%97%AE%E9%A2%98%E5%9B%B0%E9%9A%BE"><span class="toc-number">1.22.</span> <span class="toc-text">17. 为什么这个问题困难</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#17-1-%E6%B2%A1%E6%9C%89%E7%AB%AF%E5%88%B0%E7%AB%AF%E6%A2%AF%E5%BA%A6"><span class="toc-number">1.22.1.</span> <span class="toc-text">17.1 没有端到端梯度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-2-%E6%B2%A1%E6%9C%89%E4%B8%AD%E9%97%B4%E6%A0%87%E7%AD%BE"><span class="toc-number">1.22.2.</span> <span class="toc-text">17.2 没有中间标签</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-3-Prompt-%E6%98%AF%E5%B7%A8%E5%A4%A7%E7%A6%BB%E6%95%A3%E7%A9%BA%E9%97%B4"><span class="toc-number">1.22.3.</span> <span class="toc-text">17.3 Prompt 是巨大离散空间</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#17-4-Credit-Assignment"><span class="toc-number">1.22.4.</span> <span class="toc-text">17.4 Credit Assignment</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E8%AF%BE%E7%A8%8B%E4%B8%AD%E7%9A%84%E4%BC%98%E5%8C%96%E5%81%87%E8%AE%BE"><span class="toc-number">1.23.</span> <span class="toc-text">18. 课程中的优化假设</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-VI%EF%BC%9ADSPy-Optimizer-%E7%9A%84%E9%80%9A%E7%94%A8%E6%B5%81%E7%A8%8B"><span class="toc-number">1.24.</span> <span class="toc-text">Part VI：DSPy Optimizer 的通用流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-%E4%B8%89%E4%B8%AA%E5%9F%BA%E6%9C%AC%E6%AD%A5%E9%AA%A4"><span class="toc-number">1.25.</span> <span class="toc-text">19. 三个基本步骤</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-1%EF%BC%9A%E7%94%B1-Adapter-%E6%9E%84%E9%80%A0%E5%9F%BA%E7%A1%80-Prompt"><span class="toc-number">1.25.1.</span> <span class="toc-text">Step 1：由 Adapter 构造基础 Prompt</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-2%EF%BC%9A%E9%80%9A%E8%BF%87-Rejection-Sampling-%E7%94%9F%E6%88%90%E6%A8%A1%E5%9D%97%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.25.2.</span> <span class="toc-text">Step 2：通过 Rejection Sampling 生成模块示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-3%EF%BC%9A%E5%88%A9%E7%94%A8%E6%88%90%E5%8A%9F%E7%A4%BA%E4%BE%8B%E6%9B%B4%E6%96%B0%E7%A8%8B%E5%BA%8F"><span class="toc-number">1.25.3.</span> <span class="toc-text">Step 3：利用成功示例更新程序</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-VII%EF%BC%9ABootstrap-Few-Shot"><span class="toc-number">1.26.</span> <span class="toc-text">Part VII：Bootstrap Few-Shot</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#20-%E5%9F%BA%E6%9C%AC%E6%80%9D%E6%83%B3%EF%BC%9A%E4%BB%8E%E7%B3%BB%E7%BB%9F%E6%88%90%E5%8A%9F%E8%BD%A8%E8%BF%B9%E4%B8%AD%E8%87%AA%E5%8A%A8%E6%9E%84%E9%80%A0%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.27.</span> <span class="toc-text">20. 基本思想：从系统成功轨迹中自动构造示例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#21-Bootstrap-Few-Shot-%E6%B5%81%E7%A8%8B"><span class="toc-number">1.28.</span> <span class="toc-text">21. Bootstrap Few-Shot 流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#22-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AB-Bootstrapping"><span class="toc-number">1.29.</span> <span class="toc-text">22. 为什么叫 Bootstrapping</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#23-Random-Search"><span class="toc-number">1.30.</span> <span class="toc-text">23. Random Search</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#24-Bootstrap-Few-Shot-%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9"><span class="toc-number">1.31.</span> <span class="toc-text">24. Bootstrap Few-Shot 的优缺点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E7%82%B9"><span class="toc-number">1.31.1.</span> <span class="toc-text">优点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B1%80%E9%99%90"><span class="toc-number">1.31.2.</span> <span class="toc-text">局限</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-VIII%EF%BC%9AOPRO-%E4%B8%8E-Instruction-Optimization"><span class="toc-number">1.32.</span> <span class="toc-text">Part VIII：OPRO 与 Instruction Optimization</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#25-OPRO%EF%BC%9AOptimization-through-Prompting"><span class="toc-number">1.33.</span> <span class="toc-text">25. OPRO：Optimization through Prompting</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#26-%E5%B0%86-OPRO-%E6%89%A9%E5%B1%95%E5%88%B0%E5%A4%9A%E6%A8%A1%E5%9D%97%E7%A8%8B%E5%BA%8F"><span class="toc-number">1.34.</span> <span class="toc-text">26. 将 OPRO 扩展到多模块程序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#26-1-Coordinate-Ascent-OPRO"><span class="toc-number">1.34.1.</span> <span class="toc-text">26.1 Coordinate-Ascent OPRO</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#26-2-Module-Level-OPRO"><span class="toc-number">1.34.2.</span> <span class="toc-text">26.2 Module-Level OPRO</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#27-Grounding-Instruction-Proposals"><span class="toc-number">1.35.</span> <span class="toc-text">27. Grounding Instruction Proposals</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#27-1-Instruction-%E4%B8%8E%E5%88%86%E6%95%B0%E5%8E%86%E5%8F%B2"><span class="toc-number">1.35.1.</span> <span class="toc-text">27.1 Instruction 与分数历史</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-2-Bootstrapped-Demonstrations"><span class="toc-number">1.35.2.</span> <span class="toc-text">27.2 Bootstrapped Demonstrations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-3-Dataset-Summary"><span class="toc-number">1.35.3.</span> <span class="toc-text">27.3 Dataset Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-4-Program-Summary"><span class="toc-number">1.35.4.</span> <span class="toc-text">27.4 Program Summary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#27-5-Proposal-Tips"><span class="toc-number">1.35.5.</span> <span class="toc-text">27.5 Proposal Tips</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-IX%EF%BC%9AMIPRO"><span class="toc-number">1.36.</span> <span class="toc-text">Part IX：MIPRO</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#28-MIPRO-%E7%9A%84%E7%9B%AE%E6%A0%87"><span class="toc-number">1.37.</span> <span class="toc-text">28. MIPRO 的目标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#29-MIPRO-%E7%9A%84%E4%B8%89%E4%B8%AA%E6%AD%A5%E9%AA%A4"><span class="toc-number">1.38.</span> <span class="toc-text">29. MIPRO 的三个步骤</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-1%EF%BC%9ABootstrap-Task-Demonstrations"><span class="toc-number">1.38.1.</span> <span class="toc-text">Step 1：Bootstrap Task Demonstrations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-2%EF%BC%9APropose-Instruction-Candidates"><span class="toc-number">1.38.2.</span> <span class="toc-text">Step 2：Propose Instruction Candidates</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-3%EF%BC%9ABayesian-Optimization"><span class="toc-number">1.38.3.</span> <span class="toc-text">Step 3：Bayesian Optimization</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#30-Bayesian-Search-%E7%9A%84%E8%BF%AD%E4%BB%A3%E8%BF%87%E7%A8%8B"><span class="toc-number">1.39.</span> <span class="toc-text">30. Bayesian Search 的迭代过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#31-MIPRO-%E4%B8%8E%E5%89%8D%E4%B8%A4%E7%A7%8D%E6%96%B9%E6%B3%95%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">1.40.</span> <span class="toc-text">31. MIPRO 与前两种方法的关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-X%EF%BC%9A%E5%AE%9E%E9%AA%8C%E7%BB%93%E6%9E%9C%E4%B8%8E%E7%BB%8F%E9%AA%8C%E7%BB%93%E8%AE%BA"><span class="toc-number">1.41.</span> <span class="toc-text">Part X：实验结果与经验结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#32-Multi-Hop-QA-%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.42.</span> <span class="toc-text">32. Multi-Hop QA 示例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#33-LangProBe-%E4%B8%AD%E7%9A%84%E4%B8%BB%E8%A6%81%E5%8F%91%E7%8E%B0"><span class="toc-number">1.43.</span> <span class="toc-text">33. LangProBe 中的主要发现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#33-1-Instruction-Optimization-%E9%80%9A%E5%B8%B8%E6%9C%89%E6%95%88"><span class="toc-number">1.43.1.</span> <span class="toc-text">33.1 Instruction Optimization 通常有效</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#33-2-Bootstrapped-Demonstrations-%E9%9D%9E%E5%B8%B8%E5%85%B3%E9%94%AE"><span class="toc-number">1.43.2.</span> <span class="toc-text">33.2 Bootstrapped Demonstrations 非常关键</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#33-3-MIPRO-%E7%BB%8F%E5%B8%B8%E6%9C%80%E6%9C%89%E6%95%88"><span class="toc-number">1.43.3.</span> <span class="toc-text">33.3 MIPRO 经常最有效</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#33-4-%E6%9D%A1%E4%BB%B6%E8%A7%84%E5%88%99%E5%A4%9A%E6%97%B6-Instruction-%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="toc-number">1.43.4.</span> <span class="toc-text">33.4 条件规则多时 Instruction 更重要</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-XI%EF%BC%9A%E5%A6%82%E4%BD%95%E7%90%86%E8%A7%A3-DSPy"><span class="toc-number">1.44.</span> <span class="toc-text">Part XI：如何理解 DSPy</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#34-DSPy-%E4%B8%8D%E6%98%AF%E7%AE%80%E5%8D%95%E7%9A%84-Prompt-Template-Library"><span class="toc-number">1.45.</span> <span class="toc-text">34. DSPy 不是简单的 Prompt Template Library</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#35-DSPy-%E4%B8%8E%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B%E7%9A%84%E7%B1%BB%E6%AF%94"><span class="toc-number">1.46.</span> <span class="toc-text">35. DSPy 与神经网络编程的类比</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#36-%E5%AF%B9-Agent-%E7%9A%84%E6%84%8F%E4%B9%89"><span class="toc-number">1.47.</span> <span class="toc-text">36. 对 Agent 的意义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-XII%EF%BC%9A%E8%AF%BE%E7%A8%8B%E6%80%BB%E7%BB%93"><span class="toc-number">1.48.</span> <span class="toc-text">Part XII：课程总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#37-Natural-Language-Programming"><span class="toc-number">1.49.</span> <span class="toc-text">37. Natural Language Programming</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#38-Natural-Language-Optimization"><span class="toc-number">1.50.</span> <span class="toc-text">38. Natural Language Optimization</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#39-%E5%BC%80%E6%94%BE%E7%A0%94%E7%A9%B6%E6%84%BF%E6%99%AF"><span class="toc-number">1.51.</span> <span class="toc-text">39. 开放研究愿景</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/df519a88/" title="《CS294-196 24fall Lecture5》课堂笔记">《CS294-196 24fall Lecture5》课堂笔记</a><time datetime="2026-07-14T04:11:39.000Z" title="发表于 2026-07-14 12:11:39">2026-07-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/71390b19/" title="《CS294-196 24fall Lecture4》课堂笔记">《CS294-196 24fall Lecture4》课堂笔记</a><time datetime="2026-07-13T06:13:06.000Z" title="发表于 2026-07-13 14:13:06">2026-07-13</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记">《CS294-196 24fall Lecture3》课堂笔记</a><time datetime="2026-07-12T14:02:09.000Z" title="发表于 2026-07-12 22:02:09">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记">《CS294-196 24fall Lecture2》课堂笔记</a><time datetime="2026-07-12T08:16:01.000Z" title="发表于 2026-07-12 16:16:01">2026-07-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记">《CS294-196 24fall Lecture1》课堂笔记</a><time datetime="2026-07-12T05:37:19.000Z" title="发表于 2026-07-12 13:37:19">2026-07-12</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
