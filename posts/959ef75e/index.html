@@ -1,0 +1,935 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall Lecture6》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Multi-Agent AI：Self-Play、博弈均衡与多智能体协作0. 课程核心问题Self-play 曾推动 AlphaGo、Poker AI、Dota、StarCraft 等系统取得突破，但类似的递归式自我改进（recursive self-improvement） 尚未在 LLM 中以同样清晰、稳定的方式出现。 讲者用 AlphaGo 与 LLM 的发展路径进行类比：  Pretrai">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall Lecture6》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/959ef75e/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Multi-Agent AI：Self-Play、博弈均衡与多智能体协作0. 课程核心问题Self-play 曾推动 AlphaGo、Poker AI、Dota、StarCraft 等系统取得突破，但类似的递归式自我改进（recursive self-improvement） 尚未在 LLM 中以同样清晰、稳定的方式出现。 讲者用 AlphaGo 与 LLM 的发展路径进行类比：  Pretrai">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-18T05:30:00.000Z">
+<meta property="article:modified_time" content="2026-07-18T06:05:59.881Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Game-Theory">
+<meta property="article:tag" content="Multi-Agent">
+<meta property="article:tag" content="RL">
+<meta property="article:tag" content="Self-Play">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall Lecture6》课堂笔记",
+  "url": "https://wick-7.github.io/posts/959ef75e/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-18T05:30:00.000Z",
+  "dateModified": "2026-07-18T06:05:59.881Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/959ef75e/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall Lecture6》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">36</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture6》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture6》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-18T05:30:00.000Z" title="发表于 2026-07-18 13:30:00">2026-07-18</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-18T06:05:59.881Z" title="更新于 2026-07-18 14:05:59">2026-07-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Multi-Agent-AI：Self-Play、博弈均衡与多智能体协作"><a href="#Multi-Agent-AI：Self-Play、博弈均衡与多智能体协作" class="headerlink" title="Multi-Agent AI：Self-Play、博弈均衡与多智能体协作"></a>Multi-Agent AI：Self-Play、博弈均衡与多智能体协作</h1><h2 id="0-课程核心问题"><a href="#0-课程核心问题" class="headerlink" title="0. 课程核心问题"></a>0. 课程核心问题</h2><p>Self-play 曾推动 AlphaGo、Poker AI、Dota、StarCraft 等系统取得突破，但类似的<strong>递归式自我改进（recursive self-improvement）</strong> 尚未在 LLM 中以同样清晰、稳定的方式出现。</p>
+<p>讲者用 AlphaGo 与 LLM 的发展路径进行类比：</p>
+<ol>
+<li><p><strong>Pretrain on high-quality human data</strong></p>
+<ul>
+<li>AlphaGo：学习高质量人类棋局；</li>
+<li>LLM：在大规模互联网文本上进行 next-token prediction。</li>
+</ul>
+</li>
+<li><p><strong>Enable large-scale inference compute</strong></p>
+<ul>
+<li>AlphaGo：Monte Carlo Tree Search（MCTS）；</li>
+<li>LLM：Chain-of-Thought、test-time compute。</li>
+</ul>
+</li>
+<li><p><strong>Recursive self-improvement</strong></p>
+<ul>
+<li>AlphaGo：通过大量 self-play 不断变强；</li>
+<li>LLM：这一环节仍缺少通用而可靠的方法。</li>
+</ul>
+</li>
+</ol>
+<p>讲者的核心判断是：</p>
+<blockquote>
+<p>人们对 self-play 的直觉往往过度来自 Chess、Go 等 <strong>two-player zero-sum perfect-information games</strong>。<br>一旦进入 imperfect-information、general-sum 或需要与人类合作的环境，许多理想性质都会消失。</p>
+</blockquote>
+<p><strong>本节结论：</strong> Self-play 并不是一种脱离环境结构后仍然普遍有效的“通用自我改进算法”。它的成功高度依赖博弈类型、优化目标以及对手分布。</p>
+<hr>
+<h2 id="1-“最强玩家”到底是什么意思？"><a href="#1-“最强玩家”到底是什么意思？" class="headerlink" title="1. “最强玩家”到底是什么意思？"></a>1. “最强玩家”到底是什么意思？</h2><p>讲者首先提出一个问题：谁是更强的 Poker player？</p>
+<ul>
+<li><strong>Option 1</strong>：与任何其他玩家进行足够多次 head-to-head 对局，都能取得优势；</li>
+<li><strong>Option 2</strong>：在真实 Poker population 中，一年内赚到最多的钱。</li>
+</ul>
+<p>这两个目标分别对应：</p>
+<table>
+<thead>
+<tr>
+<th>目标</th>
+<th>含义</th>
+<th>关注点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Minimax Equilibrium</strong></td>
+<td>面对任意 best response 都不被击败</td>
+<td>最坏情况鲁棒性</td>
+</tr>
+<tr>
+<td><strong>Population Best Response</strong></td>
+<td>针对现实玩家群体获得最大收益</td>
+<td>对特定 population 的适应和利用</td>
+</tr>
+</tbody></table>
+<p>在 Chess、Go 等场景中，两者通常高度一致：最难被击败的玩家往往也是现实比赛表现最好的玩家。</p>
+<p>但在 Poker 中，两者可能不同：</p>
+<ul>
+<li>一位玩家可能非常接近均衡，面对顶尖对手也很稳健；</li>
+<li>另一位玩家可能更擅长发现普通玩家的弱点，从而赚取更多收益；</li>
+<li>后者面对几乎没有明显弱点的顶尖玩家时，反而可能稍弱。</li>
+</ul>
+<p>因此，“解决一个博弈”默认被定义为求得 minimax equilibrium，本身就是一个很强的目标假设，不一定等于真实部署时想要优化的指标。</p>
+<hr>
+<h2 id="2-Minimax-Equilibrium-与-Exploitability"><a href="#2-Minimax-Equilibrium-与-Exploitability" class="headerlink" title="2. Minimax Equilibrium 与 Exploitability"></a>2. Minimax Equilibrium 与 Exploitability</h2><h3 id="2-1-Minimax-Equilibrium"><a href="#2-1-Minimax-Equilibrium" class="headerlink" title="2.1 Minimax Equilibrium"></a>2.1 Minimax Equilibrium</h3><p>在 two-player zero-sum game 中，双方收益满足：</p>
+<p>$$
+u_1(\pi_1,\pi_2)=-u_2(\pi_1,\pi_2).
+$$</p>
+<p>Minimax value 可写为：</p>
+<p>$$
+v^*
+=
+\max_{\pi_1}\min_{\pi_2}u_1(\pi_1,\pi_2)
+=
+\min_{\pi_2}\max_{\pi_1}u_1(\pi_1,\pi_2).
+$$</p>
+<p>Minimax equilibrium 是一组策略，使任何玩家都无法通过单方面改变策略提高自己的期望收益。</p>
+<p>在 two-player zero-sum game 中，使用 minimax equilibrium 可以保证：</p>
+<blockquote>
+<p>即使对手知道我们的完整策略，也无法让我们在期望意义上输掉比赛。</p>
+</blockquote>
+<h3 id="2-2-Exploitability"><a href="#2-2-Exploitability" class="headerlink" title="2.2 Exploitability"></a>2.2 Exploitability</h3><p>Exploitability 衡量当前策略与 minimax equilibrium 的距离，即面对 best response 时会损失多少价值。</p>
+<p>对玩家 1 的固定策略 $\pi_1$，可直观写为：</p>
+<p>$$
+\operatorname{Exploitability}(\pi_1)
+=
+v^*
+-
+\min_{\pi_2}u_1(\pi_1,\pi_2).
+$$</p>
+<ul>
+<li>Exploitability 越大，策略中可被针对的弱点越明显；</li>
+<li>达到 equilibrium 时，exploitability 为 $0$。</li>
+</ul>
+<h3 id="2-3-Rock-Paper-Scissors-示例"><a href="#2-3-Rock-Paper-Scissors-示例" class="headerlink" title="2.3 Rock-Paper-Scissors 示例"></a>2.3 Rock-Paper-Scissors 示例</h3><p>若始终出 Rock：</p>
+<ul>
+<li>对手的 best response 是始终出 Paper；</li>
+<li>我方每轮都输；</li>
+<li>Exploitability 为 $1$。</li>
+</ul>
+<p>即使策略看起来更复杂，例如：</p>
+<ul>
+<li>第 1、2 轮出 Rock；</li>
+<li>第 3 轮根据历史改出 Scissors；</li>
+</ul>
+<p>只要策略规则是公开的，对手仍可构造完整的 best response，因此 exploitability 依旧可能为 $1$。</p>
+<h3 id="2-4-均衡分析中的关键假设"><a href="#2-4-均衡分析中的关键假设" class="headerlink" title="2.4 均衡分析中的关键假设"></a>2.4 均衡分析中的关键假设</h3><p>均衡分析假设：</p>
+<ul>
+<li><strong>策略本身是 common knowledge</strong>；</li>
+<li><strong>随机过程的具体结果不是 common knowledge</strong>，例如对手不知道 random seed。</li>
+</ul>
+<p>这一假设看起来很强，但对公开部署的 AI 有现实意义：当系统被大量使用时，潜在弱点最终可能被找到，因此应当假设攻击者充分了解策略结构。</p>
+<p>Rock-Paper-Scissors 的均衡策略是：</p>
+<p>$$
+\pi^*
+=
+\left(
+\frac{1}{3},
+\frac{1}{3},
+\frac{1}{3}
+\right).
+$$</p>
+<p>对手知道我们以等概率随机选择 Rock、Paper、Scissors，但不知道某一轮具体采样结果，因此最多只能与我们打平。</p>
+<h3 id="2-5-为什么-Poker-均衡仍能赚钱？"><a href="#2-5-为什么-Poker-均衡仍能赚钱？" class="headerlink" title="2.5 为什么 Poker 均衡仍能赚钱？"></a>2.5 为什么 Poker 均衡仍能赚钱？</h3><p>在 Rock-Paper-Scissors 中，对手面对均衡策略时采取很多策略都能打平，因此我们通常不会主动获得正收益。</p>
+<p>Poker 更复杂：</p>
+<ul>
+<li>有些动作本身具有 negative expected value；</li>
+<li>对手偏离均衡时会犯错并损失价值；</li>
+<li>因为是 zero-sum game，对手的损失会转化为我方收益。</li>
+</ul>
+<p>因此现实中的基本思路是：</p>
+<ol>
+<li>先使用接近 minimax equilibrium 的策略确保自身稳健；</li>
+<li>对手犯错时自然获利；</li>
+<li>长期观察到对手的稳定弱点后，再谨慎偏离均衡进行 exploit。</li>
+</ol>
+<p><strong>本节结论：</strong> Minimax 主要解决“最坏情况下不输”的问题；Population Best Response 解决“面对真实对手分布如何赢得更多”的问题。</p>
+<hr>
+<h2 id="3-Two-Player-Zero-Sum-Games-中的-Self-Play"><a href="#3-Two-Player-Zero-Sum-Games-中的-Self-Play" class="headerlink" title="3. Two-Player Zero-Sum Games 中的 Self-Play"></a>3. Two-Player Zero-Sum Games 中的 Self-Play</h2><p><img src="/img/posts/959ef75e/2026-07-18-13-44-27.png"></p>
+<p>Self-play 指 agent 通过不断与自己的副本对局而逐渐改进。</p>
+<p>在有限、平衡的 two-player zero-sum game 中，如果使用 <strong>sound self-play algorithm</strong>，则平均策略可以在理论上收敛到 minimax equilibrium。</p>
+<p>这带来一个非常强的性质：</p>
+<ul>
+<li>初始策略甚至可以完全随机；</li>
+<li>不需要人类专家数据；</li>
+<li>只要具有足够的 memory 与 compute，就可以通过 self-play 逼近不可被击败的策略。</li>
+</ul>
+<p>不过这里必须强调两个限定：</p>
+<ol>
+<li>不是任意 naive self-play 都能可靠收敛；</li>
+<li>理论上的均衡收敛不等于有限神经网络和有限算力下的实际安全。</li>
+</ol>
+<hr>
+<h2 id="4-Perfect-Information-Games：相对简单，但仍可能被利用"><a href="#4-Perfect-Information-Games：相对简单，但仍可能被利用" class="headerlink" title="4. Perfect-Information Games：相对简单，但仍可能被利用"></a>4. Perfect-Information Games：相对简单，但仍可能被利用</h2><p>在 two-player zero-sum perfect-information game 中，self-play 很接近两个独立的 single-agent RL 过程。</p>
+<p>例如使用 PPO：</p>
+<ul>
+<li>每一方都将另一方视作环境的一部分；</li>
+<li>在具有持续探索、无限容量和充分训练的理想条件下，可以收敛到 minimax。</li>
+</ul>
+<p>但实际系统仍可能被 adversarial strategy 击败，原因包括：</p>
+<ul>
+<li>神经网络只能近似 minimax policy；</li>
+<li>训练探索有限，未覆盖特殊状态；</li>
+<li>模型容量和计算资源有限；</li>
+<li><strong>寻找一个 exploit 通常比防御所有 exploit 更容易</strong>。</li>
+</ul>
+<p>课件以强 Go bot 的 adversarial policy 为例说明：系统在正常 benchmark 或常规对局中非常强，并不意味着它已经真正达到低 exploitability。</p>
+<p><strong>本节结论：</strong> 常规胜率高、平均性能强与 worst-case robust 并不是同一个目标。</p>
+<hr>
+<h2 id="5-Imperfect-Information-Games-为什么更难？"><a href="#5-Imperfect-Information-Games-为什么更难？" class="headerlink" title="5. Imperfect-Information Games 为什么更难？"></a>5. Imperfect-Information Games 为什么更难？</h2><h3 id="5-1-PPO-不保证找到正确的混合策略"><a href="#5-1-PPO-不保证找到正确的混合策略" class="headerlink" title="5.1 PPO 不保证找到正确的混合策略"></a>5.1 PPO 不保证找到正确的混合策略</h3><p><img src="/img/posts/959ef75e/2026-07-18-13-45-49.png"></p>
+<p>课件构造了一个不对称的 Rock-Paper-Scissors+，<br>其 equilibrium mixed strategy 为：</p>
+<p>$$
+\pi^*
+=
+(0.4,0.4,0.2),
+$$</p>
+<p>即：</p>
+<ul>
+<li>Rock：$40\%$；</li>
+<li>Paper：$40\%$；</li>
+<li>Scissors：$20\%$。</li>
+</ul>
+<p>PPO 并没有机制保证策略概率收敛到这一特定比例，因此在实验中会持续振荡，并被 optimal opponent exploit。</p>
+<h3 id="5-2-不完全信息的核心困难"><a href="#5-2-不完全信息的核心困难" class="headerlink" title="5.2 不完全信息的核心困难"></a>5.2 不完全信息的核心困难</h3><p>imperfect-information game 的关键性质是：</p>
+<blockquote>
+<p>一个动作的 value 不仅取决于动作本身，还取决于它被选择的概率。</p>
+</blockquote>
+<p>这与 standalone Chess&#x2F;Go 不同：</p>
+<ul>
+<li>Chess 中某个开局走法是否好，通常不强依赖其在策略中的频率；</li>
+<li>Poker 中 bluff 的价值则高度依赖 bluff frequency；</li>
+<li>bluff 太少无法获得足够收益；</li>
+<li>bluff 太多会被对手识别并频繁 call。</li>
+</ul>
+<p>所以算法必须学习的不只是：</p>
+<blockquote>
+<p>“选择哪个动作？”</p>
+</blockquote>
+<p>还必须学习：</p>
+<blockquote>
+<p>“以多大概率选择每个动作？”</p>
+</blockquote>
+<hr>
+<h2 id="6-Fictitious-Play"><a href="#6-Fictitious-Play" class="headerlink" title="6. Fictitious Play"></a>6. Fictitious Play</h2><p><img src="/img/posts/959ef75e/2026-07-18-13-47-52.png"></p>
+<p>Fictitious Play 的基本过程：</p>
+<ol>
+<li>任意初始化每个玩家的策略；</li>
+<li>第 $t+1$ 轮，每个玩家计算对手历史平均策略的 best response；</li>
+<li>使用所有历史策略的平均值作为最终策略。</li>
+</ol>
+<p>设对手在前 $t$ 轮的平均策略为：</p>
+<p>$$
+\bar{\pi}_{-i}^{(t)}
+=
+\frac{1}{t}
+\sum_{\tau=1}^{t}
+\pi_{-i}^{(\tau)}.
+$$</p>
+<p>玩家下一轮采用：</p>
+<p>$$
+\pi_i^{(t+1)}
+\in
+\operatorname{BR}
+\left(
+\bar{\pi}_{-i}^{(t)}
+\right).
+$$</p>
+<p>在 two-player zero-sum game 中，历史平均策略会收敛到 minimax equilibrium。</p>
+<p>Fictitious Play 的问题是：每轮都使用精确 best response，策略变化很激烈，收敛速度通常较慢。</p>
+<hr>
+<h2 id="7-Regret-Matching、Hedge-与-CFR"><a href="#7-Regret-Matching、Hedge-与-CFR" class="headerlink" title="7. Regret Matching、Hedge 与 CFR"></a>7. Regret Matching、Hedge 与 CFR</h2><h3 id="7-1-Regret-Matching"><a href="#7-1-Regret-Matching" class="headerlink" title="7.1 Regret Matching"></a>7.1 Regret Matching</h3><p><img src="/img/posts/959ef75e/2026-07-18-13-48-42.png"></p>
+<p>与 Fictitious Play 总是选择 exact best response 不同，Regret Matching 根据各动作的正 regret 分配概率，相当于一种 regularized best response。</p>
+<p>动作 $a$ 的累计 regret 可理解为：</p>
+<p>$$
+R_t(a)
+=
+\sum_{\tau=1}^{t}
+\left[
+u(a,\pi_{-\!i}^{(\tau)})
+-
+u(\pi_i^{(\tau)},\pi_{-\!i}^{(\tau)})
+\right].
+$$</p>
+<p>下一轮策略通常取：</p>
+<p>$$
+\pi_{t+1}(a)
+=
+\frac{[R_t(a)]_+}
+{\sum_b [R_t(b)]_+},
+$$</p>
+<p>其中：</p>
+<p>$$
+[x]_+=\max(x,0).
+$$</p>
+<p>含义是：</p>
+<ul>
+<li>regret 小于等于 $0$ 的动作不分配概率；</li>
+<li>正 regret 越大的动作，下一轮选择概率越高；</li>
+<li>不会像 exact best response 一样突然把全部概率压到单一动作上。</li>
+</ul>
+<h3 id="7-2-Hedge"><a href="#7-2-Hedge" class="headerlink" title="7.2 Hedge"></a>7.2 Hedge</h3><p>Hedge 也通过 regularization 平滑更新动作概率。它与 online learning、gradient-based optimization 存在很强的联系。</p>
+<h3 id="7-3-CFR-与-Linear-CFR"><a href="#7-3-CFR-与-Linear-CFR" class="headerlink" title="7.3 CFR 与 Linear CFR"></a>7.3 CFR 与 Linear CFR</h3><p>在 extensive-form imperfect-information game 中，可以在每个 information set 上进行 regret minimization，这构成 Counterfactual Regret Minimization（CFR）的核心思想。</p>
+<p><img src="/img/posts/959ef75e/2026-07-18-13-49-19.png"></p>
+<ul>
+<li>普通 CFR：策略概率围绕均衡持续振荡，平均策略缓慢靠近 $1/3$；</li>
+<li>Linear CFR：对后期迭代给予更大权重，明显更快稳定到均衡附近。</li>
+</ul>
+<h3 id="7-4-Libratus"><a href="#7-4-Libratus" class="headerlink" title="7.4 Libratus"></a>7.4 Libratus</h3><p>课件以 Libratus 为代表案例：</p>
+<ul>
+<li>2017 年与四位顶尖 heads-up no-limit Texas Hold’em 职业玩家对战；</li>
+<li>共进行 120,000 hands、持续 20 天；</li>
+<li>每位人类玩家都单独输给 Libratus；</li>
+<li>训练来自 self-play；</li>
+<li>未使用人类 Poker 数据；</li>
+<li>主要突破来自 imperfect-information search 与 equilibrium computation，而非 deep neural network。</li>
+</ul>
+<p>这说明：在 two-player zero-sum imperfect-information game 中，只要目标仍是 minimax equilibrium，self-play 与 regret minimization 依然非常强大。</p>
+<h3 id="7-5-传统方法的限制"><a href="#7-5-传统方法的限制" class="headerlink" title="7.5 传统方法的限制"></a>7.5 传统方法的限制</h3><p>Fictitious Play、Regret Matching、Hedge 的常见问题：</p>
+<ul>
+<li>在 single-agent RL 上表现较差；</li>
+<li>第一轮通常从随机策略开始；</li>
+<li>policy improvement 较慢；</li>
+<li>可能需要大量迭代；</li>
+<li>适合 equilibrium finding 的算法，不一定适合普通 reward maximization。</li>
+</ul>
+<h3 id="7-6-New-Last-Iterate-Algorithms"><a href="#7-6-New-Last-Iterate-Algorithms" class="headerlink" title="7.6 New Last-Iterate Algorithms"></a>7.6 New Last-Iterate Algorithms</h3><p>课件提到一些新的算法，尝试同时获得：</p>
+<ul>
+<li>single-agent RL 中的良好优化性能；</li>
+<li>multi-agent game 中向 minimax 的快速收敛。</li>
+</ul>
+<p>代表包括：</p>
+<ul>
+<li><strong>Regularized Nash Dynamics</strong>；</li>
+<li><strong>Magnetic Mirror Descent</strong>。</li>
+</ul>
+<p>其共同思路是：在类似 Hedge 的更新上，进一步加入对某个 “magnet policy” 的 regularization，改善 last-iterate behavior。</p>
+<hr>
+<h2 id="8-为什么前半部分几乎没有提到-LLM？"><a href="#8-为什么前半部分几乎没有提到-LLM？" class="headerlink" title="8. 为什么前半部分几乎没有提到 LLM？"></a>8. 为什么前半部分几乎没有提到 LLM？</h2><p>在 two-player zero-sum minimax equilibrium 中，<strong>cheap talk communication 没有价值</strong>。</p>
+<p>证明直觉如下：</p>
+<ul>
+<li>所有 minimax equilibria 都对应同一个唯一 value：</li>
+</ul>
+<p>$$
+(v_1,-v_1).
+$$</p>
+<ul>
+<li>假设 Player 1 发送一条不具有约束力的信息：<ul>
+<li>如果信息能增加 $v_1$，它必然损害 Player 2，Player 2 会忽略；</li>
+<li>如果信息会降低 $v_1$，Player 1 就不应发送；</li>
+<li>剩下的情况只有信息不改变 equilibrium value。</li>
+</ul>
+</li>
+</ul>
+<p>因此在纯 two-player zero-sum minimax setting 中，语言交流不是关键变量。</p>
+<p>LLM 的语言能力真正开始重要，是在以下场景中：</p>
+<ul>
+<li>多于两个玩家；</li>
+<li>general-sum game；</li>
+<li>合作、协商、联盟、信任；</li>
+<li>玩家需要根据对方的偏好与行为分布进行适应。</li>
+</ul>
+<hr>
+<h2 id="9-离开-Two-Player-Zero-Sum：为什么需要-Human-Data？"><a href="#9-离开-Two-Player-Zero-Sum：为什么需要-Human-Data？" class="headerlink" title="9. 离开 Two-Player Zero-Sum：为什么需要 Human Data？"></a>9. 离开 Two-Player Zero-Sum：为什么需要 Human Data？</h2><p>讲者提出了课程中最重要、也较有争议的观点：</p>
+<blockquote>
+<p>若目标是学习如何与人类合作，那么完全避免使用 human data 是一条 dead end。</p>
+</blockquote>
+<p>原因并不是 self-play 完全无法产生合作，而是：</p>
+<ul>
+<li>general-sum game 往往有多个 equilibrium；</li>
+<li>self-play 只能收敛到其中某一种约定；</li>
+<li>该约定未必与人类社会实际采用的约定兼容；</li>
+<li>如果最终评价对象是人类 population，就必须了解该 population。</li>
+</ul>
+<hr>
+<h2 id="10-Ultimatum-Game"><a href="#10-Ultimatum-Game" class="headerlink" title="10. Ultimatum Game"></a>10. Ultimatum Game</h2><p><img src="/img/posts/959ef75e/2026-07-18-13-57-17.png"></p>
+<p><strong>本节结论：</strong> 果部署目标是与人类合作，“数学上的 equilibrium” 不等于 “人类会接受的 equilibrium”。</p>
+<hr>
+<h2 id="11-Diplomacy：Self-Play-在-General-Sum-Game-中的局限"><a href="#11-Diplomacy：Self-Play-在-General-Sum-Game-中的局限" class="headerlink" title="11. Diplomacy：Self-Play 在 General-Sum Game 中的局限"></a>11. Diplomacy：Self-Play 在 General-Sum Game 中的局限</h2><h3 id="11-1-游戏特点"><a href="#11-1-游戏特点" class="headerlink" title="11.1 游戏特点"></a>11.1 游戏特点</h3><p>Diplomacy 是一个七人策略与谈判游戏：</p>
+<p><img src="/img/posts/959ef75e/2026-07-18-13-57-55.png"></p>
+<h3 id="11-2-Support-为什么关键？"><a href="#11-2-Support-为什么关键？" class="headerlink" title="11.2 Support 为什么关键？"></a>11.2 Support 为什么关键？</h3><p><img src="/img/posts/959ef75e/2026-07-18-13-58-10.png"></p>
+<p>若两个单位以 $1$ 对 $1$ 争夺同一区域，双方都会失败并退回。</p>
+<p>若一个单位获得另一单位支持，则形成 $2$ 对 $1$，可以成功进入目标区域。</p>
+<p>更重要的是，support 可以来自其他玩家，因此需要：</p>
+<ul>
+<li>请求帮助；</li>
+<li>交换利益；</li>
+<li>建立承诺；</li>
+<li>判断对方是否会真正执行；</li>
+<li>防止对方背叛。</li>
+</ul>
+<h3 id="11-3-DORA：从零开始-Self-Play"><a href="#11-3-DORA：从零开始-Self-Play" class="headerlink" title="11.3 DORA：从零开始 Self-Play"></a>11.3 DORA：从零开始 Self-Play</h3><p><img src="/img/posts/959ef75e/2026-07-18-13-58-29.png"></p>
+<p>DORA 在 no-press Diplomacy 中不使用自然语言，只通过动作进行隐式协调，并采用类似 AlphaZero 的 pure self-play。</p>
+<p>在 two-player no-press Diplomacy 中：</p>
+<p>$$
+\text{Win Rate}
+=
+86.5\%\pm6.1\%
+$$</p>
+<p>对人类专家表现出明显优势。</p>
+<p>但在 seven-player setting 中出现了 equilibrium mismatch：</p>
+<ul>
+<li><strong>1 个 SearchBot + 6 个 DORA</strong>：<ul>
+<li>SearchBot 的获胜比例约为 $1.1\%\pm0.4\%$；</li>
+</ul>
+</li>
+<li><strong>1 个 DORA + 6 个 SearchBot</strong>：<ul>
+<li>DORA 的获胜比例约为 $11.0\%\pm1.5\%$。</li>
+</ul>
+</li>
+</ul>
+<p>七人完全对称时，平均基准约为：</p>
+<p>$$
+\frac{1}{7}\approx14.3\%.
+$$</p>
+<p>这组结果意味着：</p>
+<ul>
+<li>SearchBot 在 DORA population 中表现很差；</li>
+<li>DORA 在 SearchBot population 中同样低于平均；</li>
+<li>两类 agent 各自学到了一套内部一致的 coordination convention；</li>
+<li>一旦进入另一种 population，它们便无法正确理解或利用对方。</li>
+</ul>
+<h3 id="11-4-多个-Equilibria-的问题"><a href="#11-4-多个-Equilibria-的问题" class="headerlink" title="11.4 多个 Equilibria 的问题"></a>11.4 多个 Equilibria 的问题</h3><p>在 two-player zero-sum game 中，不同训练方法只要都逼近 minimax，彼此对战通常仍能保持稳健。</p>
+<p>在 general-sum 或多玩家博弈中：</p>
+<ul>
+<li>可能存在大量互不兼容的 equilibria；</li>
+<li>self-play 的结果取决于初始化、训练群体和历史路径；</li>
+<li>“与自己的副本合作得很好”不代表“与陌生 agent 或人类合作得好”。</li>
+</ul>
+<p>因此 minimax equilibrium 在一般博弈中不再是足够有意义的部署目标。</p>
+<p>更现实的目标是：</p>
+<blockquote>
+<p><strong>Population Best Response</strong></p>
+</blockquote>
+<p>但随后必须回答：</p>
+<blockquote>
+<p>Population 到底是谁？</p>
+</blockquote>
+<ul>
+<li>其他自己的副本？</li>
+<li>某种固定 AI 群体？</li>
+<li>现实中的人类？</li>
+<li>某个特定文化或组织中的用户？</li>
+</ul>
+<p>只要目标 population 是人类，就需要关于人类的行为数据。</p>
+<hr>
+<h2 id="12-将-Humans-视为-Environment-的一部分"><a href="#12-将-Humans-视为-Environment-的一部分" class="headerlink" title="12. 将 Humans 视为 Environment 的一部分"></a>12. 将 Humans 视为 Environment 的一部分</h2><p>讲者推荐的方案分为三步。</p>
+<h3 id="Step-1：Human-Imitation-Model"><a href="#Step-1：Human-Imitation-Model" class="headerlink" title="Step 1：Human Imitation Model"></a>Step 1：Human Imitation Model</h3><p>收集大量人类行为数据，训练 imitation model：</p>
+<p>$$
+\hat{\pi}_{H}(a\mid s)
+\approx
+\pi_{H}(a\mid s).
+$$</p>
+<p>目标不是先学习“理论最优人类”，而是尽可能准确地预测：</p>
+<blockquote>
+<p>在给定状态下，真实人类会怎么做。</p>
+</blockquote>
+<h3 id="Step-2：Scale-Inference-Time-Compute-to-Better-Model-Humans"><a href="#Step-2：Scale-Inference-Time-Compute-to-Better-Model-Humans" class="headerlink" title="Step 2：Scale Inference-Time Compute to Better Model Humans"></a>Step 2：Scale Inference-Time Compute to Better Model Humans</h3><p>增加 inference-time compute，用于更准确地模拟人类：</p>
+<ul>
+<li>推测其意图；</li>
+<li>预测其行动；</li>
+<li>估计其可能接受的协作方案；</li>
+<li>建模其谈判与反应。</li>
+</ul>
+<p>这里的重点不是单纯提高 imitation model 自己的游戏分数，而是提高对 human behavior distribution 的建模质量。</p>
+<h3 id="Step-3：在人类模型环境中进行-RL"><a href="#Step-3：在人类模型环境中进行-RL" class="headerlink" title="Step 3：在人类模型环境中进行 RL"></a>Step 3：在人类模型环境中进行 RL</h3><p>将 human imitation models 作为环境中的其他玩家，再训练目标 agent：</p>
+<p>$$
+\pi_A^*
+=
+\arg\max_{\pi_A}
+\mathbb{E}_{\pi_H\sim\hat{P}_H}
+\left[
+R(\pi_A,\pi_H)
+\right].
+$$</p>
+<p>本质上是学习对 human population 的近似 best response。</p>
+<h3 id="12-1-Diplodocus"><a href="#12-1-Diplodocus" class="headerlink" title="12.1 Diplodocus"></a>12.1 Diplodocus</h3><p>采用这一思路训练的 Diplodocus：</p>
+<ul>
+<li>参加 200-game real-human no-press Diplomacy tournament；</li>
+<li>每个 bot 进行 50 局；</li>
+<li>Diplodocus-High 最终排名第 1；</li>
+<li>pure self-play 的 DORA 仅排在约第 32 名，低于平均人类水平。</li>
+</ul>
+<p>这说明：在真实 human population 中，准确建模人类行为比仅在自己的 self-play equilibrium 中变强更重要。</p>
+<h3 id="12-2-CICERO"><a href="#12-2-CICERO" class="headerlink" title="12.2 CICERO"></a>12.2 CICERO</h3><p>CICERO 被匿名投入 online natural-language Diplomacy league：</p>
+<ul>
+<li>位列玩家 top $10\%$；</li>
+<li>在至少完成 5 局的 19 位玩家中排名第 2；</li>
+<li>平均得分超过普通人类平均分的 2 倍。</li>
+</ul>
+<p>CICERO 的关键不是单纯让 LLM 进行自由聊天，而是将：</p>
+<ul>
+<li>strategic planning；</li>
+<li>human behavior modeling；</li>
+<li>natural language negotiation；</li>
+</ul>
+<p>结合在同一个决策系统中。</p>
+<h3 id="12-3-Hanabi"><a href="#12-3-Hanabi" class="headerlink" title="12.3 Hanabi"></a>12.3 Hanabi</h3><p>在 Hanabi 协作实验中，human modeling + RL 的方法也展现出更好的跨人群合作表现。</p>
+<p>课件表格中，对所有 56 位 testers：</p>
+<table>
+<thead>
+<tr>
+<th>搭档策略</th>
+<th align="right">平均得分</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human Experts</td>
+<td align="right">$14.54\pm1.47$</td>
+</tr>
+<tr>
+<td>BR-BC</td>
+<td align="right">$16.73\pm1.27$</td>
+</tr>
+<tr>
+<td>piKL3</td>
+<td align="right">$\mathbf{17.18\pm1.28}$</td>
+</tr>
+</tbody></table>
+<p>说明针对 human behavior distribution 进行训练，有助于 agent 与不同水平的人类玩家协调。</p>
+<hr>
+<h2 id="13-关于-Self-Play-的阶段性结论"><a href="#13-关于-Self-Play-的阶段性结论" class="headerlink" title="13. 关于 Self-Play 的阶段性结论"></a>13. 关于 Self-Play 的阶段性结论</h2><ol>
+<li><strong>Two-player zero-sum games 是特殊情形。</strong></li>
+<li>在该情形中：<ul>
+<li>minimax 有明确含义；</li>
+<li>equilibrium value 唯一；</li>
+<li>sound self-play 具有收敛保证；</li>
+<li>不一定需要 human data。</li>
+</ul>
+</li>
+<li>在一般博弈中：<ul>
+<li>AlphaGo-style self-play 不会自动收敛到唯一的“最优策略”；</li>
+<li>多个 equilibria 可能彼此不兼容；</li>
+<li>真实效果依赖对手 population。</li>
+</ul>
+</li>
+<li>若目标是和人类合作：<ul>
+<li>应显式收集 human data；</li>
+<li>建模 human behavior；</li>
+<li>在近似人类 population 中优化策略。</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="Part-II：Agent-Agent-LLM-Cooperation"><a href="#Part-II：Agent-Agent-LLM-Cooperation" class="headerlink" title="Part II：Agent-Agent LLM Cooperation"></a>Part II：Agent-Agent LLM Cooperation</h2><h2 id="14-为什么要研究-Agent-Agent-Cooperation？"><a href="#14-为什么要研究-Agent-Agent-Cooperation？" class="headerlink" title="14. 为什么要研究 Agent-Agent Cooperation？"></a>14. 为什么要研究 Agent-Agent Cooperation？</h2><p>当目标变成 AI agents 彼此协作时，不一定需要 human data，因为最终 population 本身就是 AI。</p>
+<p>讲者给出两个主要动机：</p>
+<ol>
+<li><strong>Latency &#x2F; 并行化推理</strong></li>
+<li><strong>Diversity &#x2F; 专业分工</strong></li>
+</ol>
+<hr>
+<h2 id="15-Test-Time-Compute-与串行-CoT"><a href="#15-Test-Time-Compute-与串行-CoT" class="headerlink" title="15. Test-Time Compute 与串行 CoT"></a>15. Test-Time Compute 与串行 CoT</h2><p><img src="/img/posts/959ef75e/2026-07-18-14-01-56.png"></p>
+<p>Reasoning model 的性能会随着 test-time compute 增加而提升：</p>
+<ul>
+<li>模型思考更久，通常能处理更难的问题；</li>
+<li>新一代模型也会让整条 compute-performance curve 左移；</li>
+<li>即用更低成本达到旧模型更高计算预算下的性能。</li>
+</ul>
+<p>课件使用 AIME、Codeforces 等图表说明 reasoning performance 的快速提升。</p>
+<p>但 serial Chain-of-Thought 存在根本问题：</p>
+<blockquote>
+<p>每一步依赖前一步，因此难以无限并行。</p>
+</blockquote>
+<p>当推理持续数小时、数天甚至更长时，latency 会成为瓶颈。</p>
+<hr>
+<h2 id="16-Parallel-Test-Time-Scaling"><a href="#16-Parallel-Test-Time-Scaling" class="headerlink" title="16. Parallel Test-Time Scaling"></a>16. Parallel Test-Time Scaling</h2><h3 id="16-1-Consensus"><a href="#16-1-Consensus" class="headerlink" title="16.1 Consensus"></a>16.1 Consensus</h3><p>对同一问题独立采样多次，然后选择最常见答案。</p>
+<p>例如：</p>
+<ol>
+<li>对数学题采样 64 份回答；</li>
+<li>提取每份回答的最终答案；</li>
+<li>使用多数投票作为输出。</li>
+</ol>
+<p>优势：</p>
+<ul>
+<li>容易并行；</li>
+<li>可以显著降低 wall-clock latency；</li>
+<li>对短答案、明确答案的任务效果较好。</li>
+</ul>
+<p>局限：</p>
+<ul>
+<li>输出必须容易比较；</li>
+<li>长文本几乎不会逐字相同；</li>
+<li>多数答案不一定正确；</li>
+<li>多个样本可能产生相关错误。</li>
+</ul>
+<h3 id="16-2-Best-of-N"><a href="#16-2-Best-of-N" class="headerlink" title="16.2 Best-of-N"></a>16.2 Best-of-N</h3><p>生成 $N$ 个候选，然后通过 scorer、verifier 或 unit test 选出最优答案：</p>
+<p>$$
+y^*
+=
+\arg\max_{y_i,\ i=1,\ldots,N}
+s(y_i).
+$$</p>
+<p>特别适合容易验证的任务，例如：</p>
+<ul>
+<li>Sudoku；</li>
+<li>编程题与 unit tests；</li>
+<li>可自动检查的数学答案；</li>
+<li>具有明确 reward function 的任务。</li>
+</ul>
+<p>局限是必须具备可靠 verifier。若答案质量难以自动判断，Best-of-N 可能只是把生成问题转移成评价问题。</p>
+<h3 id="16-3-并行方法的-Trade-off"><a href="#16-3-并行方法的-Trade-off" class="headerlink" title="16.3 并行方法的 Trade-off"></a>16.3 并行方法的 Trade-off</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>推理结构</th>
+<th>优势</th>
+<th>局限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serial CoT</td>
+<td>串行</td>
+<td>单位 compute 更有效，可逐步深化</td>
+<td>latency 高</td>
+</tr>
+<tr>
+<td>Consensus</td>
+<td>并行采样 + 投票</td>
+<td>简单、低延迟</td>
+<td>只适合可对齐的短答案</td>
+</tr>
+<tr>
+<td>Best-of-N</td>
+<td>并行采样 + 评分</td>
+<td>有 verifier 时非常有效</td>
+<td>依赖评分器，compute efficiency 较低</td>
+</tr>
+</tbody></table>
+<p>课件总结：</p>
+<blockquote>
+<p>Parallel methods 往往具有更低 latency，但 compute efficiency 更低。</p>
+</blockquote>
+<hr>
+<h2 id="17-Diversity-与-Routing"><a href="#17-Diversity-与-Routing" class="headerlink" title="17. Diversity 与 Routing"></a>17. Diversity 与 Routing</h2><p><img src="/img/posts/959ef75e/2026-07-18-14-02-29.png"></p>
+<p>一个强 reasoning model 也许可以完成大数乘法，但最合理的行为通常是调用 calculator。</p>
+<p>同样地：</p>
+<ul>
+<li>最大、最强的模型不一定是每个任务的最佳执行者；</li>
+<li>不同模型可能在 coding、math、vision、retrieval、planning 等任务上具有不同优势；</li>
+<li>某些模型更快、更便宜；</li>
+<li>某些模型更专业或更可靠。</li>
+</ul>
+<p>因此可以设计 router：</p>
+<ol>
+<li>接收 query；</li>
+<li>判断任务类型；</li>
+<li>选择最合适的 model &#x2F; agent；</li>
+<li>将任务转交；</li>
+<li>汇总并返回结果。</li>
+</ol>
+<p>讲者认为：</p>
+<blockquote>
+<p>Routing 本身已经是一种 multi-agent AI。</p>
+</blockquote>
+<p>这里的 multi-agent 不一定意味着多个 agent 长时间对话，也可以是：</p>
+<ul>
+<li>一个 coordinator；</li>
+<li>多个 specialized workers；</li>
+<li>按任务动态选择执行者。</li>
+</ul>
+<hr>
+<h2 id="18-当前-Multi-Agent-Collaboration-Scaffold-的问题"><a href="#18-当前-Multi-Agent-Collaboration-Scaffold-的问题" class="headerlink" title="18. 当前 Multi-Agent Collaboration Scaffold 的问题"></a>18. 当前 Multi-Agent Collaboration Scaffold 的问题</h2><p><img src="/img/posts/959ef75e/2026-07-18-14-02-51.png"></p>
+<p>当前很多 multi-agent system 依赖复杂 scaffold：</p>
+<ul>
+<li>主 agent 分解任务；</li>
+<li>多个 subagents 分别处理子任务；</li>
+<li>memory 保存中间结果；</li>
+<li>context compression 压缩历史；</li>
+<li>citation agent 或 verifier 检查输出；</li>
+<li>coordinator 合并结果。</li>
+</ul>
+<p>这些系统在部分场景中有效，但通常存在：</p>
+<ul>
+<li>heavily engineered；</li>
+<li>brittle；</li>
+<li>agent 之间上下文传递不完整；</li>
+<li>决策权被分散后，难以维持全局一致性；</li>
+<li>多个 agent 可能重复劳动或产生冲突；</li>
+<li>出现问题后难以定位责任；</li>
+<li>长任务中的关键假设和约束容易丢失。</li>
+</ul>
+<p>Cognition 的经验总结强调：目前 agents 还不能稳定地进行类似人类工程团队那样的 <strong>long-context proactive discourse</strong>。</p>
+<p>例如两个 coding agents 产生 merge conflict 时，理想情况是：</p>
+<ol>
+<li>双方解释各自的设计；</li>
+<li>识别冲突来源；</li>
+<li>重新协商接口；</li>
+<li>共同更新方案；</li>
+<li>保持对全局目标的一致理解。</li>
+</ol>
+<p>但当前系统往往不能比一个强 single agent 更可靠地完成上述长程交流。</p>
+<h3 id="已经较好解决的问题"><a href="#已经较好解决的问题" class="headerlink" title="已经较好解决的问题"></a>已经较好解决的问题</h3><p>LLM 让不同 agents 可以直接使用自然语言沟通。</p>
+<p>过去 multi-agent research 中，一个长期难题是：</p>
+<blockquote>
+<p>如何让 agents 自发形成能够互相理解的 communication protocol？</p>
+</blockquote>
+<p>LLM 使“交流媒介”本身不再是主要障碍。</p>
+<h3 id="尚未解决的问题"><a href="#尚未解决的问题" class="headerlink" title="尚未解决的问题"></a>尚未解决的问题</h3><p>自然语言可用，不等于协作已经解决。当前更困难的是：</p>
+<ul>
+<li>如何选择真正有价值的信息进行传递；</li>
+<li>如何维护 shared context；</li>
+<li>如何发现并解决分歧；</li>
+<li>如何避免错误在 agent 之间传播；</li>
+<li>如何让局部任务结果与全局目标一致；</li>
+<li>如何使多 agent 系统稳定优于单 agent。</li>
+</ul>
+<p>**本节结论：**当前瓶颈已经从“agents 能否交流”转向“agents 能否可靠、主动、长期地协调”。</p>
+<hr>
+<h2 id="19-对-LLM-Self-Improvement-与-Agent-Research-的启发"><a href="#19-对-LLM-Self-Improvement-与-Agent-Research-的启发" class="headerlink" title="19. 对 LLM Self-Improvement 与 Agent Research 的启发"></a>19. 对 LLM Self-Improvement 与 Agent Research 的启发</h2><h3 id="20-1-Self-Play-需要清晰、稳定的外部目标"><a href="#20-1-Self-Play-需要清晰、稳定的外部目标" class="headerlink" title="20.1 Self-Play 需要清晰、稳定的外部目标"></a>20.1 Self-Play 需要清晰、稳定的外部目标</h3><h3 id="20-2-“与自己合作得好”不能证明泛化"><a href="#20-2-“与自己合作得好”不能证明泛化" class="headerlink" title="20.2 “与自己合作得好”不能证明泛化"></a>20.2 “与自己合作得好”不能证明泛化</h3><h3 id="20-3-Human-Cooperation-本质上是-Population-Modeling"><a href="#20-3-Human-Cooperation-本质上是-Population-Modeling" class="headerlink" title="20.3 Human Cooperation 本质上是 Population Modeling"></a>20.3 Human Cooperation 本质上是 Population Modeling</h3><h3 id="20-4-多-Agent-的收益必须超过协调成本"><a href="#20-4-多-Agent-的收益必须超过协调成本" class="headerlink" title="20.4 多 Agent 的收益必须超过协调成本"></a>20.4 多 Agent 的收益必须超过协调成本</h3><h3 id="20-5-值得继续研究的问题"><a href="#20-5-值得继续研究的问题" class="headerlink" title="20.5 值得继续研究的问题"></a>20.5 值得继续研究的问题</h3><ul>
+<li>如何构造稳定的 cross-agent shared memory？</li>
+<li>如何自动判断任务是否值得并行拆分？</li>
+<li>如何进行动态 routing 与 re-routing？</li>
+<li>如何让 agents 发现隐含冲突并主动协商？</li>
+<li>如何评估 cross-play generalization？</li>
+<li>如何在不牺牲全局一致性的情况下获得并行收益？</li>
+<li>如何设计可靠的 verifier，支持 Best-of-N 与多 agent 汇总？</li>
+<li>如何将 human preference modeling 与 agent planning 更紧密地结合？</li>
+</ul>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/959ef75e/">https://wick-7.github.io/posts/959ef75e/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Multi-Agent/">Multi-Agent</a><a class="post-meta__tags" href="/tags/RL/">RL</a><a class="post-meta__tags" href="/tags/Game-Theory/">Game-Theory</a><a class="post-meta__tags" href="/tags/Self-Play/">Self-Play</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/a823301/" title="《生成式AI时代下的机器学习 第二讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-03</div><div class="info-item-2">《生成式AI时代下的机器学习 第二讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">1. 什么是 AI AgentAI Agent 没有唯一、严格统一的定义。这里讨论的是人类主要给出 goal，而不是逐步告诉 AI 应该执行什么；Agent 需要自己决定一连串 action，并根据环境回传的 observation 持续调整，直到完成目标。 普通的 AI 使用方式通常是“一条指令对应一个回答”。Agent 面对的任务则往往需要多个步骤，环境还可能发生无法预先知道的变化，因此它不能只执行固定脚本，而要在交互过程中不断判断下一步。 最基本的 Agent loop 可以写成：人类给出 goal；Agent 接收 observation；Agent 产生 action；action 改变环境；环境返回新的 observation；循环继续。这里的重点不是某一次回答是否聪明，而是系统能否长期维持一个面向目标的闭环。AlphaGo 可以被视为典型 Agent：goal 是赢棋，observation 是当前棋盘状态，action 是选择落子位置。这个例子也说明 Agent 的描述方式与 Reinforcement Learning 中的 agent–environment ...</div></div></div></a><a class="pagination-related" href="/posts/83d3d343/" title="《生成式AI时代下的机器学习 第七讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-05</div><div class="info-item-2">《生成式AI时代下的机器学习 第七讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">大型语言模型的学习历程：Pre-training、SFT 与 RLHF 以大金老师讲解和ppt为主，穿插Andrej Karpathy的Deep Dive into LLMs like ChatGPT   1. 整体框架：大型语言模型如何一步步变成聊天助手 大型语言模型的训练分为三个阶段：    阶段 全称 主要目标 人类提供什么 形象比喻    Pre-training Pre-training 熟悉语言、吸收世界知识，学会基本的文字接龙 大量原始文本，人类直接标注较少 学龄前：看到什么学什么   SFT Supervised Fine-Tuning 学会按照指令回答，形成有用的助手行为 问题与标准答案 上学校：老师给标准答案   RLHF Reinforcement Learning with Human Feedback 根据人类偏好改善完整回答 对答案的偏好、排序或分数 出社会：别人只告诉你好不好   1.1 Alignment 的含义Alignment（对齐） 是让模型的行为符合人类的需求、偏好和价值观。 狭义文献中，Alignment 有时主要指 RLHF；但从课程的...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">36</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Multi-Agent-AI%EF%BC%9ASelf-Play%E3%80%81%E5%8D%9A%E5%BC%88%E5%9D%87%E8%A1%A1%E4%B8%8E%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E5%8D%8F%E4%BD%9C"><span class="toc-number">1.</span> <span class="toc-text">Multi-Agent AI：Self-Play、博弈均衡与多智能体协作</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#0-%E8%AF%BE%E7%A8%8B%E6%A0%B8%E5%BF%83%E9%97%AE%E9%A2%98"><span class="toc-number">1.1.</span> <span class="toc-text">0. 课程核心问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E2%80%9C%E6%9C%80%E5%BC%BA%E7%8E%A9%E5%AE%B6%E2%80%9D%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E6%84%8F%E6%80%9D%EF%BC%9F"><span class="toc-number">1.2.</span> <span class="toc-text">1. “最强玩家”到底是什么意思？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-Minimax-Equilibrium-%E4%B8%8E-Exploitability"><span class="toc-number">1.3.</span> <span class="toc-text">2. Minimax Equilibrium 与 Exploitability</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-Minimax-Equilibrium"><span class="toc-number">1.3.1.</span> <span class="toc-text">2.1 Minimax Equilibrium</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Exploitability"><span class="toc-number">1.3.2.</span> <span class="toc-text">2.2 Exploitability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Rock-Paper-Scissors-%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.3.3.</span> <span class="toc-text">2.3 Rock-Paper-Scissors 示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%9D%87%E8%A1%A1%E5%88%86%E6%9E%90%E4%B8%AD%E7%9A%84%E5%85%B3%E9%94%AE%E5%81%87%E8%AE%BE"><span class="toc-number">1.3.4.</span> <span class="toc-text">2.4 均衡分析中的关键假设</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-5-%E4%B8%BA%E4%BB%80%E4%B9%88-Poker-%E5%9D%87%E8%A1%A1%E4%BB%8D%E8%83%BD%E8%B5%9A%E9%92%B1%EF%BC%9F"><span class="toc-number">1.3.5.</span> <span class="toc-text">2.5 为什么 Poker 均衡仍能赚钱？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Two-Player-Zero-Sum-Games-%E4%B8%AD%E7%9A%84-Self-Play"><span class="toc-number">1.4.</span> <span class="toc-text">3. Two-Player Zero-Sum Games 中的 Self-Play</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Perfect-Information-Games%EF%BC%9A%E7%9B%B8%E5%AF%B9%E7%AE%80%E5%8D%95%EF%BC%8C%E4%BD%86%E4%BB%8D%E5%8F%AF%E8%83%BD%E8%A2%AB%E5%88%A9%E7%94%A8"><span class="toc-number">1.5.</span> <span class="toc-text">4. Perfect-Information Games：相对简单，但仍可能被利用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Imperfect-Information-Games-%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9B%B4%E9%9A%BE%EF%BC%9F"><span class="toc-number">1.6.</span> <span class="toc-text">5. Imperfect-Information Games 为什么更难？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-PPO-%E4%B8%8D%E4%BF%9D%E8%AF%81%E6%89%BE%E5%88%B0%E6%AD%A3%E7%A1%AE%E7%9A%84%E6%B7%B7%E5%90%88%E7%AD%96%E7%95%A5"><span class="toc-number">1.6.1.</span> <span class="toc-text">5.1 PPO 不保证找到正确的混合策略</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%B8%8D%E5%AE%8C%E5%85%A8%E4%BF%A1%E6%81%AF%E7%9A%84%E6%A0%B8%E5%BF%83%E5%9B%B0%E9%9A%BE"><span class="toc-number">1.6.2.</span> <span class="toc-text">5.2 不完全信息的核心困难</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Fictitious-Play"><span class="toc-number">1.7.</span> <span class="toc-text">6. Fictitious Play</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-Regret-Matching%E3%80%81Hedge-%E4%B8%8E-CFR"><span class="toc-number">1.8.</span> <span class="toc-text">7. Regret Matching、Hedge 与 CFR</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Regret-Matching"><span class="toc-number">1.8.1.</span> <span class="toc-text">7.1 Regret Matching</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-Hedge"><span class="toc-number">1.8.2.</span> <span class="toc-text">7.2 Hedge</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-CFR-%E4%B8%8E-Linear-CFR"><span class="toc-number">1.8.3.</span> <span class="toc-text">7.3 CFR 与 Linear CFR</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-Libratus"><span class="toc-number">1.8.4.</span> <span class="toc-text">7.4 Libratus</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-%E4%BC%A0%E7%BB%9F%E6%96%B9%E6%B3%95%E7%9A%84%E9%99%90%E5%88%B6"><span class="toc-number">1.8.5.</span> <span class="toc-text">7.5 传统方法的限制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-6-New-Last-Iterate-Algorithms"><span class="toc-number">1.8.6.</span> <span class="toc-text">7.6 New Last-Iterate Algorithms</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%89%8D%E5%8D%8A%E9%83%A8%E5%88%86%E5%87%A0%E4%B9%8E%E6%B2%A1%E6%9C%89%E6%8F%90%E5%88%B0-LLM%EF%BC%9F"><span class="toc-number">1.9.</span> <span class="toc-text">8. 为什么前半部分几乎没有提到 LLM？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E7%A6%BB%E5%BC%80-Two-Player-Zero-Sum%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-Human-Data%EF%BC%9F"><span class="toc-number">1.10.</span> <span class="toc-text">9. 离开 Two-Player Zero-Sum：为什么需要 Human Data？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-Ultimatum-Game"><span class="toc-number">1.11.</span> <span class="toc-text">10. Ultimatum Game</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-Diplomacy%EF%BC%9ASelf-Play-%E5%9C%A8-General-Sum-Game-%E4%B8%AD%E7%9A%84%E5%B1%80%E9%99%90"><span class="toc-number">1.12.</span> <span class="toc-text">11. Diplomacy：Self-Play 在 General-Sum Game 中的局限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E6%B8%B8%E6%88%8F%E7%89%B9%E7%82%B9"><span class="toc-number">1.12.1.</span> <span class="toc-text">11.1 游戏特点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-Support-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%85%B3%E9%94%AE%EF%BC%9F"><span class="toc-number">1.12.2.</span> <span class="toc-text">11.2 Support 为什么关键？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-DORA%EF%BC%9A%E4%BB%8E%E9%9B%B6%E5%BC%80%E5%A7%8B-Self-Play"><span class="toc-number">1.12.3.</span> <span class="toc-text">11.3 DORA：从零开始 Self-Play</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E5%A4%9A%E4%B8%AA-Equilibria-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.12.4.</span> <span class="toc-text">11.4 多个 Equilibria 的问题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-%E5%B0%86-Humans-%E8%A7%86%E4%B8%BA-Environment-%E7%9A%84%E4%B8%80%E9%83%A8%E5%88%86"><span class="toc-number">1.13.</span> <span class="toc-text">12. 将 Humans 视为 Environment 的一部分</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-1%EF%BC%9AHuman-Imitation-Model"><span class="toc-number">1.13.1.</span> <span class="toc-text">Step 1：Human Imitation Model</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-2%EF%BC%9AScale-Inference-Time-Compute-to-Better-Model-Humans"><span class="toc-number">1.13.2.</span> <span class="toc-text">Step 2：Scale Inference-Time Compute to Better Model Humans</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Step-3%EF%BC%9A%E5%9C%A8%E4%BA%BA%E7%B1%BB%E6%A8%A1%E5%9E%8B%E7%8E%AF%E5%A2%83%E4%B8%AD%E8%BF%9B%E8%A1%8C-RL"><span class="toc-number">1.13.3.</span> <span class="toc-text">Step 3：在人类模型环境中进行 RL</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-Diplodocus"><span class="toc-number">1.13.4.</span> <span class="toc-text">12.1 Diplodocus</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-CICERO"><span class="toc-number">1.13.5.</span> <span class="toc-text">12.2 CICERO</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-3-Hanabi"><span class="toc-number">1.13.6.</span> <span class="toc-text">12.3 Hanabi</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-%E5%85%B3%E4%BA%8E-Self-Play-%E7%9A%84%E9%98%B6%E6%AE%B5%E6%80%A7%E7%BB%93%E8%AE%BA"><span class="toc-number">1.14.</span> <span class="toc-text">13. 关于 Self-Play 的阶段性结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-II%EF%BC%9AAgent-Agent-LLM-Cooperation"><span class="toc-number">1.15.</span> <span class="toc-text">Part II：Agent-Agent LLM Cooperation</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E7%A0%94%E7%A9%B6-Agent-Agent-Cooperation%EF%BC%9F"><span class="toc-number">1.16.</span> <span class="toc-text">14. 为什么要研究 Agent-Agent Cooperation？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-Test-Time-Compute-%E4%B8%8E%E4%B8%B2%E8%A1%8C-CoT"><span class="toc-number">1.17.</span> <span class="toc-text">15. Test-Time Compute 与串行 CoT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Parallel-Test-Time-Scaling"><span class="toc-number">1.18.</span> <span class="toc-text">16. Parallel Test-Time Scaling</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#16-1-Consensus"><span class="toc-number">1.18.1.</span> <span class="toc-text">16.1 Consensus</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-2-Best-of-N"><span class="toc-number">1.18.2.</span> <span class="toc-text">16.2 Best-of-N</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#16-3-%E5%B9%B6%E8%A1%8C%E6%96%B9%E6%B3%95%E7%9A%84-Trade-off"><span class="toc-number">1.18.3.</span> <span class="toc-text">16.3 并行方法的 Trade-off</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-Diversity-%E4%B8%8E-Routing"><span class="toc-number">1.19.</span> <span class="toc-text">17. Diversity 与 Routing</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E5%BD%93%E5%89%8D-Multi-Agent-Collaboration-Scaffold-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.20.</span> <span class="toc-text">18. 当前 Multi-Agent Collaboration Scaffold 的问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B7%B2%E7%BB%8F%E8%BE%83%E5%A5%BD%E8%A7%A3%E5%86%B3%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.20.1.</span> <span class="toc-text">已经较好解决的问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B0%9A%E6%9C%AA%E8%A7%A3%E5%86%B3%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.20.2.</span> <span class="toc-text">尚未解决的问题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-%E5%AF%B9-LLM-Self-Improvement-%E4%B8%8E-Agent-Research-%E7%9A%84%E5%90%AF%E5%8F%91"><span class="toc-number">1.21.</span> <span class="toc-text">19. 对 LLM Self-Improvement 与 Agent Research 的启发</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#20-1-Self-Play-%E9%9C%80%E8%A6%81%E6%B8%85%E6%99%B0%E3%80%81%E7%A8%B3%E5%AE%9A%E7%9A%84%E5%A4%96%E9%83%A8%E7%9B%AE%E6%A0%87"><span class="toc-number">1.21.1.</span> <span class="toc-text">20.1 Self-Play 需要清晰、稳定的外部目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-2-%E2%80%9C%E4%B8%8E%E8%87%AA%E5%B7%B1%E5%90%88%E4%BD%9C%E5%BE%97%E5%A5%BD%E2%80%9D%E4%B8%8D%E8%83%BD%E8%AF%81%E6%98%8E%E6%B3%9B%E5%8C%96"><span class="toc-number">1.21.2.</span> <span class="toc-text">20.2 “与自己合作得好”不能证明泛化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-3-Human-Cooperation-%E6%9C%AC%E8%B4%A8%E4%B8%8A%E6%98%AF-Population-Modeling"><span class="toc-number">1.21.3.</span> <span class="toc-text">20.3 Human Cooperation 本质上是 Population Modeling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-4-%E5%A4%9A-Agent-%E7%9A%84%E6%94%B6%E7%9B%8A%E5%BF%85%E9%A1%BB%E8%B6%85%E8%BF%87%E5%8D%8F%E8%B0%83%E6%88%90%E6%9C%AC"><span class="toc-number">1.21.4.</span> <span class="toc-text">20.4 多 Agent 的收益必须超过协调成本</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#20-5-%E5%80%BC%E5%BE%97%E7%BB%A7%E7%BB%AD%E7%A0%94%E7%A9%B6%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.21.5.</span> <span class="toc-text">20.5 值得继续研究的问题</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/959ef75e/" title="《CS294-196 25fall Lecture6》课堂笔记">《CS294-196 25fall Lecture6》课堂笔记</a><time datetime="2026-07-18T05:30:00.000Z" title="发表于 2026-07-18 13:30:00">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记">《CS294-196 25fall Lecture4》课堂笔记</a><time datetime="2026-07-15T14:12:18.000Z" title="发表于 2026-07-15 22:12:18">2026-07-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/18713f6d/" title="《EECS 498 Lecture 2》课堂笔记">《EECS 498 Lecture 2》课堂笔记</a><time datetime="2026-07-15T01:26:22.000Z" title="发表于 2026-07-15 09:26:22">2026-07-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/31b98b9f/" title="《EECS 498 Lecture 1》课堂笔记">《EECS 498 Lecture 1》课堂笔记</a><time datetime="2026-07-14T14:59:07.000Z" title="发表于 2026-07-14 22:59:07">2026-07-14</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
