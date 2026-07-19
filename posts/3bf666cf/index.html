@@ -1,0 +1,1236 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall Lecture7》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Predictable Noise and Patterns from Millions of Questions本节课主线现代评测正在发生一个明显变化：  过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本； 当前的代码生成与 Agent benchmark 往往只有几百道题； 单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall Lecture7》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/3bf666cf/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Predictable Noise and Patterns from Millions of Questions本节课主线现代评测正在发生一个明显变化：  过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本； 当前的代码生成与 Agent benchmark 往往只有几百道题； 单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-18T11:12:22.000Z">
+<meta property="article:modified_time" content="2026-07-19T05:56:36.011Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Benchmark">
+<meta property="article:tag" content="Evaluation">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Statistics">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall Lecture7》课堂笔记",
+  "url": "https://wick-7.github.io/posts/3bf666cf/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-18T11:12:22.000Z",
+  "dateModified": "2026-07-19T05:56:36.011Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/3bf666cf/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall Lecture7》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture7》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture7》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-19T05:56:36.011Z" title="更新于 2026-07-19 13:56:36">2026-07-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Predictable-Noise-and-Patterns-from-Millions-of-Questions"><a href="#Predictable-Noise-and-Patterns-from-Millions-of-Questions" class="headerlink" title="Predictable Noise and Patterns from Millions of Questions"></a>Predictable Noise and Patterns from Millions of Questions</h1><h2 id="本节课主线"><a href="#本节课主线" class="headerlink" title="本节课主线"></a>本节课主线</h2><p>现代评测正在发生一个明显变化：</p>
+<ul>
+<li>过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本；</li>
+<li>当前的代码生成与 Agent benchmark 往往只有几百道题；</li>
+<li>单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压缩成一个二元结果：成功或失败；</li>
+<li>在不同模型、不同题目之间，结果存在明显的不一致性：强模型会错简单题，弱模型也可能偶然做对困难题；</li>
+<li>因此，仅看平均 Accuracy &#x2F; Pass@1 不足以判断一个改进是否可靠，仍需进行统计分析。</li>
+</ul>
+<p>本节课的核心结论是：</p>
+<blockquote>
+<p><strong>当前的小型 generative &#x2F; agentic benchmark 即使包含困难任务，也往往仍然具有较大的统计噪声。困难题本身不能自动弥补样本规模不足。</strong></p>
+</blockquote>
+<p>课程进一步给出了一套分析框架：</p>
+<ol>
+<li>将 benchmark 中的问题看成从一个 <strong>super-population</strong> 中抽取的样本；</li>
+<li>区分 <strong>题目抽样噪声</strong> 与 <strong>模型随机采样噪声</strong>；</li>
+<li>使用 <strong>paired comparison</strong> 比较同一组题目上的两个模型；</li>
+<li>用标准误、$z$-score 和 signal-to-noise ratio 判断改进是否可信；</li>
+<li>利用大量模型—题目结果总结出不同 benchmark 中相对稳定、可预测的噪声模式。</li>
+</ol>
+<hr>
+<h2 id="1-为什么需要重新思考-LLM-Evaluation？"><a href="#1-为什么需要重新思考-LLM-Evaluation？" class="headerlink" title="1. 为什么需要重新思考 LLM Evaluation？"></a>1. 为什么需要重新思考 LLM Evaluation？</h2><h2 id="1-1-从“大而简单”到“小而复杂”"><a href="#1-1-从“大而简单”到“小而复杂”" class="headerlink" title="1.1 从“大而简单”到“小而复杂”"></a>1.1 从“大而简单”到“小而复杂”</h2><p>早期深度学习 benchmark 的规模很大，而现代生成式和 Agent benchmark 通常小得多：</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-37-17.png"></p>
+<p>与此同时，单道任务的成本却不断上升：</p>
+<ul>
+<li>需要生成较长代码；</li>
+<li>需要运行测试或执行环境；</li>
+<li>Agent 任务可能包含数十到数百步交互；</li>
+<li>某些评测单题会消耗数万乃至十万级 token。</li>
+</ul>
+<p>这导致现代评测呈现出：</p>
+<p>$$
+\text{更复杂的单题}
+\quad+\quad
+\text{更少的题目数量}
+\quad+\quad
+\text{更高的运行成本}.
+$$</p>
+<p>许多论文在 HumanEval、SWE-bench 等 benchmark 上报告约 $2\%\sim 10\%$ 的提升，但当测试集只有几百题时，这些提升未必具有统计显著性。</p>
+<hr>
+<h2 id="1-2-单道复杂题是否包含更多信息？"><a href="#1-2-单道复杂题是否包含更多信息？" class="headerlink" title="1.2 单道复杂题是否包含更多信息？"></a>1.2 单道复杂题是否包含更多信息？</h2><p>一个自然反驳是：</p>
+<blockquote>
+<p>虽然题目数量更少，但每道题包含的推理、代码和 Agent trajectory 更长，因此单题应该比一道选择题更有信息量。</p>
+</blockquote>
+<p>在人类评测中，少量高质量问题确实可能非常有区分度：</p>
+<ul>
+<li>IMO 只有 6 道题；</li>
+<li>Putnam 只有 12 道题；</li>
+<li>解决一个真正的开放问题，本身就足以证明重大能力突破。</li>
+</ul>
+<p>因此课程提出两种可能：</p>
+<h3 id="观点-A"><a href="#观点-A" class="headerlink" title="观点 A"></a>观点 A</h3><p>小 benchmark 即使包含困难的生成式或 Agent 任务，仍然不可靠。</p>
+<h3 id="观点-B"><a href="#观点-B" class="headerlink" title="观点 B"></a>观点 B</h3><p>一道足够困难的问题本身就很有意义，因此应当使用小而难的 benchmark。</p>
+<p>课程通过后续的 question-level exploratory data analysis，最终更支持 <strong>观点 A</strong>。</p>
+<p>关键区别在于：</p>
+<ul>
+<li>真正的开放问题通常不存在可复制、可记忆的标准答案；</li>
+<li>当前 benchmark 中的困难题，较弱模型往往也不是“绝对不会”，而只是成功概率更低；</li>
+<li>模型在不同难度题目上的表现并不具有严格的一致性。</li>
+</ul>
+<hr>
+<h2 id="2-超越平均-Accuracy：Question-level-Exploratory-Data-Analysis"><a href="#2-超越平均-Accuracy：Question-level-Exploratory-Data-Analysis" class="headerlink" title="2. 超越平均 Accuracy：Question-level Exploratory Data Analysis"></a>2. 超越平均 Accuracy：Question-level Exploratory Data Analysis</h2><h2 id="2-1-模型—题目热力图"><a href="#2-1-模型—题目热力图" class="headerlink" title="2.1 模型—题目热力图"></a>2.1 模型—题目热力图</h2><p>课件将所有评测结果绘制成热力图：</p>
+<ul>
+<li>每一列代表一个模型；</li>
+<li>模型按整体 Pass@1 从高到低排列；</li>
+<li>每一行代表一道题；</li>
+<li>题目按整体难度从易到难排列；</li>
+<li>颜色表示某个模型在该题上的成功概率。</li>
+</ul>
+<p>对于可以重复采样的评测，颜色表示多次采样后的经验成功率；对于外部 leaderboard，有时只能得到一次二元结果。</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-39-26.png"></p>
+<p>从整体上看，热力图确实存在趋势：</p>
+<ul>
+<li>好模型通常做对更多题；</li>
+<li>简单题通常被更多模型做对；</li>
+<li>困难题通常被更少模型做对。</li>
+</ul>
+<p>但矩阵中还存在大量局部不一致：</p>
+<ul>
+<li>最好的模型仍可能在简单问题上失败；</li>
+<li>较差模型偶尔可以解决非常困难的问题；</li>
+<li>某个模型相对另一个模型，并不是在所有题目上都严格更好。</li>
+</ul>
+<hr>
+<h2 id="2-2-“有时更好”不等于“严格更好”"><a href="#2-2-“有时更好”不等于“严格更好”" class="headerlink" title="2.2 “有时更好”不等于“严格更好”"></a>2.2 “有时更好”不等于“严格更好”</h2><p>设 baseline 模型在一部分题目上正确。</p>
+<p>理想中的改进模型应当是：</p>
+<p>$$
+\text{baseline 能解决的问题}
+\subseteq
+\text{新模型能解决的问题}.
+$$</p>
+<p>这可以称为 <strong>strict improvement</strong>：新模型不仅平均分更高，而且基本不会失去旧模型已经具备的能力。</p>
+<p>现实中更常见的是：</p>
+<ul>
+<li>新模型新做对了一些题；</li>
+<li>同时又错掉了 baseline 已经做对的另一些题；</li>
+<li>最终平均分略有提高，但逐题结果存在大量交换。</li>
+</ul>
+<p>因此，平均 Accuracy 的提升可能来自一种“重新洗牌”，而不是能力集合的稳定扩张。</p>
+<p>课程用一个类比说明这一点：</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-40-15.png"></p>
+<p>在普通 benchmark 中，一个弱模型解决困难题也可能来自：</p>
+<ul>
+<li>随机采样碰巧成功；</li>
+<li>训练数据中见过相似答案；</li>
+<li>benchmark contamination；</li>
+<li>某种模板化模式匹配；</li>
+<li>外部 verifier 或重试机制筛选出了少数成功样本。</li>
+</ul>
+<p>因此，困难题的成功并不自动等价于稳定、可泛化的能力。</p>
+<hr>
+<h2 id="2-3-红色格子不是严格的-0"><a href="#2-3-红色格子不是严格的-0" class="headerlink" title="2.3 红色格子不是严格的 0"></a>2.3 红色格子不是严格的 0</h2><p>热力图中的失败区域通常不代表：</p>
+<p>$$
+P(\text{success})=0,
+$$</p>
+<p>而更可能代表：</p>
+<p>$$
+P(\text{success}) \text{ 很低，但仍然大于 }0.
+$$</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-40-49.png"></p>
+<p>对于某些题，即使整体较差的模型也可能有 $1\%$、$10\%$ 甚至 $30\%$ 的成功概率。</p>
+<p>这带来一个重要观察：</p>
+<blockquote>
+<p>对于可验证任务，从 $0\%$ 提升到 $1\%$ 可能比从 $1\%$ 提升到 $99\%$ 更能体现新能力。</p>
+</blockquote>
+<p>一旦模型具有非零成功概率，并且结果可以自动验证，就可以通过：</p>
+<ul>
+<li>repeated sampling；</li>
+<li>majority voting；</li>
+<li>verifier；</li>
+<li>best-of-$N$；</li>
+<li>search；</li>
+</ul>
+<p>把低概率成功转化为高可靠性输出。</p>
+<p>若单次成功概率为 $p$，独立尝试 $K$ 次后至少成功一次的概率是：</p>
+<p>$$
+P(\text{at least one success})
+=
+1-(1-p)^K.
+$$</p>
+<p>例如，当 $p=0.01$ 时，进行 500 次独立尝试后至少成功一次的概率约为：</p>
+<p>$$
+1-(1-0.01)^{500}\approx 99.3\%.
+$$</p>
+<p>因此，在 verifier 可用的任务中，Pass@1 从 $1\%$ 提高到 $99\%$ 未必完全代表基础能力发生了同等程度的跃迁，也可能主要是分布变尖锐、搜索预算增大或验证机制增强。</p>
+<hr>
+<h2 id="2-4-多步-Agent-任务中的误差累积"><a href="#2-4-多步-Agent-任务中的误差累积" class="headerlink" title="2.4 多步 Agent 任务中的误差累积"></a>2.4 多步 Agent 任务中的误差累积</h2><p>Agent 任务通常包含多个连续步骤。若每一步独立正确的概率为 $q$，完成 $T$ 步任务且全部正确的概率近似为：</p>
+<p>$$
+P(\text{all steps correct})=q^T.
+$$</p>
+<p>例如：</p>
+<p>$$
+0.95^{20}\approx 0.36,
+$$</p>
+<p>即使每一步都有 $95\%$ 的正确率，完成 20 步后全程无误的概率也只剩约 $36\%$。</p>
+<p>因此：</p>
+<ul>
+<li>困难任务往往意味着更长的 trajectory；</li>
+<li>局部错误会在长链条中累积；</li>
+<li>偶然得到最终正确答案，不代表中间过程稳定可靠；</li>
+<li>对 Agent 的评测不能只看最终 success，还应检查过程一致性、错误恢复与中间状态。</li>
+</ul>
+<hr>
+<h2 id="3-Super-population：将-Benchmark-看成问题总体的样本"><a href="#3-Super-population：将-Benchmark-看成问题总体的样本" class="headerlink" title="3. Super-population：将 Benchmark 看成问题总体的样本"></a>3. Super-population：将 Benchmark 看成问题总体的样本</h2><h2 id="3-1-基本设定"><a href="#3-1-基本设定" class="headerlink" title="3.1 基本设定"></a>3.1 基本设定</h2><p>设 benchmark 包含 $N$ 道题：</p>
+<p>$$
+x_1,x_2,\ldots,x_N.
+$$</p>
+<p>模型 $A$ 在问题 $x_i$ 上的得分记为：</p>
+<p>$$
+A(x_i).
+$$</p>
+<p>最常见的情况是二元得分：</p>
+<p>$$
+A(x_i)\in\{0,1\},
+$$</p>
+<p>其中 1 表示正确，0 表示错误。</p>
+<p>Benchmark 报告的平均准确率为：</p>
+<p>$$
+\bar A
+=
+\frac{1}{N}
+\sum_{i=1}^{N}A(x_i)
+\approx
+\mathbb E_x[A(x)].
+$$</p>
+<p>关键思想是：当前这 $N$ 道题并不是我们唯一关心的对象，而是从某个潜在的 <strong>super-population of questions</strong> 中抽取的一组样本。</p>
+<p>我们真正希望估计的是：</p>
+<blockquote>
+<p>如果从同一任务分布中重新抽取另一组问题，模型的平均表现会是多少？</p>
+</blockquote>
+<hr>
+<h2 id="3-2-题目层面的方差"><a href="#3-2-题目层面的方差" class="headerlink" title="3.2 题目层面的方差"></a>3.2 题目层面的方差</h2><p>模型在问题总体上的方差可由样本估计：</p>
+<p>$$
+\operatorname{Var}_x[A(x)]
+\approx
+\frac{1}{N}
+\sum_{i=1}^{N}
+\left(A(x_i)-\bar A\right)^2.
+$$</p>
+<p>平均分的标准误差为：</p>
+<p>$$
+\operatorname{SE}(A)
+=
+\frac{\sqrt{\operatorname{Var}_x[A]}}{\sqrt N}.
+$$</p>
+<p>因此，标准误差大致按：</p>
+<p>$$
+\operatorname{SE}\propto \frac{1}{\sqrt N}
+$$</p>
+<p>下降。</p>
+<p>这意味着：</p>
+<ul>
+<li>想把标准误缩小一半，样本量需要扩大约 4 倍；</li>
+<li>当 benchmark 只有几百题时，几个百分点的差异很容易落在噪声范围内；</li>
+<li>单纯依赖更复杂的题目，并不会改变均值估计仍受样本量限制这一事实。</li>
+</ul>
+<p>对于 Bernoulli 得分，若总体正确率为 $p$：</p>
+<p>$$
+\operatorname{Var}[A]=p(1-p),
+$$</p>
+<p>并且：</p>
+<p>$$
+\operatorname{SE}(A)
+\approx
+\sqrt{\frac{p(1-p)}{N}}.
+$$</p>
+<p>当 $p=0.5$ 时，Bernoulli 方差最大：</p>
+<p>$$
+p(1-p)=0.25.
+$$</p>
+<p>因此在最坏情况下：</p>
+<p>$$
+\operatorname{SE}(A)
+\leq
+\frac{1}{2\sqrt N}.
+$$</p>
+<hr>
+<h2 id="4-比较两个模型：Paired-Comparison"><a href="#4-比较两个模型：Paired-Comparison" class="headerlink" title="4. 比较两个模型：Paired Comparison"></a>4. 比较两个模型：Paired Comparison</h2><h2 id="4-1-为什么应当使用-paired-test？"><a href="#4-1-为什么应当使用-paired-test？" class="headerlink" title="4.1 为什么应当使用 paired test？"></a>4.1 为什么应当使用 paired test？</h2><p>研究中真正关心的通常不是模型 $A$ 自身的方差，而是：</p>
+<blockquote>
+<p>模型 $B$ 是否真的优于模型 $A$？</p>
+</blockquote>
+<p>如果两个模型在同一组题上进行测试，那么应直接分析逐题差值：</p>
+<p>$$
+D(x_i)=A(x_i)-B(x_i).
+$$</p>
+<p>其方差为：</p>
+<p>$$
+\operatorname{Var}_x[A(x)-B(x)]
+=
+\operatorname{Var}_x[A]
++
+\operatorname{Var}_x[B]
+-
+2\operatorname{Cov}_x[A,B].
+$$</p>
+<p>当两个模型在题目上的表现高度相关时：</p>
+<p>$$
+\operatorname{Cov}_x[A,B]&gt;0,
+$$</p>
+<p>协方差项可以显著降低差值的方差。</p>
+<p>极端情况下，如果两个模型逐题表现完全相关，paired variance 可以接近 0。</p>
+<hr>
+<h2 id="4-2-Paired-与-Unpaired-的直觉"><a href="#4-2-Paired-与-Unpaired-的直觉" class="headerlink" title="4.2 Paired 与 Unpaired 的直觉"></a>4.2 Paired 与 Unpaired 的直觉</h2><h3 id="Unpaired-comparison"><a href="#Unpaired-comparison" class="headerlink" title="Unpaired comparison"></a>Unpaired comparison</h3><p>模型 $A$ 做今年的试卷，模型 $B$ 做去年的试卷：</p>
+<p>$$
+x_i,x_j\sim \mathcal D,
+\qquad
+A(x_i),B(x_j).
+$$</p>
+<p>即使 $B$ 得分更高，也可能只是因为去年的试卷更容易。</p>
+<h3 id="Paired-comparison"><a href="#Paired-comparison" class="headerlink" title="Paired comparison"></a>Paired comparison</h3><p>两个模型做完全相同的试卷：</p>
+<p>$$
+x_i\sim\mathcal D,
+\qquad
+A(x_i),B(x_i).
+$$</p>
+<p>此时可以直接比较每一道题上的差异，更容易排除题目难度带来的波动。</p>
+<p>因此，只要模型是在同一个 benchmark 上测试，paired comparison 几乎是“免费获得”的额外统计功效。</p>
+<hr>
+<h2 id="4-3-z-score-与显著性"><a href="#4-3-z-score-与显著性" class="headerlink" title="4.3 $z$-score 与显著性"></a>4.3 $z$-score 与显著性</h2><p>设两个模型的平均分分别为 $\bar A$ 和 $\bar B$，则：</p>
+<p>$$
+z
+=
+\frac{\bar A-\bar B}
+{\operatorname{SE}(A-B)}.
+$$</p>
+<p>当样本量足够大时，$z$ 近似服从标准正态分布。</p>
+<p>常用阈值：</p>
+<p>$$
+|z|&gt;1.96
+$$</p>
+<p>对应双侧检验约 $5\%$ 的 $p$-value。</p>
+<p>直观上：</p>
+<ul>
+<li>$|z|&lt;1$：差异很可能由随机性产生；</li>
+<li>$|z|\approx 2$：达到传统的统计显著性边界；</li>
+<li>$|z|\gg 2$：差异更可信；</li>
+<li>只报告 Accuracy 差值而不报告标准误，无法判断差异是否可靠。</li>
+</ul>
+<hr>
+<h2 id="4-4-HumanEval-示例"><a href="#4-4-HumanEval-示例" class="headerlink" title="4.4 HumanEval 示例"></a>4.4 HumanEval 示例</h2><p>HumanEval 只有：</p>
+<p>$$
+N=164
+$$</p>
+<p>道题。</p>
+<p>若模型准确率约为：</p>
+<p>$$
+\bar A=0.5,
+$$</p>
+<p>单模型标准误约为：</p>
+<p>$$
+\operatorname{SE}(A)
+\approx
+\sqrt{\frac{0.5(1-0.5)}{164}}
+\approx 3.9\%.
+$$</p>
+<p>课件给出的量级是约 $4\%$。</p>
+<h3 id="Unpaired-comparison-1"><a href="#Unpaired-comparison-1" class="headerlink" title="Unpaired comparison"></a>Unpaired comparison</h3><p>若将两个模型视为独立：</p>
+<p>$$
+\operatorname{SE}(A-B)
+\approx
+\sqrt{2}\times 4\%.
+$$</p>
+<p>达到 $5\%$ 显著性通常需要：</p>
+<p>$$
+4\%\times \sqrt 2\times 1.96
+\approx
+10.8\%
+$$</p>
+<p>的差异。</p>
+<h3 id="Paired-comparison-1"><a href="#Paired-comparison-1" class="headerlink" title="Paired comparison"></a>Paired comparison</h3><p>即使使用 paired test，课件中的典型差值标准误仍约为 $4\%$，因此需要：</p>
+<p>$$
+4\%\times 1.96
+\approx
+7.84\%
+$$</p>
+<p>的差异才达到传统显著性水平。</p>
+<p>这比许多论文报告的 $2\%\sim 5\%$ 提升更大。</p>
+<blockquote>
+<p><strong>本节结论：</strong> 在 HumanEval 这类小型 benchmark 上，几个百分点的提升通常不足以自动证明模型更好。</p>
+</blockquote>
+<hr>
+<h2 id="5-LLM-的多次独立采样与两类噪声"><a href="#5-LLM-的多次独立采样与两类噪声" class="headerlink" title="5. LLM 的多次独立采样与两类噪声"></a>5. LLM 的多次独立采样与两类噪声</h2><h2 id="5-1-加入模型随机性"><a href="#5-1-加入模型随机性" class="headerlink" title="5.1 加入模型随机性"></a>5.1 加入模型随机性</h2><p>LLM 可以对同一道题进行多次独立采样，这是人类很难做到的能力。</p>
+<p>设：</p>
+<ul>
+<li>$x_i$：第 $i$ 道题；</li>
+<li>$\epsilon_{ij}$：第 $j$ 次生成使用的随机 seed；</li>
+<li>$K$：每道题的采样次数；</li>
+<li>$A(x_i,\epsilon_{ij})$：第 $j$ 次采样的得分。</li>
+</ul>
+<p>平均评测结果为：</p>
+<p>$$
+\bar A
+=
+\frac{1}{N}
+\sum_{i=1}^{N}
+\frac{1}{K}
+\sum_{j=1}^{K}
+A(x_i,\epsilon_{ij})
+\approx
+\mathbb E_{x,\epsilon}[A(x,\epsilon)].
+$$</p>
+<p>总方差可以估计为：</p>
+<p>$$
+\operatorname{Var}_{x,\epsilon}[A(x,\epsilon)]
+\approx
+\frac{1}{N}
+\sum_{i=1}^{N}
+\frac{1}{K}
+\sum_{j=1}^{K}
+\left(A(x_i,\epsilon_{ij})-\bar A\right)^2.
+$$</p>
+<hr>
+<h2 id="5-2-全方差分解"><a href="#5-2-全方差分解" class="headerlink" title="5.2 全方差分解"></a>5.2 全方差分解</h2><p>根据 law of total variance：</p>
+<p>$$
+\operatorname{Var}_{x,\epsilon}[A]
+=
+\operatorname{Var}_x
+\left[
+\mathbb E_\epsilon[A]
+\right]
++
+\mathbb E_x
+\left[
+\operatorname{Var}_\epsilon[A]
+\right].
+$$</p>
+<p>两个部分分别表示：</p>
+<h3 id="题目抽样噪声-Data-variance"><a href="#题目抽样噪声-Data-variance" class="headerlink" title="题目抽样噪声 &#x2F; Data variance"></a>题目抽样噪声 &#x2F; Data variance</h3><p>$$
+\operatorname{Var}_x
+\left[
+\mathbb E_\epsilon[A]
+\right].
+$$</p>
+<p>含义是：</p>
+<ul>
+<li>对每道题先对模型随机性取平均；</li>
+<li>再观察不同题目之间的成功概率有多大差异；</li>
+<li>它反映 benchmark 具体选择了哪些题所带来的不确定性。</li>
+</ul>
+<h3 id="模型采样噪声-Model-variance"><a href="#模型采样噪声-Model-variance" class="headerlink" title="模型采样噪声 &#x2F; Model variance"></a>模型采样噪声 &#x2F; Model variance</h3><p>$$
+\mathbb E_x
+\left[
+\operatorname{Var}_\epsilon[A]
+\right].
+$$</p>
+<p>含义是：</p>
+<ul>
+<li>固定同一道题；</li>
+<li>改变随机 seed 或 sampling trajectory；</li>
+<li>观察模型输出本身的波动。</li>
+</ul>
+<p>一个常见误区是只关注模型多次生成带来的随机性，却忽略：</p>
+<blockquote>
+<p><strong>更换 benchmark 中的题目集合，本身也会造成噪声，而且它可能是更重要的部分。</strong></p>
+</blockquote>
+<hr>
+<h2 id="5-3-对应的标准误"><a href="#5-3-对应的标准误" class="headerlink" title="5.3 对应的标准误"></a>5.3 对应的标准误</h2><p>课件将方差分量分别归一化为标准误：</p>
+<p>$$
+\operatorname{SE}(A)
+=
+N^{-1/2}
+\left(
+\operatorname{Var}_{x,\epsilon}[A]
+\right)^{1/2},
+$$</p>
+<p>$$
+\operatorname{SE}_x(A)
+=
+N^{-1/2}
+\left(
+\operatorname{Var}_{x}
+[
+\mathbb E_\epsilon[A]
+]
+\right)^{1/2},
+$$</p>
+<p>$$
+\operatorname{SE}_\epsilon(A)
+=
+N^{-1/2}
+\left(
+\mathbb E_x[
+\operatorname{Var}_\epsilon[A]
+]
+\right)^{1/2}.
+$$</p>
+<p>当每题平均 $K$ 次独立生成时，模型采样噪声会进一步随 $K$ 增加而减小，直观上约按：</p>
+<p>$$
+\frac{1}{\sqrt K}
+$$</p>
+<p>缩放。</p>
+<p>但增加每题采样次数主要降低的是 <strong>model sampling noise</strong>，并不能消除题目集合有限导致的 <strong>data variance</strong>。</p>
+<hr>
+<h2 id="5-4-带模型采样噪声的-paired-comparison"><a href="#5-4-带模型采样噪声的-paired-comparison" class="headerlink" title="5.4 带模型采样噪声的 paired comparison"></a>5.4 带模型采样噪声的 paired comparison</h2><p>对于两个模型 $A$ 和 $B$：</p>
+<p>$$
+\operatorname{Var}_{x,\epsilon}[A-B]
+=
+\operatorname{Var}_x
+\left[
+\mathbb E_\epsilon[A-B]
+\right]
++
+\mathbb E_x
+\left[
+\operatorname{Var}_\epsilon[A-B]
+\right].
+$$</p>
+<p>并且：</p>
+<p>$$
+\operatorname{Var}_{x,\epsilon}[A-B]
+=
+\operatorname{Var}_{x,\epsilon}[A]
++
+\operatorname{Var}_{x,\epsilon}[B]
+-
+2\operatorname{Cov}_{x,\epsilon}[A,B].
+$$</p>
+<p>若两个模型的随机生成独立，则同一道题上的随机采样协方差为 0，主要保留的是题目层面的相关性：</p>
+<p>$$
+\operatorname{Cov}_{x,\epsilon}[A,B]
+=
+\operatorname{Cov}_{x}
+\left[
+\mathbb E_\epsilon[A],
+\mathbb E_\epsilon[B]
+\right].
+$$</p>
+<hr>
+<h2 id="6-“平均分更高”不一定意味着“能力覆盖更广”"><a href="#6-“平均分更高”不一定意味着“能力覆盖更广”" class="headerlink" title="6. “平均分更高”不一定意味着“能力覆盖更广”"></a>6. “平均分更高”不一定意味着“能力覆盖更广”</h2><p>课件给出一个 8 道题的例子。</p>
+<h2 id="模型-A"><a href="#模型-A" class="headerlink" title="模型 A"></a>模型 A</h2><p>对每道题都有：</p>
+<p>$$
+P_A(\text{correct}\mid x_i)=0.1.
+$$</p>
+<p>因此平均正确率为：</p>
+<p>$$
+\mathbb E[A]=0.1.
+$$</p>
+<h2 id="模型-B"><a href="#模型-B" class="headerlink" title="模型 B"></a>模型 B</h2><ul>
+<li>前 4 道题成功概率为 1；</li>
+<li>后 4 道题成功概率为 0。</li>
+</ul>
+<p>因此：</p>
+<p>$$
+\mathbb E[B]=0.5.
+$$</p>
+<p>从平均 Accuracy 看，$B$ 明显优于 $A$。</p>
+<p>但从“可解决题目集合”看：</p>
+<ul>
+<li>$B$ 永远无法解决后 4 道题；</li>
+<li>$A$ 对所有 8 道题都有非零成功概率；</li>
+<li>若存在可靠 verifier 并允许 repeated sampling，$A$ 最终可能覆盖全部 8 道题。</li>
+</ul>
+<p>因此，评测应区分：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>关注的问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mean success probability</td>
+<td>平均单次成功率是多少？</td>
+</tr>
+<tr>
+<td>Coverage &#x2F; support</td>
+<td>哪些题至少存在非零成功概率？</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>同一道题能否稳定重复成功？</td>
+</tr>
+<tr>
+<td>Best-of-$N$ performance</td>
+<td>给定推理预算后能达到什么效果？</td>
+</tr>
+<tr>
+<td>Verifier-assisted performance</td>
+<td>可验证时，搜索能否将低概率成功放大？</td>
+</tr>
+</tbody></table>
+<p>RL 或 reward maximization 可能提高平均 reward，却同时让模型的能力分布变得更集中：</p>
+<blockquote>
+<p>平均表现提高，不一定意味着模型可以解决的问题种类更多。</p>
+</blockquote>
+<hr>
+<h2 id="7-如何直接计算这些方差？"><a href="#7-如何直接计算这些方差？" class="headerlink" title="7. 如何直接计算这些方差？"></a>7. 如何直接计算这些方差？</h2><p>设评测矩阵：</p>
+<p>$$
+A\in\mathbb R^{N\times K},
+$$</p>
+<p>其中 $N$ 是题目数，$K$ 是每题采样次数。</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-49-40.png"></p>
+<p>因此，很多情形可以直接用均值和方差公式计算，不必默认使用 bootstrap。</p>
+<hr>
+<h2 id="8-Bootstrap-与-Sign-Test"><a href="#8-Bootstrap-与-Sign-Test" class="headerlink" title="8. Bootstrap 与 Sign Test"></a>8. Bootstrap 与 Sign Test</h2><h2 id="8-1-Bootstrap"><a href="#8-1-Bootstrap" class="headerlink" title="8.1 Bootstrap"></a>8.1 Bootstrap</h2><p>Bootstrap 的核心是：</p>
+<blockquote>
+<p>从当前经验分布中进行有放回抽样，近似重新从未知 super-population 中抽样。</p>
+</blockquote>
+<p>它通常会得到与标准误分析相近的结论。</p>
+<p>但课程强调：</p>
+<ul>
+<li>Bootstrap 本身没有问题；</li>
+<li>文献中经常存在错误使用 bootstrap 的情况；</li>
+<li>当解析公式已经很简单时，应先理解方差来源，而不是机械地套用 bootstrap。</li>
+</ul>
+<hr>
+<h2 id="8-2-Sign-Test"><a href="#8-2-Sign-Test" class="headerlink" title="8.2 Sign Test"></a>8.2 Sign Test</h2><p>对 paired comparison，只关注两个模型预测不同的题目。</p>
+<p>在零假设下，可以认为：</p>
+<p>$$
+P(A\text{ better})=P(B\text{ better})=0.5.
+$$</p>
+<p>Sign test 询问：</p>
+<blockquote>
+<p>在两个模型真实能力相同的情况下，观察到当前这样偏向某一模型的结果有多大概率只是随机产生？</p>
+</blockquote>
+<p>当 $A$ 与 $B$ 的总体性能较接近时，sign test、bootstrap 与标准误方法通常会给出大致一致的判断。</p>
+<hr>
+<h2 id="9-Eval-Arena：大规模-Pairwise-Statistical-Testing"><a href="#9-Eval-Arena：大规模-Pairwise-Statistical-Testing" class="headerlink" title="9. Eval-Arena：大规模 Pairwise Statistical Testing"></a>9. Eval-Arena：大规模 Pairwise Statistical Testing</h2><p>Eval-Arena 汇总大量 benchmark、模型与 question-level 结果，对所有模型对进行：</p>
+<ul>
+<li>paired comparison；</li>
+<li>statistical testing；</li>
+<li>noise estimation；</li>
+<li>ranking；</li>
+<li>suspect example detection；</li>
+<li>contamination &#x2F; suspicious model analysis。</li>
+</ul>
+<p>它的目标不是只给出一个 leaderboard，而是回答：</p>
+<blockquote>
+<p>在统计意义上，哪些模型可以被认为稳定优于另一些模型？</p>
+</blockquote>
+<p>对于差异落入噪声区间的模型，不能因为 leaderboard 上的单个名次差异就断言一个模型更强。</p>
+<hr>
+<h2 id="10-可预测的噪声模式"><a href="#10-可预测的噪声模式" class="headerlink" title="10. 可预测的噪声模式"></a>10. 可预测的噪声模式</h2><h2 id="10-1-operatorname-SE-A-与-operatorname-SE-A-B-接近"><a href="#10-1-operatorname-SE-A-与-operatorname-SE-A-B-接近" class="headerlink" title="10.1 $\operatorname{SE}(A)$ 与 $\operatorname{SE}(A-B)$ 接近"></a>10.1 $\operatorname{SE}(A)$ 与 $\operatorname{SE}(A-B)$ 接近</h2><p>大规模分析得到一个经验规律：</p>
+<p>$$
+\operatorname{SE}(A)
+\approx
+\operatorname{SE}(A-B).
+$$</p>
+<p>根据：</p>
+<p>$$
+\operatorname{Var}(A-B)
+=
+\operatorname{Var}(A)
++
+\operatorname{Var}(B)
+-
+2\operatorname{Cov}(A,B),
+$$</p>
+<p>若两个模型方差相近，并且 paired difference 的标准误与单模型标准误同量级，可以粗略理解为模型间相关性约为：</p>
+<p>$$
+\operatorname{corr}(A,B)\approx 0.5.
+$$</p>
+<p>这表明：</p>
+<ul>
+<li>paired test 通常比完全独立假设更有统计功效；</li>
+<li>但现实模型之间并不是高度一致，因此 paired variance 也不会降到很低；</li>
+<li>不同模型在同一题上的成功与失败仍存在大量不一致。</li>
+</ul>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-51-10.png"></p>
+<hr>
+<h2 id="10-2-噪声与总体准确率有关"><a href="#10-2-噪声与总体准确率有关" class="headerlink" title="10.2 噪声与总体准确率有关"></a>10.2 噪声与总体准确率有关</h2><p>标准误并不是完全固定的。</p>
+<p>对于 Bernoulli 变量：</p>
+<p>$$
+\operatorname{Var}(A)=p(1-p),
+$$</p>
+<p>当 $p$ 接近 0 或 1 时，方差较小；当 $p\approx 0.5$ 时，方差最大。</p>
+<p>因此：</p>
+<ul>
+<li>极弱模型和极强模型的标准误通常较低；</li>
+<li>中等准确率区域的标准误通常较高；</li>
+<li>但课件指出，这种依赖相对较弱，benchmark size 仍是决定噪声量级的主要因素之一。</li>
+</ul>
+<hr>
+<h2 id="10-3-逐题成功概率近似服从-Beta-分布"><a href="#10-3-逐题成功概率近似服从-Beta-分布" class="headerlink" title="10.3 逐题成功概率近似服从 Beta 分布"></a>10.3 逐题成功概率近似服从 Beta 分布</h2><p>对某一性能区间内的模型，统计每道题的经验成功概率：</p>
+<p>$$
+p_i=P(\text{model solves question }i).
+$$</p>
+<p>在排除所有模型都无法解决的 true zero questions 后，经验分布可以用 Beta distribution 近似。</p>
+<p>当模型达到一定性能后，分布往往呈现双峰形状，可近似写成：</p>
+<p>$$
+p_i\sim \operatorname{Beta}(a,1-a).
+$$</p>
+<p><img src="/img/posts/3bf666cf/2026-07-19-13-52-36.png"></p>
+<p>双峰意味着大量题目集中在两端：</p>
+<ul>
+<li>一部分题几乎总能做对；</li>
+<li>一部分题几乎总会失败；</li>
+<li>中间成功概率的题相对较少。</li>
+</ul>
+<p>这一模式在 MATH、MMLU-Pro、SWE-bench Verified 等不同形式的 benchmark 中都能观察到。</p>
+<p>它使研究者即使没有所有逐题重复采样结果，也可以根据：</p>
+<ul>
+<li>benchmark size；</li>
+<li>模型整体 Accuracy；</li>
+<li>经验 Beta 模型；</li>
+</ul>
+<p>近似预测评测噪声。</p>
+<hr>
+<h2 id="11-为什么不能简单通过筛题或加权来提升信号？"><a href="#11-为什么不能简单通过筛题或加权来提升信号？" class="headerlink" title="11. 为什么不能简单通过筛题或加权来提升信号？"></a>11. 为什么不能简单通过筛题或加权来提升信号？</h2><p>讲者原本希望通过建模题目难度和错误模式，使现有 benchmark 更少噪声，但实验结果并不乐观。</p>
+<p>尝试过的方向包括：</p>
+<ul>
+<li>按题目难度过滤；</li>
+<li>对题目重新加权；</li>
+<li>Item Response Model；</li>
+<li>修正 benchmark 中的错误；</li>
+<li>使用 Plus 版本替代原始版本；</li>
+<li>只保留主观上更高质量的问题。</li>
+</ul>
+<p>但这些方法没有稳定提升 signal-to-noise ratio。</p>
+<p>观察到的反直觉结果包括：</p>
+<ul>
+<li>主观质量较差的 MBPP，signal-to-noise 可能优于 HumanEval+；</li>
+<li>HumanEval+、MBPP+ 并不一定比原始版本更容易测出模型差异；</li>
+<li>题目层面的重新加权没有解决模型之间的随机不一致；</li>
+<li>模型本身可能是比 benchmark 题目更主要的不一致来源。</li>
+</ul>
+<p>因此：</p>
+<blockquote>
+<p>当前阶段，仅靠过滤和重加权现有困难题，通常不能可靠地把一个小 benchmark 变成高统计功效的 benchmark。</p>
+</blockquote>
+<p>课程建议：</p>
+<ul>
+<li>在更多 benchmark 上共同报告结果；</li>
+<li>收集更大的测试集；</li>
+<li>对昂贵任务从每道题中提取超过 1 bit 的信息；</li>
+<li>在模型行为更稳定后，再重新考虑复杂的筛题和重加权方法。</li>
+</ul>
+<hr>
+<h2 id="12-一道复杂题为什么仍可能只提供-1-bit？"><a href="#12-一道复杂题为什么仍可能只提供-1-bit？" class="headerlink" title="12. 一道复杂题为什么仍可能只提供 1 bit？"></a>12. 一道复杂题为什么仍可能只提供 1 bit？</h2><p>即使 Agent 在一道 SWE-bench 任务中生成了：</p>
+<ul>
+<li>数万 token 的 trajectory；</li>
+<li>多次 tool calls；</li>
+<li>大量代码修改；</li>
+<li>测试与调试过程；</li>
+</ul>
+<p>若最终指标只有：</p>
+<p>$$
+\text{pass}=1
+\quad\text{or}\quad
+\text{fail}=0,
+$$</p>
+<p>那么评测实际只提取了 1 bit 的最终信息。</p>
+<p>这会丢失大量过程信息，例如：</p>
+<ul>
+<li>是否正确定位 bug；</li>
+<li>是否理解 repository；</li>
+<li>是否选择了合理工具；</li>
+<li>是否在中间步骤出现严重错误；</li>
+<li>是否通过偶然 patch 通过测试；</li>
+<li>是否破坏了未覆盖的功能；</li>
+<li>是否可以稳定复现；</li>
+<li>在多少次尝试中成功。</li>
+</ul>
+<p>因此，对于复杂昂贵任务，应尽量设计更丰富的评价信号：</p>
+<ul>
+<li>中间 milestone；</li>
+<li>partial credit；</li>
+<li>trajectory-level diagnostics；</li>
+<li>error category；</li>
+<li>time &#x2F; token &#x2F; tool budget；</li>
+<li>robustness across seeds；</li>
+<li>hidden tests；</li>
+<li>human quality judgment；</li>
+<li>verifier confidence；</li>
+<li>failure recovery ability。</li>
+</ul>
+<hr>
+<h2 id="13-如何报告评测噪声？"><a href="#13-如何报告评测噪声？" class="headerlink" title="13. 如何报告评测噪声？"></a>13. 如何报告评测噪声？</h2><p>课程给出一个从方便到精确的实践顺序。</p>
+<h2 id="方法-1：直接查-benchmark-噪声表"><a href="#方法-1：直接查-benchmark-噪声表" class="headerlink" title="方法 1：直接查 benchmark 噪声表"></a>方法 1：直接查 benchmark 噪声表</h2><p>适合快速得到 ballpark estimate。</p>
+<p>优点：</p>
+<ul>
+<li>最方便；</li>
+<li>不需要额外计算。</li>
+</ul>
+<p>限制：</p>
+<ul>
+<li>只能得到典型量级；</li>
+<li>不一定完全匹配当前模型对。</li>
+</ul>
+<hr>
+<h2 id="方法-2：根据模型-Accuracy-查噪声曲线"><a href="#方法-2：根据模型-Accuracy-查噪声曲线" class="headerlink" title="方法 2：根据模型 Accuracy 查噪声曲线"></a>方法 2：根据模型 Accuracy 查噪声曲线</h2><p>在对应 benchmark 的 Accuracy–SE 图中，根据模型当前 Accuracy 区间读取估计值。</p>
+<p>优点：</p>
+<ul>
+<li>考虑了噪声随整体准确率的变化；</li>
+<li>比固定表格更准确。</li>
+</ul>
+<hr>
+<h2 id="方法-3：导出完整逐题结果并运行-Eval-Arena-代码"><a href="#方法-3：导出完整逐题结果并运行-Eval-Arena-代码" class="headerlink" title="方法 3：导出完整逐题结果并运行 Eval-Arena 代码"></a>方法 3：导出完整逐题结果并运行 Eval-Arena 代码</h2><p>需要提供：</p>
+<ul>
+<li>每道题的模型得分；</li>
+<li>多次采样结果；</li>
+<li>对应模型对。</li>
+</ul>
+<p>优点：</p>
+<ul>
+<li>可以得到当前模型对的具体 paired comparison；</li>
+<li>能与大量已有模型比较；</li>
+<li>容易发现异常结果。</li>
+</ul>
+<hr>
+<h2 id="方法-4：自行实现统计检验"><a href="#方法-4：自行实现统计检验" class="headerlink" title="方法 4：自行实现统计检验"></a>方法 4：自行实现统计检验</h2><p>理论上可以自行计算：</p>
+<ul>
+<li>paired variance；</li>
+<li>standard error；</li>
+<li>bootstrap；</li>
+<li>sign test；</li>
+<li>confidence interval；</li>
+<li>$p$-value。</li>
+</ul>
+<p>但课程提醒，这一流程涉及多种噪声来源和 estimator，手动实现较容易出错。</p>
+<hr>
+<h2 id="对-Benchmark-Builder-的建议"><a href="#对-Benchmark-Builder-的建议" class="headerlink" title="对 Benchmark Builder 的建议"></a>对 Benchmark Builder 的建议</h2><p>Benchmark 和 leaderboard 构建者应公开：</p>
+<ul>
+<li>完整 question-level results；</li>
+<li>多 seed &#x2F; 多采样结果；</li>
+<li>评测配置；</li>
+<li>模型版本；</li>
+<li>sampling parameters；</li>
+<li>agent scaffold；</li>
+<li>tool environment；</li>
+<li>token &#x2F; time budget；</li>
+<li>failure logs。</li>
+</ul>
+<p>只公开一个总分，会让后续统计分析、错误审计与 contamination 检测变得困难。</p>
+<hr>
+<h2 id="14-多-Seed-与训练曲线方差"><a href="#14-多-Seed-与训练曲线方差" class="headerlink" title="14. 多 Seed 与训练曲线方差"></a>14. 多 Seed 与训练曲线方差</h2><p>运行多个 training seeds 可以帮助观察结果稳定性。</p>
+<p>但它通常只覆盖：</p>
+<ul>
+<li>训练随机初始化；</li>
+<li>数据顺序；</li>
+<li>优化随机性；</li>
+<li>部分生成随机性。</li>
+</ul>
+<p>它不一定完整覆盖：</p>
+<ul>
+<li>benchmark 题目抽样噪声；</li>
+<li>模型—问题之间的系统性不一致；</li>
+<li>agent environment randomness；</li>
+<li>evaluator &#x2F; verifier error。</li>
+</ul>
+<p>因此，多 seed 结果可以与本课程框架兼容，但只看 training curve variance 往往会低估总体评测不确定性。</p>
+<hr>
+<h2 id="15-使用-Question-level-Data-审计-Benchmark"><a href="#15-使用-Question-level-Data-审计-Benchmark" class="headerlink" title="15. 使用 Question-level Data 审计 Benchmark"></a>15. 使用 Question-level Data 审计 Benchmark</h2><p>除估计噪声外，Eval-Arena 还可以用于发现可疑样本。</p>
+<p>一种方法是计算：</p>
+<blockquote>
+<p>某道题的得分与模型整体能力是否呈负相关？</p>
+</blockquote>
+<p>正常情况下，更强模型应更容易解决大多数问题。</p>
+<p>若出现：</p>
+<p>$$
+\text{模型越强，该题得分反而越低},
+$$</p>
+<p>可能意味着：</p>
+<ul>
+<li>参考答案错误；</li>
+<li>测试用例不一致；</li>
+<li>题目描述存在歧义；</li>
+<li>强模型给出更合理但不被 evaluator 接受的答案；</li>
+<li>某些弱模型记住了 benchmark 特定答案。</li>
+</ul>
+<p>课程提到，通过这种方式在 MBPP 中发现了一些错误或不一致样本，其中一部分后来被纳入 MBPP+ 的修正。</p>
+<hr>
+<h2 id="15-1-检测可疑模型与数据污染"><a href="#15-1-检测可疑模型与数据污染" class="headerlink" title="15.1 检测可疑模型与数据污染"></a>15.1 检测可疑模型与数据污染</h2><p>若某些 benchmark 样本本身存在错误，而某个模型却反复给出与 benchmark 错误参考答案完全一致的输出，这可能成为训练数据污染的间接证据。</p>
+<p>这种证据不能单独证明 contamination，但可以帮助 benchmark builder 进一步调查：</p>
+<ul>
+<li>模型是否训练过评测集；</li>
+<li>是否记住固定错误答案；</li>
+<li>是否存在 benchmark-specific pattern matching。</li>
+</ul>
+<hr>
+<h2 id="16-Signal-to-Noise-Ratio"><a href="#16-Signal-to-Noise-Ratio" class="headerlink" title="16. Signal-to-Noise Ratio"></a>16. Signal-to-Noise Ratio</h2><h2 id="16-1-定义"><a href="#16-1-定义" class="headerlink" title="16.1 定义"></a>16.1 定义</h2><p>课程用模型规模翻倍带来的平均提升作为 signal：</p>
+<p>$$
+\text{Signal}=|\bar A-\bar B|.
+$$</p>
+<p>用 paired comparison 的标准误作为 noise：</p>
+<p>$$
+\text{Noise}=\operatorname{SE}(A-B).
+$$</p>
+<p>于是：</p>
+<p>$$
+\text{Signal-to-Noise Ratio}
+=
+\frac{|\bar A-\bar B|}
+{\operatorname{SE}(A-B)}.
+$$</p>
+<p>这实际上就是差值对应的 $|z|$-score。</p>
+<p>若：</p>
+<p>$$
+\frac{|\bar A-\bar B|}
+{\operatorname{SE}(A-B)}
+&lt;2,
+$$</p>
+<p>则 benchmark 通常不能可靠地区分这两个模型。</p>
+<hr>
+<h2 id="16-2-不同-Benchmark-的-Signal-to-Noise"><a href="#16-2-不同-Benchmark-的-Signal-to-Noise" class="headerlink" title="16.2 不同 Benchmark 的 Signal-to-Noise"></a>16.2 不同 Benchmark 的 Signal-to-Noise</h2><p><img src="/img/posts/3bf666cf/2026-07-19-13-55-09.png"></p>
+<p>可以看到：</p>
+<ul>
+<li>大型 multiple-choice benchmark 通常有更高的 signal-to-noise；</li>
+<li>复杂代码生成 benchmark 未必具有更好的统计功效；</li>
+<li>HumanEval 的 SNR 约为 1.1，无法稳定识别模型规模翻倍带来的提升；</li>
+<li>HumanEval+ 的 SNR 在该分析中甚至低于原始 HumanEval。</li>
+</ul>
+<hr>
+<h2 id="17-复杂-Agent-Evaluation-的额外风险"><a href="#17-复杂-Agent-Evaluation-的额外风险" class="headerlink" title="17. 复杂 Agent Evaluation 的额外风险"></a>17. 复杂 Agent Evaluation 的额外风险</h2><p>复杂评测往往需要：</p>
+<ul>
+<li>很长的 trajectory；</li>
+<li>多个工具与依赖；</li>
+<li>动态环境；</li>
+<li>隐藏测试；</li>
+<li>自动 evaluator；</li>
+<li>大量工程配置。</li>
+</ul>
+<p>当每个人都因为评测过于复杂、运行一次需要十万级 token，而没有精力检查细节时，评测管线本身也可能出错。</p>
+<p>可能的问题包括：</p>
+<ul>
+<li>环境配置错误；</li>
+<li>测试泄漏；</li>
+<li>evaluator bug；</li>
+<li>无效 patch 被判为成功；</li>
+<li>合理答案被错误拒绝；</li>
+<li>不同 agent 使用不公平的预算；</li>
+<li>leaderboard 配置不可复现。</li>
+</ul>
+<p>因此，对复杂 Agent benchmark，不能只相信最终 leaderboard 分数；还需要：</p>
+<ul>
+<li>独立复核；</li>
+<li>公开 logs；</li>
+<li>人工审计异常样本；</li>
+<li>检查 paired results；</li>
+<li>对 benchmark implementation 做测试。</li>
+</ul>
+<hr>
+<h2 id="18-面向研究者的评测检查清单"><a href="#18-面向研究者的评测检查清单" class="headerlink" title="18. 面向研究者的评测检查清单"></a>18. 面向研究者的评测检查清单</h2><p>在论文中声称模型提升前，应至少回答以下问题。</p>
+<h2 id="18-1-Benchmark-层面"><a href="#18-1-Benchmark-层面" class="headerlink" title="18.1 Benchmark 层面"></a>18.1 Benchmark 层面</h2><ul>
+<li>测试集包含多少道题？</li>
+<li>这些题是否可视为目标任务分布的代表性样本？</li>
+<li>是否存在 contamination？</li>
+<li>是否公开完整 question-level results？</li>
+<li>evaluator 是否经过独立验证？</li>
+</ul>
+<h2 id="18-2-模型比较层面"><a href="#18-2-模型比较层面" class="headerlink" title="18.2 模型比较层面"></a>18.2 模型比较层面</h2><ul>
+<li>两个模型是否在完全相同的题目上比较？</li>
+<li>是否使用 paired comparison？</li>
+<li>是否报告 $\operatorname{SE}(A-B)$ 或 confidence interval？</li>
+<li>提升对应的 $z$-score 是否大于 2？</li>
+<li>是否存在大量“有时更好、有时更差”的题目交换？</li>
+</ul>
+<h2 id="18-3-随机性层面"><a href="#18-3-随机性层面" class="headerlink" title="18.3 随机性层面"></a>18.3 随机性层面</h2><ul>
+<li>每题运行了多少个 seed？</li>
+<li>是否区分题目抽样噪声与模型采样噪声？</li>
+<li>增加 sampling budget 后结果如何变化？</li>
+<li>是否报告 Pass@1、Pass@$K$ 与 verifier-assisted performance？</li>
+</ul>
+<h2 id="18-4-结果解释层面"><a href="#18-4-结果解释层面" class="headerlink" title="18.4 结果解释层面"></a>18.4 结果解释层面</h2><ul>
+<li>改进是提高了单次成功率，还是扩大了可解决问题的覆盖范围？</li>
+<li>是否只在一个小 benchmark 上提升？</li>
+<li>是否在多个独立 benchmark 上复现？</li>
+<li>改进幅度是否超过 benchmark 的典型噪声区间？</li>
+<li>是否考虑 compute、token 与 tool budget 的差异？</li>
+</ul>
+<hr>
+<h2 id="19-本节课的核心结论"><a href="#19-本节课的核心结论" class="headerlink" title="19. 本节课的核心结论"></a>19. 本节课的核心结论</h2><h2 id="结论-1：困难题不能自动弥补样本量不足"><a href="#结论-1：困难题不能自动弥补样本量不足" class="headerlink" title="结论 1：困难题不能自动弥补样本量不足"></a>结论 1：困难题不能自动弥补样本量不足</h2><p>一道题产生很长的答案，不代表最终二元得分包含了同等多的统计信息。</p>
+<hr>
+<h2 id="结论-2：平均-Accuracy-会掩盖大量逐题不一致"><a href="#结论-2：平均-Accuracy-会掩盖大量逐题不一致" class="headerlink" title="结论 2：平均 Accuracy 会掩盖大量逐题不一致"></a>结论 2：平均 Accuracy 会掩盖大量逐题不一致</h2><p>强模型错简单题、弱模型做对困难题说明，很多 benchmark 结果是概率性的，而不是清晰的能力边界。</p>
+<hr>
+<h2 id="结论-3：模型比较应优先使用-Paired-Comparison"><a href="#结论-3：模型比较应优先使用-Paired-Comparison" class="headerlink" title="结论 3：模型比较应优先使用 Paired Comparison"></a>结论 3：模型比较应优先使用 Paired Comparison</h2><p>同一组题上的逐题差值包含现成的相关信息，比只比较两个总分更有统计功效。</p>
+<hr>
+<h2 id="结论-4：噪声至少包含两个来源"><a href="#结论-4：噪声至少包含两个来源" class="headerlink" title="结论 4：噪声至少包含两个来源"></a>结论 4：噪声至少包含两个来源</h2><p>$$
+\text{Total Noise}
+=
+\text{Question Sampling Noise}
++
+\text{Model Sampling Noise}.
+$$</p>
+<p>多采样可以降低后者，却不能解决小测试集导致的前者。</p>
+<hr>
+<h2 id="结论-5：当前许多代码与-Agent-Benchmark-的-Signal-to-Noise-偏低"><a href="#结论-5：当前许多代码与-Agent-Benchmark-的-Signal-to-Noise-偏低" class="headerlink" title="结论 5：当前许多代码与 Agent Benchmark 的 Signal-to-Noise 偏低"></a>结论 5：当前许多代码与 Agent Benchmark 的 Signal-to-Noise 偏低</h2><p>在 HumanEval 等小型 benchmark 上，几个百分点的提升通常不足以稳定证明模型更强。</p>
+<hr>
+<h2 id="结论-6：现阶段更可靠的改进方向是增加信息，而不只是筛题"><a href="#结论-6：现阶段更可靠的改进方向是增加信息，而不只是筛题" class="headerlink" title="结论 6：现阶段更可靠的改进方向是增加信息，而不只是筛题"></a>结论 6：现阶段更可靠的改进方向是增加信息，而不只是筛题</h2><p>应优先考虑：</p>
+<ul>
+<li>更大的 benchmark；</li>
+<li>更多独立 benchmark；</li>
+<li>每题提取超过 1 bit 的评价信息；</li>
+<li>公开 question-level results；</li>
+<li>报告标准误和 paired statistical test。</li>
+</ul>
+<hr>
+<h2 id="20-一句话概括"><a href="#20-一句话概括" class="headerlink" title="20. 一句话概括"></a>20. 一句话概括</h2><blockquote>
+<p><strong>现代 LLM &#x2F; Agent benchmark 虽然单题越来越复杂，但由于题目数量少、模型行为随机且逐题表现不一致，平均分中的几个百分点提升往往落在可预测的噪声范围内；可靠评测需要 paired comparison、方差分解、question-level results 和更高的信息量。</strong></p>
+</blockquote>
+<hr>
+<h2 id="References-课件链接"><a href="#References-课件链接" class="headerlink" title="References &#x2F; 课件链接"></a>References &#x2F; 课件链接</h2><h2 id="Eval-Arena"><a href="#Eval-Arena" class="headerlink" title="Eval-Arena"></a>Eval-Arena</h2><ul>
+<li>Results: <a target="_blank" rel="noopener" href="https://crux-eval.github.io/eval-arena/main/">https://crux-eval.github.io/eval-arena/main/</a></li>
+<li>Code: <a target="_blank" rel="noopener" href="https://github.com/crux-eval/eval-arena">https://github.com/crux-eval/eval-arena</a></li>
+<li>Signal-to-noise analysis: <a target="_blank" rel="noopener" href="https://crux-eval.github.io/eval-arena/signal_noise.html">https://crux-eval.github.io/eval-arena/signal_noise.html</a></li>
+<li>Errors and contamination: <a target="_blank" rel="noopener" href="https://github.com/crux-eval/eval-arena?tab=readme-ov-file#errors-and-contamination">https://github.com/crux-eval/eval-arena?tab=readme-ov-file#errors-and-contamination</a></li>
+</ul>
+<h2 id="Evaluation-Stability"><a href="#Evaluation-Stability" class="headerlink" title="Evaluation Stability"></a>Evaluation Stability</h2><ul>
+<li>多 seed 评测相关工作：<a target="_blank" rel="noopener" href="https://arxiv.org/abs/2406.10229v1">https://arxiv.org/abs/2406.10229v1</a></li>
+<li>SWE-bench evaluation issue：<a target="_blank" rel="noopener" href="https://github.com/SWE-bench/SWE-bench/issues/465">https://github.com/SWE-bench/SWE-bench/issues/465</a></li>
+</ul>
+<h2 id="课件中列出的-Code-LLM-相关工作"><a href="#课件中列出的-Code-LLM-相关工作" class="headerlink" title="课件中列出的 Code LLM 相关工作"></a>课件中列出的 Code LLM 相关工作</h2><ul>
+<li>AST-FIM: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2506.00204">https://arxiv.org/abs/2506.00204</a></li>
+<li>SWE-RL: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2502.18449">https://arxiv.org/abs/2502.18449</a></li>
+<li>LEVER: <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2302.08468">https://arxiv.org/pdf/2302.08468</a></li>
+<li>Coder-Reviewer: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2211.16490">https://arxiv.org/abs/2211.16490</a></li>
+<li>InCoder: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2204.05999">https://arxiv.org/abs/2204.05999</a></li>
+<li>MBR-Exec: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2204.11454">https://arxiv.org/abs/2204.11454</a></li>
+</ul>
+<h2 id="课件中列出的-Benchmark"><a href="#课件中列出的-Benchmark" class="headerlink" title="课件中列出的 Benchmark"></a>课件中列出的 Benchmark</h2><ul>
+<li>SWE-bench Multimodal: <a target="_blank" rel="noopener" href="https://www.swebench.com/multimodal.html">https://www.swebench.com/multimodal.html</a></li>
+<li>Spider 2.0: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2411.07763">https://arxiv.org/abs/2411.07763</a></li>
+<li>LiveCodeBench: <a target="_blank" rel="noopener" href="https://livecodebench.github.io/">https://livecodebench.github.io/</a></li>
+<li>SAFIM: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2403.04814">https://arxiv.org/abs/2403.04814</a></li>
+<li>CRUXEval: <a target="_blank" rel="noopener" href="https://arxiv.org/abs/2401.03065">https://arxiv.org/abs/2401.03065</a></li>
+<li>DS-1000: <a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2211.11501">https://arxiv.org/pdf/2211.11501</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/3bf666cf/">https://wick-7.github.io/posts/3bf666cf/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Evaluation/">Evaluation</a><a class="post-meta__tags" href="/tags/Benchmark/">Benchmark</a><a class="post-meta__tags" href="/tags/Statistics/">Statistics</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture8》课堂笔记</div></div><div class="info-2"><div class="info-item-1">AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以下循环的复杂系统： 1234567理解目标→ 拆解任务→ 组建角色或调用专业能力→ 使用工具和外部知识→ 保存项目状态→ 检查与修正错误→ 输出可验证结果  核心变化不是模型单次回答得更聪明，而是 模型开始成为工具、知识、记忆与协作流程的组织者。  2. 这节课的核心观点2.1 从 AI Tool 到 Agentic System传统 AI 通常解决边界清晰的单一任务，例如分类、预测或生成。 Agent 系统面对的则是开放式、长周期任务。它需要自己决定：  下一步做什么； 需要调用哪些工具； 是否要搜索新知识； 如何保存中间结果； 什么时候检查、回退或请求人类介入。  因此，Agent ...</div></div></div></a><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-15</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a><a class="pagination-related" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Evolution of System Designs from an AI Engineer Perspective从 AI Engineer 的视角观察：  模型算法为什么仍在持续进步； 什么样的 AI 应用能够真正创造价值； 为什么 AI Infra 正在成为企业 IT 的第三大支柱； 为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。   1. Demystify “LLM” and “AGI”1.1 Chinese Typewriter Problem英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 bigram、n-gram，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。 早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。 1.2 BERT...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/df519a88/" title="《CS294-196 24fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">《CS294-196 24fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Compound AI Systems &amp; DSPy Framework1. 课程主线现在使用大语言模型快速搭建一个令人印象深刻的 Demo 已经非常容易，但将一个单体语言模型（Monolithic LM）变成可靠、可控、可调试、可持续改进的 AI 系统仍然很困难。 这节课的核心观点是：  与其把所有任务都交给一个黑盒 LM，不如把系统写成一个由多个专门模块组成的程序，并进一步让这些模块的提示词、示例乃至模型权重根据任务指标自动优化。  这对应两个重要概念：  Compound AI System：使用 LM 作为专门组件的模块化程序。 DSPy：以声明式方式编写 LM 程序，并通过 Optimizer 将程序编译为适配具体模型和任务的高质量实现。   Part I：为什么需要 Compound AI Systems2. 单体 LM 的问题语言模型的流畅性既是优势，也是风险来源。模型即使产生了错误答案或有 Bug 的代码，也可能表现得非常自信，使错误难以被发现。 所有 AI 系统都会犯错，真正的问题在于：单体 LM 的内部行为高度耦合，因此很难完成以下工作：  Contr...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Predictable-Noise-and-Patterns-from-Millions-of-Questions"><span class="toc-number">1.</span> <span class="toc-text">Predictable Noise and Patterns from Millions of Questions</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AC%E8%8A%82%E8%AF%BE%E4%B8%BB%E7%BA%BF"><span class="toc-number">1.1.</span> <span class="toc-text">本节课主线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E9%87%8D%E6%96%B0%E6%80%9D%E8%80%83-LLM-Evaluation%EF%BC%9F"><span class="toc-number">1.2.</span> <span class="toc-text">1. 为什么需要重新思考 LLM Evaluation？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-%E4%BB%8E%E2%80%9C%E5%A4%A7%E8%80%8C%E7%AE%80%E5%8D%95%E2%80%9D%E5%88%B0%E2%80%9C%E5%B0%8F%E8%80%8C%E5%A4%8D%E6%9D%82%E2%80%9D"><span class="toc-number">1.3.</span> <span class="toc-text">1.1 从“大而简单”到“小而复杂”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-%E5%8D%95%E9%81%93%E5%A4%8D%E6%9D%82%E9%A2%98%E6%98%AF%E5%90%A6%E5%8C%85%E5%90%AB%E6%9B%B4%E5%A4%9A%E4%BF%A1%E6%81%AF%EF%BC%9F"><span class="toc-number">1.4.</span> <span class="toc-text">1.2 单道复杂题是否包含更多信息？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E7%82%B9-A"><span class="toc-number">1.4.1.</span> <span class="toc-text">观点 A</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%82%E7%82%B9-B"><span class="toc-number">1.4.2.</span> <span class="toc-text">观点 B</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%B6%85%E8%B6%8A%E5%B9%B3%E5%9D%87-Accuracy%EF%BC%9AQuestion-level-Exploratory-Data-Analysis"><span class="toc-number">1.5.</span> <span class="toc-text">2. 超越平均 Accuracy：Question-level Exploratory Data Analysis</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E6%A8%A1%E5%9E%8B%E2%80%94%E9%A2%98%E7%9B%AE%E7%83%AD%E5%8A%9B%E5%9B%BE"><span class="toc-number">1.6.</span> <span class="toc-text">2.1 模型—题目热力图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-%E2%80%9C%E6%9C%89%E6%97%B6%E6%9B%B4%E5%A5%BD%E2%80%9D%E4%B8%8D%E7%AD%89%E4%BA%8E%E2%80%9C%E4%B8%A5%E6%A0%BC%E6%9B%B4%E5%A5%BD%E2%80%9D"><span class="toc-number">1.7.</span> <span class="toc-text">2.2 “有时更好”不等于“严格更好”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E7%BA%A2%E8%89%B2%E6%A0%BC%E5%AD%90%E4%B8%8D%E6%98%AF%E4%B8%A5%E6%A0%BC%E7%9A%84-0"><span class="toc-number">1.8.</span> <span class="toc-text">2.3 红色格子不是严格的 0</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-%E5%A4%9A%E6%AD%A5-Agent-%E4%BB%BB%E5%8A%A1%E4%B8%AD%E7%9A%84%E8%AF%AF%E5%B7%AE%E7%B4%AF%E7%A7%AF"><span class="toc-number">1.9.</span> <span class="toc-text">2.4 多步 Agent 任务中的误差累积</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Super-population%EF%BC%9A%E5%B0%86-Benchmark-%E7%9C%8B%E6%88%90%E9%97%AE%E9%A2%98%E6%80%BB%E4%BD%93%E7%9A%84%E6%A0%B7%E6%9C%AC"><span class="toc-number">1.10.</span> <span class="toc-text">3. Super-population：将 Benchmark 看成问题总体的样本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E5%9F%BA%E6%9C%AC%E8%AE%BE%E5%AE%9A"><span class="toc-number">1.11.</span> <span class="toc-text">3.1 基本设定</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E9%A2%98%E7%9B%AE%E5%B1%82%E9%9D%A2%E7%9A%84%E6%96%B9%E5%B7%AE"><span class="toc-number">1.12.</span> <span class="toc-text">3.2 题目层面的方差</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E6%AF%94%E8%BE%83%E4%B8%A4%E4%B8%AA%E6%A8%A1%E5%9E%8B%EF%BC%9APaired-Comparison"><span class="toc-number">1.13.</span> <span class="toc-text">4. 比较两个模型：Paired Comparison</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BA%94%E5%BD%93%E4%BD%BF%E7%94%A8-paired-test%EF%BC%9F"><span class="toc-number">1.14.</span> <span class="toc-text">4.1 为什么应当使用 paired test？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-2-Paired-%E4%B8%8E-Unpaired-%E7%9A%84%E7%9B%B4%E8%A7%89"><span class="toc-number">1.15.</span> <span class="toc-text">4.2 Paired 与 Unpaired 的直觉</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Unpaired-comparison"><span class="toc-number">1.15.1.</span> <span class="toc-text">Unpaired comparison</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Paired-comparison"><span class="toc-number">1.15.2.</span> <span class="toc-text">Paired comparison</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3-z-score-%E4%B8%8E%E6%98%BE%E8%91%97%E6%80%A7"><span class="toc-number">1.16.</span> <span class="toc-text">4.3 $z$-score 与显著性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-4-HumanEval-%E7%A4%BA%E4%BE%8B"><span class="toc-number">1.17.</span> <span class="toc-text">4.4 HumanEval 示例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Unpaired-comparison-1"><span class="toc-number">1.17.1.</span> <span class="toc-text">Unpaired comparison</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Paired-comparison-1"><span class="toc-number">1.17.2.</span> <span class="toc-text">Paired comparison</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-LLM-%E7%9A%84%E5%A4%9A%E6%AC%A1%E7%8B%AC%E7%AB%8B%E9%87%87%E6%A0%B7%E4%B8%8E%E4%B8%A4%E7%B1%BB%E5%99%AA%E5%A3%B0"><span class="toc-number">1.18.</span> <span class="toc-text">5. LLM 的多次独立采样与两类噪声</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-1-%E5%8A%A0%E5%85%A5%E6%A8%A1%E5%9E%8B%E9%9A%8F%E6%9C%BA%E6%80%A7"><span class="toc-number">1.19.</span> <span class="toc-text">5.1 加入模型随机性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-2-%E5%85%A8%E6%96%B9%E5%B7%AE%E5%88%86%E8%A7%A3"><span class="toc-number">1.20.</span> <span class="toc-text">5.2 全方差分解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%A2%98%E7%9B%AE%E6%8A%BD%E6%A0%B7%E5%99%AA%E5%A3%B0-Data-variance"><span class="toc-number">1.20.1.</span> <span class="toc-text">题目抽样噪声 &#x2F; Data variance</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A8%A1%E5%9E%8B%E9%87%87%E6%A0%B7%E5%99%AA%E5%A3%B0-Model-variance"><span class="toc-number">1.20.2.</span> <span class="toc-text">模型采样噪声 &#x2F; Model variance</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-3-%E5%AF%B9%E5%BA%94%E7%9A%84%E6%A0%87%E5%87%86%E8%AF%AF"><span class="toc-number">1.21.</span> <span class="toc-text">5.3 对应的标准误</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-4-%E5%B8%A6%E6%A8%A1%E5%9E%8B%E9%87%87%E6%A0%B7%E5%99%AA%E5%A3%B0%E7%9A%84-paired-comparison"><span class="toc-number">1.22.</span> <span class="toc-text">5.4 带模型采样噪声的 paired comparison</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E2%80%9C%E5%B9%B3%E5%9D%87%E5%88%86%E6%9B%B4%E9%AB%98%E2%80%9D%E4%B8%8D%E4%B8%80%E5%AE%9A%E6%84%8F%E5%91%B3%E7%9D%80%E2%80%9C%E8%83%BD%E5%8A%9B%E8%A6%86%E7%9B%96%E6%9B%B4%E5%B9%BF%E2%80%9D"><span class="toc-number">1.23.</span> <span class="toc-text">6. “平均分更高”不一定意味着“能力覆盖更广”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A8%A1%E5%9E%8B-A"><span class="toc-number">1.24.</span> <span class="toc-text">模型 A</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A8%A1%E5%9E%8B-B"><span class="toc-number">1.25.</span> <span class="toc-text">模型 B</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E5%A6%82%E4%BD%95%E7%9B%B4%E6%8E%A5%E8%AE%A1%E7%AE%97%E8%BF%99%E4%BA%9B%E6%96%B9%E5%B7%AE%EF%BC%9F"><span class="toc-number">1.26.</span> <span class="toc-text">7. 如何直接计算这些方差？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-Bootstrap-%E4%B8%8E-Sign-Test"><span class="toc-number">1.27.</span> <span class="toc-text">8. Bootstrap 与 Sign Test</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-1-Bootstrap"><span class="toc-number">1.28.</span> <span class="toc-text">8.1 Bootstrap</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-2-Sign-Test"><span class="toc-number">1.29.</span> <span class="toc-text">8.2 Sign Test</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Eval-Arena%EF%BC%9A%E5%A4%A7%E8%A7%84%E6%A8%A1-Pairwise-Statistical-Testing"><span class="toc-number">1.30.</span> <span class="toc-text">9. Eval-Arena：大规模 Pairwise Statistical Testing</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E5%8F%AF%E9%A2%84%E6%B5%8B%E7%9A%84%E5%99%AA%E5%A3%B0%E6%A8%A1%E5%BC%8F"><span class="toc-number">1.31.</span> <span class="toc-text">10. 可预测的噪声模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-1-operatorname-SE-A-%E4%B8%8E-operatorname-SE-A-B-%E6%8E%A5%E8%BF%91"><span class="toc-number">1.32.</span> <span class="toc-text">10.1 $\operatorname{SE}(A)$ 与 $\operatorname{SE}(A-B)$ 接近</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-2-%E5%99%AA%E5%A3%B0%E4%B8%8E%E6%80%BB%E4%BD%93%E5%87%86%E7%A1%AE%E7%8E%87%E6%9C%89%E5%85%B3"><span class="toc-number">1.33.</span> <span class="toc-text">10.2 噪声与总体准确率有关</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-3-%E9%80%90%E9%A2%98%E6%88%90%E5%8A%9F%E6%A6%82%E7%8E%87%E8%BF%91%E4%BC%BC%E6%9C%8D%E4%BB%8E-Beta-%E5%88%86%E5%B8%83"><span class="toc-number">1.34.</span> <span class="toc-text">10.3 逐题成功概率近似服从 Beta 分布</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%AE%80%E5%8D%95%E9%80%9A%E8%BF%87%E7%AD%9B%E9%A2%98%E6%88%96%E5%8A%A0%E6%9D%83%E6%9D%A5%E6%8F%90%E5%8D%87%E4%BF%A1%E5%8F%B7%EF%BC%9F"><span class="toc-number">1.35.</span> <span class="toc-text">11. 为什么不能简单通过筛题或加权来提升信号？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-%E4%B8%80%E9%81%93%E5%A4%8D%E6%9D%82%E9%A2%98%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E5%8F%AF%E8%83%BD%E5%8F%AA%E6%8F%90%E4%BE%9B-1-bit%EF%BC%9F"><span class="toc-number">1.36.</span> <span class="toc-text">12. 一道复杂题为什么仍可能只提供 1 bit？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-%E5%A6%82%E4%BD%95%E6%8A%A5%E5%91%8A%E8%AF%84%E6%B5%8B%E5%99%AA%E5%A3%B0%EF%BC%9F"><span class="toc-number">1.37.</span> <span class="toc-text">13. 如何报告评测噪声？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E6%B3%95-1%EF%BC%9A%E7%9B%B4%E6%8E%A5%E6%9F%A5-benchmark-%E5%99%AA%E5%A3%B0%E8%A1%A8"><span class="toc-number">1.38.</span> <span class="toc-text">方法 1：直接查 benchmark 噪声表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E6%B3%95-2%EF%BC%9A%E6%A0%B9%E6%8D%AE%E6%A8%A1%E5%9E%8B-Accuracy-%E6%9F%A5%E5%99%AA%E5%A3%B0%E6%9B%B2%E7%BA%BF"><span class="toc-number">1.39.</span> <span class="toc-text">方法 2：根据模型 Accuracy 查噪声曲线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E6%B3%95-3%EF%BC%9A%E5%AF%BC%E5%87%BA%E5%AE%8C%E6%95%B4%E9%80%90%E9%A2%98%E7%BB%93%E6%9E%9C%E5%B9%B6%E8%BF%90%E8%A1%8C-Eval-Arena-%E4%BB%A3%E7%A0%81"><span class="toc-number">1.40.</span> <span class="toc-text">方法 3：导出完整逐题结果并运行 Eval-Arena 代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E6%B3%95-4%EF%BC%9A%E8%87%AA%E8%A1%8C%E5%AE%9E%E7%8E%B0%E7%BB%9F%E8%AE%A1%E6%A3%80%E9%AA%8C"><span class="toc-number">1.41.</span> <span class="toc-text">方法 4：自行实现统计检验</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9-Benchmark-Builder-%E7%9A%84%E5%BB%BA%E8%AE%AE"><span class="toc-number">1.42.</span> <span class="toc-text">对 Benchmark Builder 的建议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-%E5%A4%9A-Seed-%E4%B8%8E%E8%AE%AD%E7%BB%83%E6%9B%B2%E7%BA%BF%E6%96%B9%E5%B7%AE"><span class="toc-number">1.43.</span> <span class="toc-text">14. 多 Seed 与训练曲线方差</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-%E4%BD%BF%E7%94%A8-Question-level-Data-%E5%AE%A1%E8%AE%A1-Benchmark"><span class="toc-number">1.44.</span> <span class="toc-text">15. 使用 Question-level Data 审计 Benchmark</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-1-%E6%A3%80%E6%B5%8B%E5%8F%AF%E7%96%91%E6%A8%A1%E5%9E%8B%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%B1%A1%E6%9F%93"><span class="toc-number">1.45.</span> <span class="toc-text">15.1 检测可疑模型与数据污染</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Signal-to-Noise-Ratio"><span class="toc-number">1.46.</span> <span class="toc-text">16. Signal-to-Noise Ratio</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-1-%E5%AE%9A%E4%B9%89"><span class="toc-number">1.47.</span> <span class="toc-text">16.1 定义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-2-%E4%B8%8D%E5%90%8C-Benchmark-%E7%9A%84-Signal-to-Noise"><span class="toc-number">1.48.</span> <span class="toc-text">16.2 不同 Benchmark 的 Signal-to-Noise</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-%E5%A4%8D%E6%9D%82-Agent-Evaluation-%E7%9A%84%E9%A2%9D%E5%A4%96%E9%A3%8E%E9%99%A9"><span class="toc-number">1.49.</span> <span class="toc-text">17. 复杂 Agent Evaluation 的额外风险</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E9%9D%A2%E5%90%91%E7%A0%94%E7%A9%B6%E8%80%85%E7%9A%84%E8%AF%84%E6%B5%8B%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95"><span class="toc-number">1.50.</span> <span class="toc-text">18. 面向研究者的评测检查清单</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-Benchmark-%E5%B1%82%E9%9D%A2"><span class="toc-number">1.51.</span> <span class="toc-text">18.1 Benchmark 层面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-2-%E6%A8%A1%E5%9E%8B%E6%AF%94%E8%BE%83%E5%B1%82%E9%9D%A2"><span class="toc-number">1.52.</span> <span class="toc-text">18.2 模型比较层面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-%E9%9A%8F%E6%9C%BA%E6%80%A7%E5%B1%82%E9%9D%A2"><span class="toc-number">1.53.</span> <span class="toc-text">18.3 随机性层面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-4-%E7%BB%93%E6%9E%9C%E8%A7%A3%E9%87%8A%E5%B1%82%E9%9D%A2"><span class="toc-number">1.54.</span> <span class="toc-text">18.4 结果解释层面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-%E6%9C%AC%E8%8A%82%E8%AF%BE%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E8%AE%BA"><span class="toc-number">1.55.</span> <span class="toc-text">19. 本节课的核心结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-1%EF%BC%9A%E5%9B%B0%E9%9A%BE%E9%A2%98%E4%B8%8D%E8%83%BD%E8%87%AA%E5%8A%A8%E5%BC%A5%E8%A1%A5%E6%A0%B7%E6%9C%AC%E9%87%8F%E4%B8%8D%E8%B6%B3"><span class="toc-number">1.56.</span> <span class="toc-text">结论 1：困难题不能自动弥补样本量不足</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-2%EF%BC%9A%E5%B9%B3%E5%9D%87-Accuracy-%E4%BC%9A%E6%8E%A9%E7%9B%96%E5%A4%A7%E9%87%8F%E9%80%90%E9%A2%98%E4%B8%8D%E4%B8%80%E8%87%B4"><span class="toc-number">1.57.</span> <span class="toc-text">结论 2：平均 Accuracy 会掩盖大量逐题不一致</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-3%EF%BC%9A%E6%A8%A1%E5%9E%8B%E6%AF%94%E8%BE%83%E5%BA%94%E4%BC%98%E5%85%88%E4%BD%BF%E7%94%A8-Paired-Comparison"><span class="toc-number">1.58.</span> <span class="toc-text">结论 3：模型比较应优先使用 Paired Comparison</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-4%EF%BC%9A%E5%99%AA%E5%A3%B0%E8%87%B3%E5%B0%91%E5%8C%85%E5%90%AB%E4%B8%A4%E4%B8%AA%E6%9D%A5%E6%BA%90"><span class="toc-number">1.59.</span> <span class="toc-text">结论 4：噪声至少包含两个来源</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-5%EF%BC%9A%E5%BD%93%E5%89%8D%E8%AE%B8%E5%A4%9A%E4%BB%A3%E7%A0%81%E4%B8%8E-Agent-Benchmark-%E7%9A%84-Signal-to-Noise-%E5%81%8F%E4%BD%8E"><span class="toc-number">1.60.</span> <span class="toc-text">结论 5：当前许多代码与 Agent Benchmark 的 Signal-to-Noise 偏低</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA-6%EF%BC%9A%E7%8E%B0%E9%98%B6%E6%AE%B5%E6%9B%B4%E5%8F%AF%E9%9D%A0%E7%9A%84%E6%94%B9%E8%BF%9B%E6%96%B9%E5%90%91%E6%98%AF%E5%A2%9E%E5%8A%A0%E4%BF%A1%E6%81%AF%EF%BC%8C%E8%80%8C%E4%B8%8D%E5%8F%AA%E6%98%AF%E7%AD%9B%E9%A2%98"><span class="toc-number">1.61.</span> <span class="toc-text">结论 6：现阶段更可靠的改进方向是增加信息，而不只是筛题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#20-%E4%B8%80%E5%8F%A5%E8%AF%9D%E6%A6%82%E6%8B%AC"><span class="toc-number">1.62.</span> <span class="toc-text">20. 一句话概括</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#References-%E8%AF%BE%E4%BB%B6%E9%93%BE%E6%8E%A5"><span class="toc-number">1.63.</span> <span class="toc-text">References &#x2F; 课件链接</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Eval-Arena"><span class="toc-number">1.64.</span> <span class="toc-text">Eval-Arena</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Evaluation-Stability"><span class="toc-number">1.65.</span> <span class="toc-text">Evaluation Stability</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BE%E4%BB%B6%E4%B8%AD%E5%88%97%E5%87%BA%E7%9A%84-Code-LLM-%E7%9B%B8%E5%85%B3%E5%B7%A5%E4%BD%9C"><span class="toc-number">1.66.</span> <span class="toc-text">课件中列出的 Code LLM 相关工作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BE%E4%BB%B6%E4%B8%AD%E5%88%97%E5%87%BA%E7%9A%84-Benchmark"><span class="toc-number">1.67.</span> <span class="toc-text">课件中列出的 Benchmark</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
