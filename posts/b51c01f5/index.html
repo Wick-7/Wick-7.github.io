@@ -1,0 +1,419 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall Lecture8》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall Lecture8》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/b51c01f5/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-19T05:56:31.000Z">
+<meta property="article:modified_time" content="2026-07-19T06:07:28.825Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="AI4Science">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="Multi-Agent">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall Lecture8》课堂笔记",
+  "url": "https://wick-7.github.io/posts/b51c01f5/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-19T05:56:31.000Z",
+  "dateModified": "2026-07-19T06:07:28.825Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/b51c01f5/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall Lecture8》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture8》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture8》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-19T06:07:28.825Z" title="更新于 2026-07-19 14:07:28">2026-07-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="AI-Agents-to-Automate-Scientific-Discoveries"><a href="#AI-Agents-to-Automate-Scientific-Discoveries" class="headerlink" title="AI Agents to Automate Scientific Discoveries"></a>AI Agents to Automate Scientific Discoveries</h1><blockquote>
+<p>本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 <strong>Agent 系统设计趋势</strong>：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。</p>
+</blockquote>
+<h2 id="1-一句话概括"><a href="#1-一句话概括" class="headerlink" title="1. 一句话概括"></a>1. 一句话概括</h2><p>AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以下循环的复杂系统：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">理解目标</span><br><span class="line">→ 拆解任务</span><br><span class="line">→ 组建角色或调用专业能力</span><br><span class="line">→ 使用工具和外部知识</span><br><span class="line">→ 保存项目状态</span><br><span class="line">→ 检查与修正错误</span><br><span class="line">→ 输出可验证结果</span><br></pre></td></tr></table></figure>
+
+<p>核心变化不是模型单次回答得更聪明，而是 <strong>模型开始成为工具、知识、记忆与协作流程的组织者</strong>。</p>
+<hr>
+<h2 id="2-这节课的核心观点"><a href="#2-这节课的核心观点" class="headerlink" title="2. 这节课的核心观点"></a>2. 这节课的核心观点</h2><h3 id="2-1-从-AI-Tool-到-Agentic-System"><a href="#2-1-从-AI-Tool-到-Agentic-System" class="headerlink" title="2.1 从 AI Tool 到 Agentic System"></a>2.1 从 AI Tool 到 Agentic System</h3><p>传统 AI 通常解决边界清晰的单一任务，例如分类、预测或生成。</p>
+<p>Agent 系统面对的则是开放式、长周期任务。它需要自己决定：</p>
+<ul>
+<li>下一步做什么；</li>
+<li>需要调用哪些工具；</li>
+<li>是否要搜索新知识；</li>
+<li>如何保存中间结果；</li>
+<li>什么时候检查、回退或请求人类介入。</li>
+</ul>
+<p>因此，Agent 的能力不只取决于底层 LLM，还取决于外围系统是否具备：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Planning + Tools + Memory + Verification + Environment</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-Multi-Agent-的价值在于专业分工，而不是简单增加模型数量"><a href="#2-2-Multi-Agent-的价值在于专业分工，而不是简单增加模型数量" class="headerlink" title="2.2 Multi-Agent 的价值在于专业分工，而不是简单增加模型数量"></a>2.2 Multi-Agent 的价值在于专业分工，而不是简单增加模型数量</h3><p>Virtual Lab 使用类似真实团队的结构：</p>
+<ul>
+<li><strong>Manager &#x2F; PI Agent</strong>：理解目标、拆解任务、协调其他 Agent；</li>
+<li><strong>Specialist Agents</strong>：承担不同专业角色；</li>
+<li><strong>Coding &#x2F; Tool Agent</strong>：执行代码和调用工具；</li>
+<li><strong>Critic Agent</strong>：检查假设、方法和结果；</li>
+<li><strong>Human</strong>：提供目标、约束、关键审核和现实验证。</li>
+</ul>
+<p>多个 Agent 的潜在优势包括：</p>
+<ul>
+<li>从不同角度探索方案；</li>
+<li>将复杂任务拆给不同专家；</li>
+<li>通过讨论和批评发现错误；</li>
+<li>并行生成多个候选方案，再由 Manager 汇总。</li>
+</ul>
+<p>但 Multi-Agent <strong>并不天然比单 Agent 可靠</strong>。多个 Agent 可能共享同一种模型偏差，也可能对错误形成伪共识。因此，真正关键的是角色差异、独立采样、验证机制和明确的聚合方法。</p>
+<h3 id="2-3-当前-Agent-的“创新”主要是组合创新"><a href="#2-3-当前-Agent-的“创新”主要是组合创新" class="headerlink" title="2.3 当前 Agent 的“创新”主要是组合创新"></a>2.3 当前 Agent 的“创新”主要是组合创新</h3><p>课程案例显示，Agent 更擅长：</p>
+<ul>
+<li>发现适合当前问题的已有工具；</li>
+<li>修改部分 scoring function 或参数；</li>
+<li>将多个工具连接成新的 pipeline；</li>
+<li>把已有方法迁移到新的数据或任务。</li>
+</ul>
+<p>这种能力可以称为 <strong>combinatorial creativity</strong>。</p>
+<p>它并不等同于从零发明一个全新的基础模型，但已经能够显著降低复杂工作流的设计、实现和试错成本。</p>
+<h3 id="2-4-可靠-Agent-必须管理长期状态"><a href="#2-4-可靠-Agent-必须管理长期状态" class="headerlink" title="2.4 可靠 Agent 必须管理长期状态"></a>2.4 可靠 Agent 必须管理长期状态</h3><p>开放式任务不能只依赖不断增长的聊天记录。Virtual Lab 使用了分层状态管理：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">完整交互历史</span><br><span class="line">→ External Memory</span><br><span class="line">→ Manager 定期总结</span><br><span class="line">→ Bounded Working State</span><br><span class="line">→ 当前结论与下一步 To-do</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>External Memory 保存历史讨论和中间产物；</li>
+<li>Manager Agent 周期性总结“已经完成什么、当前状态、下一步是什么”；</li>
+<li>Critic Agent 检查逐轮累积的错误；</li>
+<li>Human 在关键节点纠正方向。</li>
+</ul>
+<p>这说明长程 Agent 的重点不是无限扩大 Context Window，而是维护一个持续更新、大小受控的 <strong>working state</strong>，并按需访问外部历史。</p>
+<hr>
+<h2 id="3-课程展示的前沿进展"><a href="#3-课程展示的前沿进展" class="headerlink" title="3. 课程展示的前沿进展"></a>3. 课程展示的前沿进展</h2><h3 id="3-1-动态生成和组织专业-Agent"><a href="#3-1-动态生成和组织专业-Agent" class="headerlink" title="3.1 动态生成和组织专业 Agent"></a>3.1 动态生成和组织专业 Agent</h3><p>系统不再固定所有 Agent，而是由 Manager 根据任务动态判断需要哪些专业能力，并创建相应角色。</p>
+<p>这代表 Agent 架构从固定 workflow 走向：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Task-conditioned Agent Organization</span><br></pre></td></tr></table></figure>
+
+<p>值得研究的问题包括：</p>
+<ul>
+<li>什么任务需要多 Agent；</li>
+<li>应创建哪些角色；</li>
+<li>如何分配任务和通信预算；</li>
+<li>什么时候合并、替换或终止 Agent。</li>
+</ul>
+<h3 id="3-2-Agent-自我专业化"><a href="#3-2-Agent-自我专业化" class="headerlink" title="3.2 Agent 自我专业化"></a>3.2 Agent 自我专业化</h3><p>Agent School 展示了一条从通用模型到专业 Agent 的路线：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">确定学习主题</span><br><span class="line">→ 自动生成学习问题</span><br><span class="line">→ 检索资料</span><br><span class="line">→ 学习或微调</span><br><span class="line">→ Teacher Agent 测试</span><br><span class="line">→ 未通过则继续训练</span><br></pre></td></tr></table></figure>
+
+<p>其核心思想是：不同 Agent 可以从同一 Base Model 出发，通过不同数据和工具训练形成 specialization。</p>
+<p>不过，参数级持续学习仍面临成本、错误知识写入、灾难性遗忘和能力评估等问题。实践中，RAG、工具说明、Memory 与轻量微调可能会组合使用。</p>
+<h3 id="3-3-从静态文档到-Executable-Knowledge"><a href="#3-3-从静态文档到-Executable-Knowledge" class="headerlink" title="3.3 从静态文档到 Executable Knowledge"></a>3.3 从静态文档到 Executable Knowledge</h3><p>Paper2Agent 的重要思想不是“让 Agent 总结论文”，而是将文档、代码、数据、环境和使用流程封装成可调用接口：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Document + Code + Data</span><br><span class="line">→ 可复现环境</span><br><span class="line">→ 工具封装与测试</span><br><span class="line">→ MCP / Tool Interface</span><br><span class="line">→ 可交互的专业 Agent</span><br></pre></td></tr></table></figure>
+
+<p>这使知识从 <strong>可阅读</strong> 进一步变为 <strong>可执行、可复用和可组合</strong>。</p>
+<p>相较于每次都让通用 Coding Agent 从头阅读文档、安装环境并理解代码，预先构建并验证好的工具接口通常更稳定，也更节省后续调用成本。</p>
+<h3 id="3-4-Agent-to-Agent-Collaboration"><a href="#3-4-Agent-to-Agent-Collaboration" class="headerlink" title="3.4 Agent-to-Agent Collaboration"></a>3.4 Agent-to-Agent Collaboration</h3><p>当不同知识来源都被封装成 Agent 或工具后，一个方法 Agent 可以与一个数据 Agent 自动协作：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Method Agent + Data Agent</span><br><span class="line">→ 判断是否适配</span><br><span class="line">→ 调用各自工具</span><br><span class="line">→ 生成新的分析结果</span><br></pre></td></tr></table></figure>
+
+<p>这一思路可以推广到软件工程、数据分析和企业流程：不同系统不再只提供 API，而是提供能够解释、规划并协作的 Agent 接口。</p>
+<h3 id="3-5-Agent-Evaluation-从最终答案走向过程评估"><a href="#3-5-Agent-Evaluation-从最终答案走向过程评估" class="headerlink" title="3.5 Agent Evaluation 从最终答案走向过程评估"></a>3.5 Agent Evaluation 从最终答案走向过程评估</h3><p>课程中的 AI 审稿实验表明，只看最终文本远远不够。Agent 系统还需要评估：</p>
+<ul>
+<li>引用和外部事实是否真实；</li>
+<li>中间步骤能否复现；</li>
+<li>工具是否被正确调用；</li>
+<li>Reviewer 或 Critic 是否存在固定偏差；</li>
+<li>需要多少人类干预；</li>
+<li>长任务中是否发生 topic drift；</li>
+<li>最终结果是否经过现实或外部验证。</li>
+</ul>
+<p>这也是当前 Agent Evaluation 的重要方向：从静态 QA Accuracy，转向 <strong>trajectory、tool use、robustness、cost 与 human effort</strong> 的综合评估。</p>
+<hr>
+<h2 id="4-当前比较现实的应用"><a href="#4-当前比较现实的应用" class="headerlink" title="4. 当前比较现实的应用"></a>4. 当前比较现实的应用</h2><h3 id="4-1-复杂研究与分析工作流"><a href="#4-1-复杂研究与分析工作流" class="headerlink" title="4.1 复杂研究与分析工作流"></a>4.1 复杂研究与分析工作流</h3><p>Agent 可以帮助完成：</p>
+<ul>
+<li>文献和资料检索；</li>
+<li>跨来源信息整理；</li>
+<li>研究方案或分析计划生成；</li>
+<li>代码实现和计算实验；</li>
+<li>数据分析与候选方案筛选；</li>
+<li>自动整理阶段性状态和报告。</li>
+</ul>
+<p>其价值主要在于提高探索速度和减少重复劳动，关键结论仍需要人类审核。</p>
+<h3 id="4-2-将论文、代码库或内部文档封装成专业-Agent"><a href="#4-2-将论文、代码库或内部文档封装成专业-Agent" class="headerlink" title="4.2 将论文、代码库或内部文档封装成专业 Agent"></a>4.2 将论文、代码库或内部文档封装成专业 Agent</h3><p>一个知识库不再只支持问答，还可以进一步提供：</p>
+<ul>
+<li>正确的工具调用；</li>
+<li>环境配置；</li>
+<li>标准化 workflow；</li>
+<li>输入检查；</li>
+<li>中间结果和错误诊断。</li>
+</ul>
+<p>这可用于：</p>
+<ul>
+<li>开源项目使用助手；</li>
+<li>企业内部数据分析 Agent；</li>
+<li>模型与算法的交互式文档；</li>
+<li>面向非技术用户的专业软件接口。</li>
+</ul>
+<h3 id="4-3-Coding-与数据分析自动化"><a href="#4-3-Coding-与数据分析自动化" class="headerlink" title="4.3 Coding 与数据分析自动化"></a>4.3 Coding 与数据分析自动化</h3><p>Paper2Agent 的思想可以迁移到一般软件系统：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Repository</span><br><span class="line">→ 自动搭建环境</span><br><span class="line">→ 识别关键函数和入口</span><br><span class="line">→ 生成工具接口</span><br><span class="line">→ 测试</span><br><span class="line">→ 交给上层 Agent 使用</span><br></pre></td></tr></table></figure>
+
+<p>相比让 Agent 每次直接修改整个仓库，这种“先封装、再调用”的方式更可控。</p>
+<h3 id="4-4-多角色决策与方案探索"><a href="#4-4-多角色决策与方案探索" class="headerlink" title="4.4 多角色决策与方案探索"></a>4.4 多角色决策与方案探索</h3><p>对于难以一次确定路线的问题，可以使用：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">多个独立方案生成</span><br><span class="line">+ Critic 检查</span><br><span class="line">+ Manager 聚合</span><br><span class="line">+ External Verification</span><br></pre></td></tr></table></figure>
+
+<p>适用于技术方案比较、产品研究、代码设计、数据分析计划和长期项目管理。</p>
+<hr>
+<h2 id="5-当前能力边界"><a href="#5-当前能力边界" class="headerlink" title="5. 当前能力边界"></a>5. 当前能力边界</h2><h3 id="5-1-更擅长使用和组合已有能力"><a href="#5-1-更擅长使用和组合已有能力" class="headerlink" title="5.1 更擅长使用和组合已有能力"></a>5.1 更擅长使用和组合已有能力</h3><p>Agent 目前更擅长调用、修改和连接现有工具，而不是从零创造突破性的基础方法。</p>
+<h3 id="5-2-广度较强，深度仍依赖专家"><a href="#5-2-广度较强，深度仍依赖专家" class="headerlink" title="5.2 广度较强，深度仍依赖专家"></a>5.2 广度较强，深度仍依赖专家</h3><p>Agent 可以快速连接多个领域，但在非常细分的问题上，容易缺少隐性知识、边界条件和真正深入的机制理解。</p>
+<h3 id="5-3-Context-不完整会导致错误假设"><a href="#5-3-Context-不完整会导致错误假设" class="headerlink" title="5.3 Context 不完整会导致错误假设"></a>5.3 Context 不完整会导致错误假设</h3><p>仅提供数据或任务描述往往不够，还需要提供：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Metadata + Processing History + Constraints + Provenance</span><br></pre></td></tr></table></figure>
+
+<p>否则 Agent 可能在错误前提下完成一套看似合理的分析。</p>
+<h3 id="5-4-Multi-Agent-可能放大成本与共同偏差"><a href="#5-4-Multi-Agent-可能放大成本与共同偏差" class="headerlink" title="5.4 Multi-Agent 可能放大成本与共同偏差"></a>5.4 Multi-Agent 可能放大成本与共同偏差</h3><p>增加 Agent 会带来更多 Token、通信和延迟。若角色设计不合理，多 Agent 只是重复生成相似答案，并不会产生真正的多样性。</p>
+<h3 id="5-5-外部验证仍不可缺少"><a href="#5-5-外部验证仍不可缺少" class="headerlink" title="5.5 外部验证仍不可缺少"></a>5.5 外部验证仍不可缺少</h3><p>无论是代码测试、数据核验、模拟环境还是现实实验，Agent 输出都需要与外部环境形成闭环。纯语言层面的“互相同意”不能证明结果正确。</p>
+<hr>
+<h2 id="6-对-Agent-研究最值得关注的启发"><a href="#6-对-Agent-研究最值得关注的启发" class="headerlink" title="6. 对 Agent 研究最值得关注的启发"></a>6. 对 Agent 研究最值得关注的启发</h2><p>这节课最值得保留的并不是具体 AI4S 案例，而是下面四个研究问题：</p>
+<ol>
+<li><p><strong>Dynamic Agent Organization</strong><br>如何根据任务动态决定使用单 Agent、多 Agent或哪些专业角色？</p>
+</li>
+<li><p><strong>Bounded Working State + External Memory</strong><br>如何用固定大小的当前状态维持长程任务，同时把细节保存在可检索的外部 Memory 中？</p>
+</li>
+<li><p><strong>Verification-aware Agent</strong><br>如何让 Agent 主动调用测试、Critic、环境反馈和真实数据，而不是依靠语言上的自我反思？</p>
+</li>
+<li><p><strong>Executable Knowledge</strong><br>如何把论文、代码库和文档转换成经过验证、能够被 Agent 可靠调用的工具与工作流？</p>
+</li>
+</ol>
+<hr>
+<h2 id="7-最终总结"><a href="#7-最终总结" class="headerlink" title="7. 最终总结"></a>7. 最终总结</h2><blockquote>
+<p>Agent 的前沿不只是让 LLM 进行更长的推理，而是构建一个能够组织角色、调用工具、维护状态、验证结果和复用知识的完整系统。</p>
+</blockquote>
+<p>当前最现实的方向不是 Fully Autonomous Agent，而是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Human 提出目标与关键约束</span><br><span class="line">→ Agent 搜索、规划、调用工具并执行</span><br><span class="line">→ Critic / Tests / Environment 验证</span><br><span class="line">→ Human 审核高风险决策</span><br><span class="line">→ 结果写入 Memory 并继续迭代</span><br></pre></td></tr></table></figure>
+
+<p>从更一般的 Agent 研究角度看，这节课展示了三条重要趋势：</p>
+<ul>
+<li><strong>从单 Agent 到动态组织的协作系统；</strong></li>
+<li><strong>从长对话到分层 Memory 和 bounded working state；</strong></li>
+<li><strong>从静态知识检索到可执行、可验证的知识接口。</strong></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/b51c01f5/">https://wick-7.github.io/posts/b51c01f5/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/Multi-Agent/">Multi-Agent</a><a class="post-meta__tags" href="/tags/AI4Science/">AI4Science</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture9》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Practical Lessons from Deploying Real-World AI Agents1. 课程概览这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。 整节课可以概括为一条主线： $$ \text{Agent Demo} \rightarrow \text{Agent System} \rightarrow \text{Reliable Product} $$ 一个基础 Agent 看起来可能只需要：  LLM； RAG； Tool Use； 一个简单的 reasoning &#x2F; orchestration loop。  但在生产环境中，还需要处理测试、监控、延迟、安全、版本管理、合规、多渠道部署、故障切换、用户身份验证等大量工程问题。  构建 Agent 的难点并不只是让模型“会做事”，而是让它在复杂、开放、非确定性的真实环境中持续、可靠、安全地做对事情。   2. Agent 的三种主要形态讲者...</div></div></div></a><a class="pagination-related" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture7》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Predictable Noise and Patterns from Millions of Questions本节课主线现代评测正在发生一个明显变化：  过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本； 当前的代码生成与 Agent benchmark 往往只有几百道题； 单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压缩成一个二元结果：成功或失败； 在不同模型、不同题目之间，结果存在明显的不一致性：强模型会错简单题，弱模型也可能偶然做对困难题； 因此，仅看平均 Accuracy &#x2F; Pass@1 不足以判断一个改进是否可靠，仍需进行统计分析。  本节课的核心结论是：  当前的小型 generative &#x2F; agentic benchmark 即使包含困难任务，也往往仍然具有较大的统计噪声。困难题本身不能自动弥补样本规模不足。  课程进一步给出了一套分析框架：  将 benchmark 中的问题看成从一个 super-population 中抽取的样本； 区分 题目抽样噪声 与 模型...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-19</div><div class="info-item-2">《CS294-196 25fall Lecture10》课堂笔记</div></div><div class="info-2"><div class="info-item-1">从 AlphaStar 到 LLM Agents1. 整体训练框架AlphaStar 的训练流程： 123456789Human Replays    ↓Imitation Learning    ↓Reinforcement Learning    ↓Multi-Agent League    ↓更强、更稳健的 Agent  对应现代 LLM：    AlphaStar 现代 LLM &#x2F; Agent    Human replay Pre-training &#x2F; Demonstration Data   Imitation Learning Pre-training &#x2F; SFT   Structured action decoder Tool Calling   Conditioning vector Prompt &#x2F; Instruction   Reinforcement Learning Post-training   KL penalty Reference Policy Regularization   League &#x2F; ...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-19</div><div class="info-item-2">《CS294-196 25fall Lecture9》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Practical Lessons from Deploying Real-World AI Agents1. 课程概览这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。 整节课可以概括为一条主线： $$ \text{Agent Demo} \rightarrow \text{Agent System} \rightarrow \text{Reliable Product} $$ 一个基础 Agent 看起来可能只需要：  LLM； RAG； Tool Use； 一个简单的 reasoning &#x2F; orchestration loop。  但在生产环境中，还需要处理测试、监控、延迟、安全、版本管理、合规、多渠道部署、故障切换、用户身份验证等大量工程问题。  构建 Agent 的难点并不只是让模型“会做事”，而是让它在复杂、开放、非确定性的真实环境中持续、可靠、安全地做对事情。   2. Agent 的三种主要形态讲者...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#AI-Agents-to-Automate-Scientific-Discoveries"><span class="toc-number">1.</span> <span class="toc-text">AI Agents to Automate Scientific Discoveries</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%B8%80%E5%8F%A5%E8%AF%9D%E6%A6%82%E6%8B%AC"><span class="toc-number">1.1.</span> <span class="toc-text">1. 一句话概括</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E8%BF%99%E8%8A%82%E8%AF%BE%E7%9A%84%E6%A0%B8%E5%BF%83%E8%A7%82%E7%82%B9"><span class="toc-number">1.2.</span> <span class="toc-text">2. 这节课的核心观点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E4%BB%8E-AI-Tool-%E5%88%B0-Agentic-System"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 从 AI Tool 到 Agentic System</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Multi-Agent-%E7%9A%84%E4%BB%B7%E5%80%BC%E5%9C%A8%E4%BA%8E%E4%B8%93%E4%B8%9A%E5%88%86%E5%B7%A5%EF%BC%8C%E8%80%8C%E4%B8%8D%E6%98%AF%E7%AE%80%E5%8D%95%E5%A2%9E%E5%8A%A0%E6%A8%A1%E5%9E%8B%E6%95%B0%E9%87%8F"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 Multi-Agent 的价值在于专业分工，而不是简单增加模型数量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%BD%93%E5%89%8D-Agent-%E7%9A%84%E2%80%9C%E5%88%9B%E6%96%B0%E2%80%9D%E4%B8%BB%E8%A6%81%E6%98%AF%E7%BB%84%E5%90%88%E5%88%9B%E6%96%B0"><span class="toc-number">1.2.3.</span> <span class="toc-text">2.3 当前 Agent 的“创新”主要是组合创新</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%8F%AF%E9%9D%A0-Agent-%E5%BF%85%E9%A1%BB%E7%AE%A1%E7%90%86%E9%95%BF%E6%9C%9F%E7%8A%B6%E6%80%81"><span class="toc-number">1.2.4.</span> <span class="toc-text">2.4 可靠 Agent 必须管理长期状态</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%AF%BE%E7%A8%8B%E5%B1%95%E7%A4%BA%E7%9A%84%E5%89%8D%E6%B2%BF%E8%BF%9B%E5%B1%95"><span class="toc-number">1.3.</span> <span class="toc-text">3. 课程展示的前沿进展</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E5%92%8C%E7%BB%84%E7%BB%87%E4%B8%93%E4%B8%9A-Agent"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 动态生成和组织专业 Agent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Agent-%E8%87%AA%E6%88%91%E4%B8%93%E4%B8%9A%E5%8C%96"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 Agent 自我专业化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E4%BB%8E%E9%9D%99%E6%80%81%E6%96%87%E6%A1%A3%E5%88%B0-Executable-Knowledge"><span class="toc-number">1.3.3.</span> <span class="toc-text">3.3 从静态文档到 Executable Knowledge</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-Agent-to-Agent-Collaboration"><span class="toc-number">1.3.4.</span> <span class="toc-text">3.4 Agent-to-Agent Collaboration</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-Agent-Evaluation-%E4%BB%8E%E6%9C%80%E7%BB%88%E7%AD%94%E6%A1%88%E8%B5%B0%E5%90%91%E8%BF%87%E7%A8%8B%E8%AF%84%E4%BC%B0"><span class="toc-number">1.3.5.</span> <span class="toc-text">3.5 Agent Evaluation 从最终答案走向过程评估</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%BD%93%E5%89%8D%E6%AF%94%E8%BE%83%E7%8E%B0%E5%AE%9E%E7%9A%84%E5%BA%94%E7%94%A8"><span class="toc-number">1.4.</span> <span class="toc-text">4. 当前比较现实的应用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%A4%8D%E6%9D%82%E7%A0%94%E7%A9%B6%E4%B8%8E%E5%88%86%E6%9E%90%E5%B7%A5%E4%BD%9C%E6%B5%81"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 复杂研究与分析工作流</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E5%B0%86%E8%AE%BA%E6%96%87%E3%80%81%E4%BB%A3%E7%A0%81%E5%BA%93%E6%88%96%E5%86%85%E9%83%A8%E6%96%87%E6%A1%A3%E5%B0%81%E8%A3%85%E6%88%90%E4%B8%93%E4%B8%9A-Agent"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 将论文、代码库或内部文档封装成专业 Agent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Coding-%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%88%86%E6%9E%90%E8%87%AA%E5%8A%A8%E5%8C%96"><span class="toc-number">1.4.3.</span> <span class="toc-text">4.3 Coding 与数据分析自动化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E5%A4%9A%E8%A7%92%E8%89%B2%E5%86%B3%E7%AD%96%E4%B8%8E%E6%96%B9%E6%A1%88%E6%8E%A2%E7%B4%A2"><span class="toc-number">1.4.4.</span> <span class="toc-text">4.4 多角色决策与方案探索</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E5%BD%93%E5%89%8D%E8%83%BD%E5%8A%9B%E8%BE%B9%E7%95%8C"><span class="toc-number">1.5.</span> <span class="toc-text">5. 当前能力边界</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%9B%B4%E6%93%85%E9%95%BF%E4%BD%BF%E7%94%A8%E5%92%8C%E7%BB%84%E5%90%88%E5%B7%B2%E6%9C%89%E8%83%BD%E5%8A%9B"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 更擅长使用和组合已有能力</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E5%B9%BF%E5%BA%A6%E8%BE%83%E5%BC%BA%EF%BC%8C%E6%B7%B1%E5%BA%A6%E4%BB%8D%E4%BE%9D%E8%B5%96%E4%B8%93%E5%AE%B6"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 广度较强，深度仍依赖专家</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Context-%E4%B8%8D%E5%AE%8C%E6%95%B4%E4%BC%9A%E5%AF%BC%E8%87%B4%E9%94%99%E8%AF%AF%E5%81%87%E8%AE%BE"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 Context 不完整会导致错误假设</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-Multi-Agent-%E5%8F%AF%E8%83%BD%E6%94%BE%E5%A4%A7%E6%88%90%E6%9C%AC%E4%B8%8E%E5%85%B1%E5%90%8C%E5%81%8F%E5%B7%AE"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 Multi-Agent 可能放大成本与共同偏差</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-%E5%A4%96%E9%83%A8%E9%AA%8C%E8%AF%81%E4%BB%8D%E4%B8%8D%E5%8F%AF%E7%BC%BA%E5%B0%91"><span class="toc-number">1.5.5.</span> <span class="toc-text">5.5 外部验证仍不可缺少</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E5%AF%B9-Agent-%E7%A0%94%E7%A9%B6%E6%9C%80%E5%80%BC%E5%BE%97%E5%85%B3%E6%B3%A8%E7%9A%84%E5%90%AF%E5%8F%91"><span class="toc-number">1.6.</span> <span class="toc-text">6. 对 Agent 研究最值得关注的启发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%9C%80%E7%BB%88%E6%80%BB%E7%BB%93"><span class="toc-number">1.7.</span> <span class="toc-text">7. 最终总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>

@@ -1,0 +1,648 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall Lecture10》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="从 AlphaStar 到 LLM Agents1. 整体训练框架AlphaStar 的训练流程： 123456789Human Replays    ↓Imitation Learning    ↓Reinforcement Learning    ↓Multi-Agent League    ↓更强、更稳健的 Agent  对应现代 LLM：    AlphaStar 现代 LLM &amp;#x2F">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall Lecture10》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/Infinity/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="从 AlphaStar 到 LLM Agents1. 整体训练框架AlphaStar 的训练流程： 123456789Human Replays    ↓Imitation Learning    ↓Reinforcement Learning    ↓Multi-Agent League    ↓更强、更稳健的 Agent  对应现代 LLM：    AlphaStar 现代 LLM &amp;#x2F">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-19T06:31:15.000Z">
+<meta property="article:modified_time" content="2026-07-19T06:36:19.291Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="AlphaStar">
+<meta property="article:tag" content="Multi-Agent">
+<meta property="article:tag" content="RL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall Lecture10》课堂笔记",
+  "url": "https://wick-7.github.io/posts/Infinity/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-19T06:31:15.000Z",
+  "dateModified": "2026-07-19T06:36:19.291Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/Infinity/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall Lecture10》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture10》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture10》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-19T06:36:19.291Z" title="更新于 2026-07-19 14:36:19">2026-07-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="从-AlphaStar-到-LLM-Agents"><a href="#从-AlphaStar-到-LLM-Agents" class="headerlink" title="从 AlphaStar 到 LLM Agents"></a>从 AlphaStar 到 LLM Agents</h1><h2 id="1-整体训练框架"><a href="#1-整体训练框架" class="headerlink" title="1. 整体训练框架"></a>1. 整体训练框架</h2><p>AlphaStar 的训练流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Human Replays</span><br><span class="line">    ↓</span><br><span class="line">Imitation Learning</span><br><span class="line">    ↓</span><br><span class="line">Reinforcement Learning</span><br><span class="line">    ↓</span><br><span class="line">Multi-Agent League</span><br><span class="line">    ↓</span><br><span class="line">更强、更稳健的 Agent</span><br></pre></td></tr></table></figure>
+
+<p>对应现代 LLM：</p>
+<table>
+<thead>
+<tr>
+<th>AlphaStar</th>
+<th>现代 LLM &#x2F; Agent</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human replay</td>
+<td>Pre-training &#x2F; Demonstration Data</td>
+</tr>
+<tr>
+<td>Imitation Learning</td>
+<td>Pre-training &#x2F; SFT</td>
+</tr>
+<tr>
+<td>Structured action decoder</td>
+<td>Tool Calling</td>
+</tr>
+<tr>
+<td>Conditioning vector</td>
+<td>Prompt &#x2F; Instruction</td>
+</tr>
+<tr>
+<td>Reinforcement Learning</td>
+<td>Post-training</td>
+</tr>
+<tr>
+<td>KL penalty</td>
+<td>Reference Policy Regularization</td>
+</tr>
+<tr>
+<td>League &#x2F; Exploiter</td>
+<td>Multi-Agent Training &#x2F; Red Teaming</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>现代 LLM Agent 面临的许多问题，如工具调用、RL 后策略坍缩、模型盲点和多智能体稳健性，在 AlphaStar 中已经出现。</p>
+</blockquote>
+<hr>
+<h2 id="2-从传统-Agent-到-LLM-Agent"><a href="#2-从传统-Agent-到-LLM-Agent" class="headerlink" title="2. 从传统 Agent 到 LLM Agent"></a>2. 从传统 Agent 到 LLM Agent</h2><p>传统 Agent 在环境中执行：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Observation → Policy → Action → Environment → Reward</span><br></pre></td></tr></table></figure>
+
+<p>其目标是最大化累计回报：</p>
+<p>$$
+\max_\theta
+\mathbb{E}_{\pi_\theta}
+\left[
+\sum_{t=0}^{T}\gamma^t r_t
+
+\right].
+$$</p>
+<p>传统游戏中的 observation、action 和 reward 边界清楚。现代 LLM Agent 则可能连接用户、搜索引擎、Terminal、Browser、文件系统和外部 API。</p>
+<p>因此，完整的 LLM Agent 不只是一个 LLM，还包括负责组织上下文、调用工具和控制循环的 <strong>Agent Harness</strong>。</p>
+<hr>
+<h2 id="3-StarCraft-为什么适合研究复杂-Agent？"><a href="#3-StarCraft-为什么适合研究复杂-Agent？" class="headerlink" title="3. StarCraft 为什么适合研究复杂 Agent？"></a>3. StarCraft 为什么适合研究复杂 Agent？</h2><p>StarCraft 的主要难点包括：</p>
+<h3 id="Partial-Observability"><a href="#Partial-Observability" class="headerlink" title="Partial Observability"></a>Partial Observability</h3><p>Agent 看不到完整地图，需要根据历史信息维护内部状态：</p>
+<p>$$
+h_t=f_\theta(h_{t-1},o_t).
+$$</p>
+<h3 id="Long-Horizon"><a href="#Long-Horizon" class="headerlink" title="Long Horizon"></a>Long Horizon</h3><p>早期资源分配和建造顺序，可能很久以后才影响胜负，导致 credit assignment 困难。</p>
+<h3 id="Combinatorial-Action-Space"><a href="#Combinatorial-Action-Space" class="headerlink" title="Combinatorial Action Space"></a>Combinatorial Action Space</h3><p>一个 action 通常包含：</p>
+<ul>
+<li>action type；</li>
+<li>selected units；</li>
+<li>target position；</li>
+<li>delay；</li>
+<li>repeat。</li>
+</ul>
+<h3 id="Strategy-与-Micro-control-并存"><a href="#Strategy-与-Micro-control-并存" class="headerlink" title="Strategy 与 Micro-control 并存"></a>Strategy 与 Micro-control 并存</h3><p>Agent 既要规划资源、兵种和进攻时机，也要完成单位移动、技能释放等细粒度操作。</p>
+<hr>
+<h2 id="4-Action-Modeling-与-Tool-Use"><a href="#4-Action-Modeling-与-Tool-Use" class="headerlink" title="4. Action Modeling 与 Tool Use"></a>4. Action Modeling 与 Tool Use</h2><p>StarCraft 的 action 类似一个结构化 API 调用：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">action_type = ForceField</span><br><span class="line">selected_units = [...]</span><br><span class="line">target_position = (6, 82)</span><br><span class="line">delay = 10</span><br><span class="line">repeat = 1</span><br></pre></td></tr></table></figure>
+
+<p>AlphaStar 使用 autoregressive decoder 依次预测各个参数：</p>
+<p>$$
+p(a_t\mid s_t)
+=
+\prod_{k=1}^{K}
+p(a_t^{(k)}\mid a_t^{(&lt;k)},s_t).
+$$</p>
+<p>这与现代 LLM 的 tool calling 很接近：模型需要选择工具、填写参数，并将结果交给环境执行。</p>
+<p>区别是：</p>
+<ul>
+<li>AlphaStar 的 action schema 写入网络结构；</li>
+<li>LLM 使用自然语言或代码描述不同 API；</li>
+<li>同一个 Transformer 可以调用多种工具。</li>
+</ul>
+<blockquote>
+<p>Tool use 本质上也是 action modeling。</p>
+</blockquote>
+<hr>
+<h2 id="5-为什么不能只用-Pure-RL？"><a href="#5-为什么不能只用-Pure-RL？" class="headerlink" title="5. 为什么不能只用 Pure RL？"></a>5. 为什么不能只用 Pure RL？</h2><p>StarCraft 的动作空间大、reward 延迟长，随机 policy 很难探索出有效策略。</p>
+<p>Pure RL 还可能找到能赢但不理想的漏洞，因此：</p>
+<p>$$
+\text{Reward Maximization}
+
+eq
+\text{Desired Behavior}.
+$$</p>
+<p>AlphaStar 首先使用人类 replay 做 imitation learning：</p>
+<p>$$
+\mathcal{L}_{\text{IL}}
+=
+-
+\mathbb{E}_{(s,a)\sim D_{\text{human}}}
+\left[
+\log \pi_\theta(a\mid s)
+
+\right].
+$$</p>
+<p>它帮助 Agent：</p>
+<ul>
+<li>学会基本操作和资源管理；</li>
+<li>学会常见 build order；</li>
+<li>获得多样化策略；</li>
+<li>减少 RL 阶段的探索难度。</li>
+</ul>
+<p>课程中，单独的 supervised policy 已达到约 <strong>900 Elo</strong>。</p>
+<blockquote>
+<p>更合理的路线是先学习 human prior，再通过环境交互继续提升，而不是 imitation 与 RL 二选一。</p>
+</blockquote>
+<hr>
+<h2 id="6-Conditioning-与-Prompt"><a href="#6-Conditioning-与-Prompt" class="headerlink" title="6. Conditioning 与 Prompt"></a>6. Conditioning 与 Prompt</h2><p>AlphaStar 会从完整 replay 中提取：</p>
+<ul>
+<li>最终使用的单位；</li>
+<li>build order；</li>
+<li>玩家水平；</li>
+<li>策略风格。</li>
+</ul>
+<p>模型被 condition 在这些信息上：</p>
+<p>$$
+\pi_\theta(a_t\mid o_{\le t},c).
+$$</p>
+<p>这相当于告诉 Agent：</p>
+<ul>
+<li>使用某类单位；</li>
+<li>采用某种战术；</li>
+<li>模仿某种水平或风格。</li>
+</ul>
+<p>它与现代 LLM 的 prompt &#x2F; instruction following 类似。</p>
+<p>区别在于 AlphaStar 使用有限的结构化向量，而 LLM 使用开放的自然语言。</p>
+<hr>
+<h2 id="7-RL-Post-training-与策略坍缩"><a href="#7-RL-Post-training-与策略坍缩" class="headerlink" title="7. RL Post-training 与策略坍缩"></a>7. RL Post-training 与策略坍缩</h2><p>从 imitation policy 开始做 RL，可以提高胜率，但可能出现 <strong>behavior collapse</strong>。</p>
+<p>Imitation Learning 学到多样的人类策略，而 RL 可能集中到一种暂时有效的策略：</p>
+<p>$$
+\pi_{\text{diverse}}
+
+\rightarrow
+\pi_{\text{specialized}}.
+$$</p>
+<p>结果是：</p>
+<ul>
+<li>原有策略多样性下降；</li>
+<li>Agent 过度适应当前对手；</li>
+<li>self-play 中很强；</li>
+<li>面对新 counter-strategy 时很脆弱。</li>
+</ul>
+<p>这与现代 LLM post-training 中的 mode collapse、capability regression 和 reward over-optimization 类似。</p>
+<hr>
+<h2 id="8-Supervised-KL-Penalty"><a href="#8-Supervised-KL-Penalty" class="headerlink" title="8. Supervised KL Penalty"></a>8. Supervised KL Penalty</h2><p>为了限制 RL policy 偏离 imitation policy，AlphaStar 使用 KL regularization：</p>
+<p>$$
+\max_\theta
+\;
+\mathbb{E}_{\pi_\theta}[R]
+-
+\beta
+D_{\mathrm{KL}}
+\left(
+\pi_\theta
+\Vert
+\pi_{\text{SL}}
+
+\right).
+$$</p>
+<p>作用是：</p>
+<ul>
+<li>保留人类策略分布；</li>
+<li>减少策略坍缩；</li>
+<li>避免过早集中到局部策略；</li>
+<li>在提升 reward 的同时维持多样性。</li>
+</ul>
+<p>现代 LLM post-training 中的 reference policy constraint 使用了相同思想。</p>
+<hr>
+<h2 id="9-Privileged-Value-Function"><a href="#9-Privileged-Value-Function" class="headerlink" title="9. Privileged Value Function"></a>9. Privileged Value Function</h2><p>StarCraft 是部分可观测的，但训练 critic 时可以让它看到完整地图：</p>
+<p>$$
+a_t\sim\pi_\theta(a_t\mid o_{\le t}),
+$$</p>
+<p>$$
+V_\phi(s_t^{\text{full}})
+\approx
+\mathbb{E}[R_t\mid s_t^{\text{full}}].
+$$</p>
+<p>即：</p>
+<ul>
+<li>Actor 只能使用真实可见信息；</li>
+<li>Critic 可以使用完整状态。</li>
+</ul>
+<p>这样能提高 value estimation 的准确度、降低训练方差并改善 credit assignment。</p>
+<p>对现代 Agent 来说，verifier 或 critic 也可以使用完整 trajectory、最终环境状态或测试结果。</p>
+<hr>
+<h2 id="10-AlphaStar-RL-与-LLM-Post-training-的差异"><a href="#10-AlphaStar-RL-与-LLM-Post-training-的差异" class="headerlink" title="10. AlphaStar RL 与 LLM Post-training 的差异"></a>10. AlphaStar RL 与 LLM Post-training 的差异</h2><h3 id="Reward-更难定义"><a href="#Reward-更难定义" class="headerlink" title="Reward 更难定义"></a>Reward 更难定义</h3><p>StarCraft 的胜负相对明确，而 LLM 的开放任务常常没有唯一标准，例如“写一首好诗”或“给出有帮助的建议”。</p>
+<h3 id="Post-training-规模"><a href="#Post-training-规模" class="headerlink" title="Post-training 规模"></a>Post-training 规模</h3><p>讲者认为，现代 LLM 的 compute 仍然过度集中于 pre-training。AlphaStar 则在 RL 与 League interaction 中进行了大量训练，post-training 达到约：</p>
+<p>$$
+10^{10}
+$$</p>
+<p>个 training steps。</p>
+<p>这说明未来 Agent 的提升可能来自更大规模的环境交互，而不只是更大的 pre-trained model。</p>
+<hr>
+<h2 id="11-为什么需要-Multi-Agent-Learning？"><a href="#11-为什么需要-Multi-Agent-Learning？" class="headerlink" title="11. 为什么需要 Multi-Agent Learning？"></a>11. 为什么需要 Multi-Agent Learning？</h2><p>一个 Agent 可能总体 Elo 很高，却仍存在简单而严重的弱点。</p>
+<p>LLM 也类似：</p>
+<ul>
+<li>能解决复杂数学问题，却在简单字符计数上失败；</li>
+<li>benchmark 分数高，却容易被特殊 prompt 攻击；</li>
+<li>平均性能强，但 worst-case robustness 较差。</li>
+</ul>
+<p>Multi-Agent Learning 用于主动发现：</p>
+<ul>
+<li>blind spot；</li>
+<li>adversarial behavior；</li>
+<li>counter-strategy；</li>
+<li>distribution shift；</li>
+<li>可迁移 failure mode。</li>
+</ul>
+<hr>
+<h2 id="12-Non-transitivity"><a href="#12-Non-transitivity" class="headerlink" title="12. Non-transitivity"></a>12. Non-transitivity</h2><p>策略强弱不一定满足简单排序，可能出现：</p>
+<p>$$
+\pi_A \succ \pi_B,
+\qquad
+\pi_B \succ \pi_C,
+\qquad
+\pi_C \succ \pi_A.
+$$</p>
+<p>最典型的是 Rock-Paper-Scissors。</p>
+<p>这说明单一 Elo 或 leaderboard score 无法完整表示 Agent 能力。两个平均分接近的模型，可能擅长不同任务，也可能具有完全不同的弱点。</p>
+<p>因此，Agent evaluation 还需要关注：</p>
+<ul>
+<li>worst-case performance；</li>
+<li>能力覆盖；</li>
+<li>针对性攻击；</li>
+<li>面对新对手时的稳定性。</li>
+</ul>
+<hr>
+<h2 id="13-为什么-Naive-Self-play-会失败？"><a href="#13-为什么-Naive-Self-play-会失败？" class="headerlink" title="13. 为什么 Naive Self-play 会失败？"></a>13. 为什么 Naive Self-play 会失败？</h2><p>AlphaStar 中存在类似 Rock-Paper-Scissors 的单位克制：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Void Ray &gt; Immortal</span><br><span class="line">Immortal &gt; Stalker</span><br><span class="line">Stalker &gt; Void Ray</span><br></pre></td></tr></table></figure>
+
+<p>在 naive self-play 中，Agent 逐渐只使用 Void Ray。由于双方都采用同一策略，训练对局看起来很强，但 Stalker 已经从训练分布中消失。</p>
+<p>外部对手只需使用 Stalker，就能轻易击败 Agent。</p>
+<blockquote>
+<p>Self-play 中变强，不代表面对真实、多样化对手时也足够 robust。</p>
+</blockquote>
+<hr>
+<h2 id="14-AlphaStar-League"><a href="#14-AlphaStar-League" class="headerlink" title="14. AlphaStar League"></a>14. AlphaStar League</h2><p>AlphaStar 使用由大量不同 policy 组成的 population，包括：</p>
+<ul>
+<li>Main Agents；</li>
+<li>历史 checkpoints；</li>
+<li>Main Exploiters；</li>
+<li>League Exploiters；</li>
+<li>不同策略和风格的 Agent。</li>
+</ul>
+<h3 id="Main-Agent"><a href="#Main-Agent" class="headerlink" title="Main Agent"></a>Main Agent</h3><p>最终希望部署的 Agent。它与当前 Agent、历史 checkpoint 和各类 exploiter 对战，不断修复弱点。</p>
+<h3 id="Main-Exploiter"><a href="#Main-Exploiter" class="headerlink" title="Main Exploiter"></a>Main Exploiter</h3><p>专门针对某个 Main Agent：</p>
+<ol>
+<li>从 imitation prior 初始化；</li>
+<li>固定 Main Agent；</li>
+<li>学习击败它；</li>
+<li>胜率足够高后保存 checkpoint；</li>
+<li>将该 checkpoint 加入 League；</li>
+<li>Main Agent 再学习防御。</li>
+</ol>
+<p>这类似针对单个 LLM 的 adaptive red teaming。</p>
+<h3 id="League-Exploiter"><a href="#League-Exploiter" class="headerlink" title="League Exploiter"></a>League Exploiter</h3><p>目标不是击败单一 Main Agent，而是找到对整个 population 都有效的策略。</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Main Exploiter</td>
+<td>找到某个 Agent 的特定弱点</td>
+</tr>
+<tr>
+<td>League Exploiter</td>
+<td>找到多个 Agent 的共同弱点</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="15-Matchmaking"><a href="#15-Matchmaking" class="headerlink" title="15. Matchmaking"></a>15. Matchmaking</h2><p>League 中有大量 Agent，需要决定下一局选择谁作为 opponent。</p>
+<p>如果选择一个几乎必胜于自己的对手，Main Agent 会一直输，学习信号反而有限。</p>
+<p>更有效的方法是选择胜率接近 $50\%$ 的对手。</p>
+<p>二元胜负结果的 entropy 为：</p>
+<p>$$
+H(p)
+=
+-p\log p-(1-p)\log(1-p).
+$$</p>
+<p>当：</p>
+<p>$$
+p=0.5
+$$</p>
+<p>时 entropy 最大，因此 50&#x2F;50 opponent 通常能提供更丰富、稳定的学习信号。</p>
+<hr>
+<h2 id="16-Conditioning-Exploiters"><a href="#16-Conditioning-Exploiters" class="headerlink" title="16. Conditioning Exploiters"></a>16. Conditioning Exploiters</h2><p>如果所有 Exploiter 都自由寻找获胜方式，它们可能反复发现同一种弱点。</p>
+<p>因此，可以给 Exploiter 添加限制：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">击败 Main Agent，但必须使用某种单位。</span><br><span class="line">击败 Main Agent，但必须采用某种 build order。</span><br></pre></td></tr></table></figure>
+
+<p>这样可以主动扩大 counter-strategy 的多样性。</p>
+<p>对 LLM 来说，可以用 prompt 控制不同：</p>
+<ul>
+<li>攻击方式；</li>
+<li>语言；</li>
+<li>工具；</li>
+<li>任务类型；</li>
+<li>推理方式。</li>
+</ul>
+<blockquote>
+<p>Prompt 不只用于控制输出，也可以用于扩大训练中的 interaction distribution。</p>
+</blockquote>
+<hr>
+<h2 id="17-对现代-LLM-Agent-的启发"><a href="#17-对现代-LLM-Agent-的启发" class="headerlink" title="17. 对现代 LLM Agent 的启发"></a>17. 对现代 LLM Agent 的启发</h2><h3 id="Tool-Use"><a href="#Tool-Use" class="headerlink" title="Tool Use"></a>Tool Use</h3><p>Tool call 应被视为 policy action，不只评估最终答案，也要评估完整 tool trajectory。</p>
+<h3 id="Human-Prior-Experience"><a href="#Human-Prior-Experience" class="headerlink" title="Human Prior + Experience"></a>Human Prior + Experience</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Pre-training / SFT</span><br><span class="line">    +</span><br><span class="line">Environment Interaction</span><br><span class="line">    +</span><br><span class="line">RL / Verifier Feedback</span><br></pre></td></tr></table></figure>
+
+<p>比 pure imitation 或 pure RL 更合理。</p>
+<h3 id="KL-Regularization"><a href="#KL-Regularization" class="headerlink" title="KL Regularization"></a>KL Regularization</h3><p>Post-training 需要在提升 reward 和保留原能力之间取得平衡。</p>
+<h3 id="Privileged-Critic"><a href="#Privileged-Critic" class="headerlink" title="Privileged Critic"></a>Privileged Critic</h3><p>Critic 或 verifier 可以使用完整 trajectory、测试结果和最终环境状态。</p>
+<h3 id="Population-Training"><a href="#Population-Training" class="headerlink" title="Population Training"></a>Population Training</h3><p>可以维护：</p>
+<ul>
+<li>不同 checkpoint；</li>
+<li>不同 system prompt；</li>
+<li>adversarial users；</li>
+<li>task generators；</li>
+<li>critics；</li>
+<li>target-specific exploiters；</li>
+<li>general red-team agents。</li>
+</ul>
+<hr>
+<h2 id="18-与-LLM-Multi-Agent-的关键差异"><a href="#18-与-LLM-Multi-Agent-的关键差异" class="headerlink" title="18. 与 LLM Multi-Agent 的关键差异"></a>18. 与 LLM Multi-Agent 的关键差异</h2><h3 id="用户通常是协作方"><a href="#用户通常是协作方" class="headerlink" title="用户通常是协作方"></a>用户通常是协作方</h3><p>StarCraft 是 zero-sum game，但 LLM Agent 与普通用户通常是合作关系。</p>
+<h3 id="同时存在对抗用户"><a href="#同时存在对抗用户" class="headerlink" title="同时存在对抗用户"></a>同时存在对抗用户</h3><p>开放系统仍会遇到 jailbreak、prompt injection、恶意工具调用和安全边界绕过。</p>
+<h3 id="Reward-更模糊"><a href="#Reward-更模糊" class="headerlink" title="Reward 更模糊"></a>Reward 更模糊</h3><p>LLM 任务往往同时考虑正确性、有用性、安全性、成本和用户满意度，这些目标还可能冲突。</p>
+<h3 id="Prompt-Space-更大"><a href="#Prompt-Space-更大" class="headerlink" title="Prompt Space 更大"></a>Prompt Space 更大</h3><p>AlphaStar 的 conditioning 有限，而自然语言 prompt 几乎可以表达任意任务和约束，使 LLM population 更复杂。</p>
+<hr>
+<h2 id="19-对-Agent-Evaluation-的启发"><a href="#19-对-Agent-Evaluation-的启发" class="headerlink" title="19. 对 Agent Evaluation 的启发"></a>19. 对 Agent Evaluation 的启发</h2><p>Agent evaluation 不应只看平均分，还应评估：</p>
+<ul>
+<li>worst-case performance；</li>
+<li>distribution shift；</li>
+<li>adaptive attack；</li>
+<li>transferable failures；</li>
+<li>是否遗忘历史 failure mode；</li>
+<li>面对新 opponent 的适应能力。</li>
+</ul>
+<p>可以构造：</p>
+<ul>
+<li><strong>Target-specific Exploiter：</strong> 针对一个固定模型持续寻找失败样例；</li>
+<li><strong>League-level Exploiter：</strong> 针对多个模型寻找共同 failure mode。</li>
+</ul>
+<p>这比固定 benchmark 更接近持续、适应性的 Agent evaluation。</p>
+<hr>
+<h2 id="20-总结"><a href="#20-总结" class="headerlink" title="20. 总结"></a>20. 总结</h2><ol>
+<li><p><strong>Tool use 本质上是 action modeling。</strong></p>
+</li>
+<li><p><strong>Human prior 与 RL 不是二选一。</strong><br>人类数据提供合理起点，环境交互提供新经验。</p>
+</li>
+<li><p><strong>RL post-training 可能破坏原有策略多样性。</strong><br>KL regularization 可以限制策略坍缩。</p>
+</li>
+<li><p><strong>Naive self-play 不等于 robustness。</strong><br>Agent 可能只在自己创造的狭窄策略分布中变强。</p>
+</li>
+<li><p><strong>Population-based training 可以主动发现弱点。</strong><br>Main Exploiter、League Exploiter、历史 checkpoint 和 matchmaking 共同构成持续进化的环境。</p>
+</li>
+<li><p><strong>未来 Scaling 不一定只来自更大的模型。</strong></p>
+</li>
+</ol>
+<p>$$
+\text{Scaling}
+=
+\text{Model Scale}
++
+\text{Interaction Scale}
++
+\text{Population Diversity}.
+$$</p>
+<blockquote>
+<p>AlphaStar 的经验表明，更强的 Agent 不只是更大的 neural network，还需要合理的人类先验、长期环境交互、稳定的 post-training 和多样化的对手分布。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/Infinity/">https://wick-7.github.io/posts/Infinity/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/Multi-Agent/">Multi-Agent</a><a class="post-meta__tags" href="/tags/RL/">RL</a><a class="post-meta__tags" href="/tags/AlphaStar/">AlphaStar</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture9》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Practical Lessons from Deploying Real-World AI Agents1. 课程概览这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。 整节课可以概括为一条主线： $$ \text{Agent Demo} \rightarrow \text{Agent System} \rightarrow \text{Reliable Product} $$ 一个基础 Agent 看起来可能只需要：  LLM； RAG； Tool Use； 一个简单的 reasoning &#x2F; orchestration loop。  但在生产环境中，还需要处理测试、监控、延迟、安全、版本管理、合规、多渠道部署、故障切换、用户身份验证等大量工程问题。  构建 Agent 的难点并不只是让模型“会做事”，而是让它在复杂、开放、非确定性的真实环境中持续、可靠、安全地做对事情。   2. Agent 的三种主要形态讲者...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a><a class="pagination-related" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-19</div><div class="info-item-2">《CS294-196 25fall Lecture8》课堂笔记</div></div><div class="info-2"><div class="info-item-1">AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以下循环的复杂系统： 1234567理解目标→ 拆解任务→ 组建角色或调用专业能力→ 使用工具和外部知识→ 保存项目状态→ 检查与修正错误→ 输出可验证结果  核心变化不是模型单次回答得更聪明，而是 模型开始成为工具、知识、记忆与协作流程的组织者。  2. 这节课的核心观点2.1 从 AI Tool 到 Agentic System传统 AI 通常解决边界清晰的单一任务，例如分类、预测或生成。 Agent 系统面对的则是开放式、长周期任务。它需要自己决定：  下一步做什么； 需要调用哪些工具； 是否要搜索新知识； 如何保存中间结果； 什么时候检查、回退或请求人类介入。  因此，Agent ...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/959ef75e/" title="《CS294-196 25fall Lecture6》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture6》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Multi-Agent AI：Self-Play、博弈均衡与多智能体协作0. 课程核心问题Self-play 曾推动 AlphaGo、Poker AI、Dota、StarCraft 等系统取得突破，但类似的递归式自我改进（recursive self-improvement） 尚未在 LLM 中以同样清晰、稳定的方式出现。 讲者用 AlphaGo 与 LLM 的发展路径进行类比：  Pretrain on high-quality human data  AlphaGo：学习高质量人类棋局； LLM：在大规模互联网文本上进行 next-token prediction。   Enable large-scale inference compute  AlphaGo：Monte Carlo Tree Search（MCTS）； LLM：Chain-of-Thought、test-time compute。   Recursive self-improvement  AlphaGo：通过大量 self-play 不断变强； LLM：这一环节仍缺少通用而可靠的方法。    讲者的核心判...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E-AlphaStar-%E5%88%B0-LLM-Agents"><span class="toc-number">1.</span> <span class="toc-text">从 AlphaStar 到 LLM Agents</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%95%B4%E4%BD%93%E8%AE%AD%E7%BB%83%E6%A1%86%E6%9E%B6"><span class="toc-number">1.1.</span> <span class="toc-text">1. 整体训练框架</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%BB%8E%E4%BC%A0%E7%BB%9F-Agent-%E5%88%B0-LLM-Agent"><span class="toc-number">1.2.</span> <span class="toc-text">2. 从传统 Agent 到 LLM Agent</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-StarCraft-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%80%82%E5%90%88%E7%A0%94%E7%A9%B6%E5%A4%8D%E6%9D%82-Agent%EF%BC%9F"><span class="toc-number">1.3.</span> <span class="toc-text">3. StarCraft 为什么适合研究复杂 Agent？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Partial-Observability"><span class="toc-number">1.3.1.</span> <span class="toc-text">Partial Observability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Long-Horizon"><span class="toc-number">1.3.2.</span> <span class="toc-text">Long Horizon</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Combinatorial-Action-Space"><span class="toc-number">1.3.3.</span> <span class="toc-text">Combinatorial Action Space</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Strategy-%E4%B8%8E-Micro-control-%E5%B9%B6%E5%AD%98"><span class="toc-number">1.3.4.</span> <span class="toc-text">Strategy 与 Micro-control 并存</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Action-Modeling-%E4%B8%8E-Tool-Use"><span class="toc-number">1.4.</span> <span class="toc-text">4. Action Modeling 与 Tool Use</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E5%8F%AA%E7%94%A8-Pure-RL%EF%BC%9F"><span class="toc-number">1.5.</span> <span class="toc-text">5. 为什么不能只用 Pure RL？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Conditioning-%E4%B8%8E-Prompt"><span class="toc-number">1.6.</span> <span class="toc-text">6. Conditioning 与 Prompt</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-RL-Post-training-%E4%B8%8E%E7%AD%96%E7%95%A5%E5%9D%8D%E7%BC%A9"><span class="toc-number">1.7.</span> <span class="toc-text">7. RL Post-training 与策略坍缩</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-Supervised-KL-Penalty"><span class="toc-number">1.8.</span> <span class="toc-text">8. Supervised KL Penalty</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Privileged-Value-Function"><span class="toc-number">1.9.</span> <span class="toc-text">9. Privileged Value Function</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-AlphaStar-RL-%E4%B8%8E-LLM-Post-training-%E7%9A%84%E5%B7%AE%E5%BC%82"><span class="toc-number">1.10.</span> <span class="toc-text">10. AlphaStar RL 与 LLM Post-training 的差异</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Reward-%E6%9B%B4%E9%9A%BE%E5%AE%9A%E4%B9%89"><span class="toc-number">1.10.1.</span> <span class="toc-text">Reward 更难定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Post-training-%E8%A7%84%E6%A8%A1"><span class="toc-number">1.10.2.</span> <span class="toc-text">Post-training 规模</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-Multi-Agent-Learning%EF%BC%9F"><span class="toc-number">1.11.</span> <span class="toc-text">11. 为什么需要 Multi-Agent Learning？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-Non-transitivity"><span class="toc-number">1.12.</span> <span class="toc-text">12. Non-transitivity</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-%E4%B8%BA%E4%BB%80%E4%B9%88-Naive-Self-play-%E4%BC%9A%E5%A4%B1%E8%B4%A5%EF%BC%9F"><span class="toc-number">1.13.</span> <span class="toc-text">13. 为什么 Naive Self-play 会失败？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-AlphaStar-League"><span class="toc-number">1.14.</span> <span class="toc-text">14. AlphaStar League</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Main-Agent"><span class="toc-number">1.14.1.</span> <span class="toc-text">Main Agent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Main-Exploiter"><span class="toc-number">1.14.2.</span> <span class="toc-text">Main Exploiter</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#League-Exploiter"><span class="toc-number">1.14.3.</span> <span class="toc-text">League Exploiter</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-Matchmaking"><span class="toc-number">1.15.</span> <span class="toc-text">15. Matchmaking</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-Conditioning-Exploiters"><span class="toc-number">1.16.</span> <span class="toc-text">16. Conditioning Exploiters</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#17-%E5%AF%B9%E7%8E%B0%E4%BB%A3-LLM-Agent-%E7%9A%84%E5%90%AF%E5%8F%91"><span class="toc-number">1.17.</span> <span class="toc-text">17. 对现代 LLM Agent 的启发</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Tool-Use"><span class="toc-number">1.17.1.</span> <span class="toc-text">Tool Use</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Human-Prior-Experience"><span class="toc-number">1.17.2.</span> <span class="toc-text">Human Prior + Experience</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#KL-Regularization"><span class="toc-number">1.17.3.</span> <span class="toc-text">KL Regularization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Privileged-Critic"><span class="toc-number">1.17.4.</span> <span class="toc-text">Privileged Critic</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Population-Training"><span class="toc-number">1.17.5.</span> <span class="toc-text">Population Training</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-%E4%B8%8E-LLM-Multi-Agent-%E7%9A%84%E5%85%B3%E9%94%AE%E5%B7%AE%E5%BC%82"><span class="toc-number">1.18.</span> <span class="toc-text">18. 与 LLM Multi-Agent 的关键差异</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%A8%E6%88%B7%E9%80%9A%E5%B8%B8%E6%98%AF%E5%8D%8F%E4%BD%9C%E6%96%B9"><span class="toc-number">1.18.1.</span> <span class="toc-text">用户通常是协作方</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%90%8C%E6%97%B6%E5%AD%98%E5%9C%A8%E5%AF%B9%E6%8A%97%E7%94%A8%E6%88%B7"><span class="toc-number">1.18.2.</span> <span class="toc-text">同时存在对抗用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Reward-%E6%9B%B4%E6%A8%A1%E7%B3%8A"><span class="toc-number">1.18.3.</span> <span class="toc-text">Reward 更模糊</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Prompt-Space-%E6%9B%B4%E5%A4%A7"><span class="toc-number">1.18.4.</span> <span class="toc-text">Prompt Space 更大</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#19-%E5%AF%B9-Agent-Evaluation-%E7%9A%84%E5%90%AF%E5%8F%91"><span class="toc-number">1.19.</span> <span class="toc-text">19. 对 Agent Evaluation 的启发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#20-%E6%80%BB%E7%BB%93"><span class="toc-number">1.20.</span> <span class="toc-text">20. 总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>

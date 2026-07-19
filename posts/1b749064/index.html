@@ -1,0 +1,637 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《CS294-196 25fall Lecture9》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Practical Lessons from Deploying Real-World AI Agents1. 课程概览这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。 整节课可以概括为一条主线： $$ \text{Agent Demo} \">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《CS294-196 25fall Lecture9》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/1b749064/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Practical Lessons from Deploying Real-World AI Agents1. 课程概览这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。 整节课可以概括为一条主线： $$ \text{Agent Demo} \">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-19T06:07:57.000Z">
+<meta property="article:modified_time" content="2026-07-19T06:27:14.301Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agents">
+<meta property="article:tag" content="Deployment">
+<meta property="article:tag" content="Production">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《CS294-196 25fall Lecture9》课堂笔记",
+  "url": "https://wick-7.github.io/posts/1b749064/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-19T06:07:57.000Z",
+  "dateModified": "2026-07-19T06:27:14.301Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/1b749064/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《CS294-196 25fall Lecture9》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture9》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture9》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-19T06:27:14.301Z" title="更新于 2026-07-19 14:27:14">2026-07-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Practical-Lessons-from-Deploying-Real-World-AI-Agents"><a href="#Practical-Lessons-from-Deploying-Real-World-AI-Agents" class="headerlink" title="Practical Lessons from Deploying Real-World AI Agents"></a>Practical Lessons from Deploying Real-World AI Agents</h1><h2 id="1-课程概览"><a href="#1-课程概览" class="headerlink" title="1. 课程概览"></a>1. 课程概览</h2><p>这节课并不重点讨论某一种新的 Agent 算法，而是从 Sierra 部署大量 customer-facing agents（面向客户的智能体）的经验出发，讨论 Agent 真正接触现实世界后会遇到的问题。</p>
+<p>整节课可以概括为一条主线：</p>
+<p>$$
+\text{Agent Demo}
+\rightarrow
+\text{Agent System}
+\rightarrow
+\text{Reliable Product}
+$$</p>
+<p>一个基础 Agent 看起来可能只需要：</p>
+<ul>
+<li>LLM；</li>
+<li>RAG；</li>
+<li>Tool Use；</li>
+<li>一个简单的 reasoning &#x2F; orchestration loop。</li>
+</ul>
+<p>但在生产环境中，还需要处理测试、监控、延迟、安全、版本管理、合规、多渠道部署、故障切换、用户身份验证等大量工程问题。</p>
+<blockquote>
+<p><strong>构建 Agent 的难点并不只是让模型“会做事”，而是让它在复杂、开放、非确定性的真实环境中持续、可靠、安全地做对事情。</strong></p>
+</blockquote>
+<hr>
+<h2 id="2-Agent-的三种主要形态"><a href="#2-Agent-的三种主要形态" class="headerlink" title="2. Agent 的三种主要形态"></a>2. Agent 的三种主要形态</h2><p>讲者将当前 Agent 大致分为三类。</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>典型例子</th>
+<th>主要作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Personal Agent</td>
+<td>ChatGPT、Gemini</td>
+<td>作为个人数字助手，为用户完成通用任务</td>
+</tr>
+<tr>
+<td>Role-based &#x2F; Persona-based Agent</td>
+<td>Coding Agent、Legal Agent</td>
+<td>围绕某种职业或角色完成专业工作</td>
+</tr>
+<tr>
+<td>Customer-facing Agent</td>
+<td>企业客服、销售、售后 Agent</td>
+<td>代表企业直接与客户交互并执行业务流程</td>
+</tr>
+</tbody></table>
+<p>Sierra 主要关注第三类，即面向客户的 Agent。它们不仅回答问题，还需要真正执行操作，例如：</p>
+<ul>
+<li>退换商品；</li>
+<li>排查设备故障；</li>
+<li>修改订阅计划；</li>
+<li>恢复账户；</li>
+<li>查询订单；</li>
+<li>更新客户信息；</li>
+<li>触发业务系统中的真实操作。</li>
+</ul>
+<p>这意味着 customer-facing agents 不只是对话系统，而是连接用户、企业知识和业务系统的执行层。</p>
+<h2 id="3-AI-的应用层：从-Website、App-到-Agent"><a href="#3-AI-的应用层：从-Website、App-到-Agent" class="headerlink" title="3. AI 的应用层：从 Website、App 到 Agent"></a>3. AI 的应用层：从 Website、App 到 Agent</h2><p>讲者将 Agent 类比为新一代技术平台上的核心应用形态：</p>
+<p>$$
+\text{Internet} \rightarrow \text{Websites},\qquad
+\text{Mobile} \rightarrow \text{Apps},\qquad
+\text{AI} \rightarrow \text{Agents}
+$$</p>
+<p>LLM 更像底层能力，Agent 则是用户实际使用 AI 的产品形态。</p>
+<p>未来企业可以只定义一次 Agent 的知识、工具和规则，再将其部署到电话、Chat、Email 等不同渠道：</p>
+<p>$$
+\text{Define Once} \rightarrow \text{Deploy Everywhere}
+$$</p>
+<p>自然语言对话由此成为新的用户界面。Agent 的价值不只是回答问题，而是通过对话直接完成过去需要多层 UI 或人工客服处理的任务。</p>
+<hr>
+<h2 id="4-Outcome-based-Pricing"><a href="#4-Outcome-based-Pricing" class="headerlink" title="4. Outcome-based Pricing"></a>4. Outcome-based Pricing</h2><p>软件商业模式大致经历：</p>
+<p>$$
+\text{一次性购买}
+\rightarrow
+\text{SaaS 订阅}
+\rightarrow
+\text{按使用量付费}
+\rightarrow
+\text{按结果付费}
+$$</p>
+<p>Sierra 采用 outcomes-based pricing：只有 Agent 成功完成退货、换货、销售或客户挽留等目标时，企业才付费。</p>
+<p>这种模式要求 Agent 的结果必须可验证，而不能只依赖回答“看起来不错”。</p>
+<hr>
+<h2 id="5-Agent-Iceberg：真正困难的部分在水面之下"><a href="#5-Agent-Iceberg：真正困难的部分在水面之下" class="headerlink" title="5. Agent Iceberg：真正困难的部分在水面之下"></a>5. Agent Iceberg：真正困难的部分在水面之下</h2><p><img src="/img/posts/1b749064/2026-07-19-14-16-20.png"></p>
+<p>表面上，一个 Agent 似乎只需要：</p>
+<ul>
+<li>LLM；</li>
+<li>RAG；</li>
+<li>Tool Use。</li>
+</ul>
+<p>但生产系统还必须处理：</p>
+<ul>
+<li>测试、监控与 Trace；</li>
+<li>版本控制和发布管理；</li>
+<li>Prompt Injection、防泄漏与合规；</li>
+<li>多渠道接入和人工转接；</li>
+<li>延迟优化与模型 Failover；</li>
+<li>权限控制、身份验证和业务系统访问。</li>
+</ul>
+<p>因此，当前 Agent 生态类似 1997 年的 Web：基础能力已经出现，但成熟的工程栈和标准仍不完善。</p>
+<p>行业正在经历：</p>
+<p>$$
+\text{Agents as Technology}
+\rightarrow
+\text{Agents as Product}
+$$</p>
+<p>核心原则是：</p>
+<blockquote>
+<p><strong>Simple, not simplistic.</strong></p>
+</blockquote>
+<p>产品可以易用，但不能牺牲可靠性、安全性和可控性。</p>
+<hr>
+<h2 id="6-从-Transaction-到-Relationship：Agent-Memory"><a href="#6-从-Transaction-到-Relationship：Agent-Memory" class="headerlink" title="6. 从 Transaction 到 Relationship：Agent Memory"></a>6. 从 Transaction 到 Relationship：Agent Memory</h2><p>当前很多 Agent 是 transactional 的：每次会话相互独立，用户再次联系时需要从头说明问题。</p>
+<p>更好的 Agent 应当：</p>
+<ol>
+<li>跨时间、跨渠道持续交互；</li>
+<li>记住过去的重要信息；</li>
+<li>整合企业已有的客户数据；</li>
+<li>从被动响应转向主动服务。</li>
+</ol>
+<p>Agent Memory 的关键价值是解决 <strong>Warm Start</strong>：新会话不再从零开始，而是基于历史交互继续服务。</p>
+<hr>
+<h2 id="7-Agent-Development-Life-Cycle"><a href="#7-Agent-Development-Life-Cycle" class="headerlink" title="7. Agent Development Life Cycle"></a>7. Agent Development Life Cycle</h2><p><img src="/img/posts/1b749064/2026-07-19-14-17-31.png"></p>
+<p>Agent 具有非确定性，因此也需要独立的开发生命周期：</p>
+<p>$$
+\text{Build}
+\rightarrow
+\text{Test}
+\rightarrow
+\text{Optimize}
+$$</p>
+<p>构建平台通常同时提供：</p>
+<ul>
+<li>Code-based SDK：适合工程团队接入 Git、版本管理和发布流程；</li>
+<li>No-code &#x2F; Low-code 工具：适合业务团队配置知识、工具和 Policy；</li>
+<li>Declarative Configuration：描述 Agent 应该做什么，而不是手工编排每次模型调用。</li>
+</ul>
+<p>Sierra 强调的不是简单的 Build or Buy，而是 <strong>Build with</strong>：平台提供底层生产能力，企业保留业务定制空间。</p>
+<hr>
+<h2 id="8-Voice-Agent：Demo-容易，Production-很难"><a href="#8-Voice-Agent：Demo-容易，Production-很难" class="headerlink" title="8. Voice Agent：Demo 容易，Production 很难"></a>8. Voice Agent：Demo 容易，Production 很难</h2><p>生产级语音 Agent 通常采用：</p>
+<p>$$
+\text{Audio}
+\rightarrow
+\text{Speech-to-Text}
+\rightarrow
+\text{LLM / Orchestration}
+\rightarrow
+\text{Text-to-Speech}
+\rightarrow
+\text{Audio}
+$$</p>
+<p>这种模块化架构比端到端 audio-to-audio 更容易控制、调试和替换。</p>
+<p>语音系统需要同时解决：</p>
+<ul>
+<li>低延迟；</li>
+<li>背景噪声和多说话人；</li>
+<li>打断检测；</li>
+<li>专有名词与数字发音；</li>
+<li>语气、节奏和情绪；</li>
+<li>模型故障切换。</li>
+</ul>
+<h3 id="8-1-Latency"><a href="#8-1-Latency" class="headerlink" title="8.1 Latency"></a>8.1 Latency</h3><p>真正重要的是用户停止说话到 Agent 开始回答之间的时间：</p>
+<p>$$
+L_{\text{perceived}}
+=
+t_{\text{agent starts speaking}}
+-
+t_{\text{user stops speaking}}
+$$</p>
+<p>常见优化方法包括：</p>
+<ul>
+<li>并行执行多个步骤；</li>
+<li>同时发出多个推理请求，使用最先返回的结果；</li>
+<li>用自然的 filler phrase 缓解等待感；</li>
+<li>在模型异常时自动 Failover。</li>
+</ul>
+<p>这些方法能降低延迟，但会增加计算成本和系统复杂度。</p>
+<h3 id="8-2-打断检测"><a href="#8-2-打断检测" class="headerlink" title="8.2 打断检测"></a>8.2 打断检测</h3><p>系统需要区分：</p>
+<p>$$
+\text{Acknowledgement}
+\neq
+\text{Semantic Interruption}
+$$</p>
+<p>“嗯嗯”“好的”通常只是附和，而“等等，我不是这个意思”才是真正的打断。普通 VAD 只能检测声音，无法判断语义，因此需要专门的 interruption classifier。</p>
+<h3 id="8-3-Transcription-与-Synthesis"><a href="#8-3-Transcription-与-Synthesis" class="headerlink" title="8.3 Transcription 与 Synthesis"></a>8.3 Transcription 与 Synthesis</h3><p>传统转录指标：</p>
+<p>$$
+WER = \frac{S+D+I}{N}
+$$</p>
+<p>但 Voice Agent 更关心：</p>
+<ul>
+<li>是否识别主要说话人；</li>
+<li>是否忽略背景电视和次要说话人；</li>
+<li>是否识别关键实体；</li>
+<li>错误是否影响任务完成。</li>
+</ul>
+<p>因此，WER 不一定等同于真实体验。</p>
+<p>语音合成还要处理：</p>
+<ul>
+<li>地址、电话、姓名等实体发音；</li>
+<li>Prosody 和自然停顿；</li>
+<li>简短、口语化的表达；</li>
+<li>与用户情绪和企业品牌匹配的声音。</li>
+</ul>
+<p>即：</p>
+<p>$$
+\text{Good Chat Response}
+\not\Rightarrow
+\text{Good Voice Response}
+$$</p>
+<hr>
+<h2 id="9-为什么-Agent-需要新的测试方法"><a href="#9-为什么-Agent-需要新的测试方法" class="headerlink" title="9. 为什么 Agent 需要新的测试方法"></a>9. 为什么 Agent 需要新的测试方法</h2><p>Agent 的同一输入可能产生不同的推理过程、工具调用和对话轨迹，因此传统 Unit Test 和 Integration Test 不够。</p>
+<p>测试需要尽量还原真实环境：</p>
+<ul>
+<li>多轮对话；</li>
+<li>用户情绪与口语表达；</li>
+<li>工具调用；</li>
+<li>数据库状态变化；</li>
+<li>Policy 与 Guardrail；</li>
+<li>噪声、口音和打断；</li>
+<li>用户与 Agent 共同改变环境。</li>
+</ul>
+<p>Sierra 早期曾让 user agent 与 business agent 自动对话，但由于没有终止条件，两个 Agent 陷入无限的“感谢—不客气”循环。这说明测试必须观察完整 trajectory，并设置明确的终止和成功条件。</p>
+<hr>
+<h2 id="10-tau-Bench：面向真实交互的-Agent-Evaluation"><a href="#10-tau-Bench：面向真实交互的-Agent-Evaluation" class="headerlink" title="10. $\tau$-Bench：面向真实交互的 Agent Evaluation"></a>10. $\tau$-Bench：面向真实交互的 Agent Evaluation</h2><p>$\tau$ 表示 Tool-Agent-User。它评估 Agent 能否在动态、多轮、受政策约束的环境中完成任务。</p>
+<p>核心要求包括：</p>
+<ol>
+<li><strong>Seamless Interaction</strong>：与用户和工具顺畅交互；</li>
+<li><strong>Policy Adherence</strong>：遵守业务规则；</li>
+<li><strong>Consistency at Scale</strong>：多次运行仍保持稳定。</li>
+</ol>
+<h3 id="10-1-环境组成"><a href="#10-1-环境组成" class="headerlink" title="10.1 环境组成"></a>10.1 环境组成</h3><p>每个任务包含：</p>
+<ul>
+<li>数据库和可读写 API；</li>
+<li>Domain Policy；</li>
+<li>明确的用户目标；</li>
+<li>LLM-based User Simulator；</li>
+<li>可验证的最终状态。</li>
+</ul>
+<p>环境是 dual-control 的：</p>
+<p>$$
+s_{t+1}=T(s_t,a_t^{agent},a_t^{user})
+$$</p>
+<p>即用户和 Agent 都可能改变世界状态。</p>
+<h3 id="10-2-Objective-Evaluation"><a href="#10-2-Objective-Evaluation" class="headerlink" title="10.2 Objective Evaluation"></a>10.2 Objective Evaluation</h3><p>相比只使用 LLM-as-a-Judge，$\tau$-Bench 更关注最终状态：</p>
+<p>$$
+\text{Success}
+=
+\mathbb{1}
+\left[
+s_{\text{final}}=s_{\text{target}}
+\land
+\text{Policy Satisfied}
+\right]
+$$</p>
+<p>例如检查订单是否真正退款、航班是否修改、身份验证是否完成，而不是只判断回答是否自然。</p>
+<hr>
+<h2 id="11-Pass-k-与-Pass-k"><a href="#11-Pass-k-与-Pass-k" class="headerlink" title="11. Pass@k 与 Pass$^k$"></a>11. Pass@k 与 Pass$^k$</h2><ul>
+<li><strong>Pass@k</strong>：$k$ 次尝试中至少一次成功，强调“能不能做到”；</li>
+<li><strong>Pass$^k$</strong>：连续 $k$ 次全部成功，强调“能否稳定做到”。</li>
+</ul>
+<p>若单次成功率为 $p$，则：</p>
+<p>$$
+P(\text{all }k\text{ runs succeed})=p^k
+$$</p>
+<p>例如：</p>
+<p>$$
+0.95^{20}\approx0.358
+$$</p>
+<p>因此，生产 Agent 不能只追求 best-case capability，还要关注 repeated reliability。</p>
+<hr>
+<h2 id="12-Production-Simulation-与-Traces"><a href="#12-Production-Simulation-与-Traces" class="headerlink" title="12. Production Simulation 与 Traces"></a>12. Production Simulation 与 Traces</h2><p>$\tau$-Bench 提供通用评测框架，生产环境还需要持续运行的 Simulation Suite：</p>
+<p>$$
+\text{Agent Change}
+\rightarrow
+\text{Simulation}
+\rightarrow
+\text{Regression Analysis}
+\rightarrow
+\text{Release / Reject}
+$$</p>
+<p>Simulation 可以覆盖企业自己的数据库、工具、用户 persona、语音噪声和业务 Policy。</p>
+<p>Traces 则记录一次响应中的完整执行过程，例如：</p>
+<ul>
+<li>Agent 推理；</li>
+<li>Retrieval；</li>
+<li>Tool Call；</li>
+<li>Supervisor；</li>
+<li>数据库请求；</li>
+<li>Safety Check；</li>
+<li>TTS。</li>
+</ul>
+<p>它主要用于：</p>
+<ul>
+<li>Debugging；</li>
+<li>Latency Optimization；</li>
+<li>Audit；</li>
+<li>Root Cause Analysis。</li>
+</ul>
+<hr>
+<h2 id="13-Use-AI-to-Improve-AI"><a href="#13-Use-AI-to-Improve-AI" class="headerlink" title="13. Use AI to Improve AI"></a>13. Use AI to Improve AI</h2><p>Primary Agent 周围可以配置多个专门的 Supervisor：</p>
+<ul>
+<li>Task Supervisor；</li>
+<li>Grounding Supervisor；</li>
+<li>Compliance &#x2F; Safety Supervisor；</li>
+<li>Tool Supervisor；</li>
+<li>Prompt Injection Detector。</li>
+</ul>
+<p>这种设计能提高安全性和可控性，但也会增加延迟、成本和系统复杂度。</p>
+<p>系统还可以利用真实交互持续改进：</p>
+<p>$$
+\text{Escalated Cases}
+\rightarrow
+\text{Human Expert Solutions}
+\rightarrow
+\text{Synthesized Knowledge}
+\rightarrow
+\text{Improved Agent}
+$$</p>
+<p>即从人工客服成功处理的案例中补充 Agent 的知识缺口。</p>
+<hr>
+<h2 id="14-Prompt-Injection-与-Agent-Security"><a href="#14-Prompt-Injection-与-Agent-Security" class="headerlink" title="14. Prompt Injection 与 Agent Security"></a>14. Prompt Injection 与 Agent Security</h2><p>Agent 能访问知识、调用工具并修改真实业务系统，因此 Prompt Injection 可能直接造成现实风险。</p>
+<p>防护应采用分层架构：</p>
+<p>$$
+\text{Input Guardrails}
+\rightarrow
+\text{Rules / Policies / Supervisors}
+\rightarrow
+\text{Output Guardrails}
+$$</p>
+<p>关键原则包括：</p>
+<ul>
+<li>输入阶段检测 Prompt Injection、Context Poisoning 和异常请求；</li>
+<li>Agent 内部明确 Rules、Policies 和 Tool Permissions；</li>
+<li>输出前检查 Prompt 泄露、PII 和违规内容；</li>
+<li>高风险规则由确定性软件强制执行；</li>
+<li>LLM 不直接无限制访问 CRM 或交易数据库。</li>
+</ul>
+<p>正确的工具访问路径是：</p>
+<p>$$
+\text{LLM Intent}
+\rightarrow
+\text{Deterministic Tool Interface}
+\rightarrow
+\text{Authentication + Validation}
+\rightarrow
+\text{Business System}
+$$</p>
+<p>生产 Agent 同时面临两类风险：</p>
+<p>$$
+\text{Classic Software Vulnerabilities}
++
+\text{AI-specific Vulnerabilities}
+$$</p>
+<p>因此，Agent Security 必须同时采用传统软件安全、AI Guardrail 和持续 Red Teaming。</p>
+<hr>
+<h2 id="15-整体架构总结"><a href="#15-整体架构总结" class="headerlink" title="15. 整体架构总结"></a>15. 整体架构总结</h2><p>一个生产级 customer-facing Agent 可以抽象为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">User Input</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">Input Guardrails</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">Agent Orchestration Loop</span><br><span class="line"> ├── Rules / Policies</span><br><span class="line"> ├── Supervisor Agents</span><br><span class="line"> ├── Knowledge Retrieval</span><br><span class="line"> ├── Memory Recollection</span><br><span class="line"> └── Tool Planning</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">Deterministic Tool Layer</span><br><span class="line"> ├── Authentication</span><br><span class="line"> ├── Authorization</span><br><span class="line"> ├── Parameter Validation</span><br><span class="line"> ├── Business System Access</span><br><span class="line"> └── Audit Log</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">Output Guardrails</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">Channel-specific Response</span><br><span class="line">(Chat / Voice / Email / SMS)</span><br></pre></td></tr></table></figure>
+
+<p>在系统外围还需要：</p>
+<ul>
+<li>Simulation；</li>
+<li>Regression Testing；</li>
+<li>Traces；</li>
+<li>Monitoring；</li>
+<li>Release Management；</li>
+<li>Model Failover；</li>
+<li>Human Handoff；</li>
+<li>Continuous Optimization。</li>
+</ul>
+<hr>
+<h2 id="16-本节课最值得记住的实践原则"><a href="#16-本节课最值得记住的实践原则" class="headerlink" title="16. 本节课最值得记住的实践原则"></a>16. 本节课最值得记住的实践原则</h2><h3 id="原则一：不要把-Agent-等同于-LLM-RAG-Tools"><a href="#原则一：不要把-Agent-等同于-LLM-RAG-Tools" class="headerlink" title="原则一：不要把 Agent 等同于 LLM + RAG + Tools"></a>原则一：不要把 Agent 等同于 LLM + RAG + Tools</h3><p>真正的生产 Agent 是一个完整的软件系统。</p>
+<h3 id="原则二：能力只是起点，可靠性才决定能否部署"><a href="#原则二：能力只是起点，可靠性才决定能否部署" class="headerlink" title="原则二：能力只是起点，可靠性才决定能否部署"></a>原则二：能力只是起点，可靠性才决定能否部署</h3><p>模型偶尔成功，不代表系统能够服务数百万用户。</p>
+<h3 id="原则三：指标必须贴近最终用户体验与业务目标"><a href="#原则三：指标必须贴近最终用户体验与业务目标" class="headerlink" title="原则三：指标必须贴近最终用户体验与业务目标"></a>原则三：指标必须贴近最终用户体验与业务目标</h3><p>WER、LLM-as-a-Judge 等通用指标不一定适合具体产品。</p>
+<h3 id="原则四：测试真实-trajectory，而不只是单轮答案"><a href="#原则四：测试真实-trajectory，而不只是单轮答案" class="headerlink" title="原则四：测试真实 trajectory，而不只是单轮答案"></a>原则四：测试真实 trajectory，而不只是单轮答案</h3><p>需要模拟用户、工具、环境状态、政策约束和多轮变化。</p>
+<h3 id="原则五：对可执行任务，应优先使用可验证的最终状态"><a href="#原则五：对可执行任务，应优先使用可验证的最终状态" class="headerlink" title="原则五：对可执行任务，应优先使用可验证的最终状态"></a>原则五：对可执行任务，应优先使用可验证的最终状态</h3><p>数据库是否被正确修改，比回答是否“听起来合理”更重要。</p>
+<h3 id="原则六：高风险操作必须由确定性软件约束"><a href="#原则六：高风险操作必须由确定性软件约束" class="headerlink" title="原则六：高风险操作必须由确定性软件约束"></a>原则六：高风险操作必须由确定性软件约束</h3><p>不要让 LLM 直接、无限制地访问企业核心系统。</p>
+<h3 id="原则七：Voice-Agent-是完整实时系统问题"><a href="#原则七：Voice-Agent-是完整实时系统问题" class="headerlink" title="原则七：Voice Agent 是完整实时系统问题"></a>原则七：Voice Agent 是完整实时系统问题</h3><p>语音体验由延迟、识别、打断、表达、情绪和故障切换共同决定。</p>
+<h3 id="原则八：Agent-需要-Build–Test–Optimize-的持续闭环"><a href="#原则八：Agent-需要-Build–Test–Optimize-的持续闭环" class="headerlink" title="原则八：Agent 需要 Build–Test–Optimize 的持续闭环"></a>原则八：Agent 需要 Build–Test–Optimize 的持续闭环</h3><p>Agent 不是一次性完成的模型应用，而是需要长期迭代的产品。</p>
+<hr>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/1b749064/">https://wick-7.github.io/posts/1b749064/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/Production/">Production</a><a class="post-meta__tags" href="/tags/Deployment/">Deployment</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture10》课堂笔记</div></div><div class="info-2"><div class="info-item-1">从 AlphaStar 到 LLM Agents1. 整体训练框架AlphaStar 的训练流程： 123456789Human Replays    ↓Imitation Learning    ↓Reinforcement Learning    ↓Multi-Agent League    ↓更强、更稳健的 Agent  对应现代 LLM：    AlphaStar 现代 LLM &#x2F; Agent    Human replay Pre-training &#x2F; Demonstration Data   Imitation Learning Pre-training &#x2F; SFT   Structured action decoder Tool Calling   Conditioning vector Prompt &#x2F; Instruction   Reinforcement Learning Post-training   KL penalty Reference Policy Regularization   League &#x2F; ...</div></div></div></a><a class="pagination-related" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture8》课堂笔记</div></div><div class="info-2"><div class="info-item-1">AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以下循环的复杂系统： 1234567理解目标→ 拆解任务→ 组建角色或调用专业能力→ 使用工具和外部知识→ 保存项目状态→ 检查与修正错误→ 输出可验证结果  核心变化不是模型单次回答得更聪明，而是 模型开始成为工具、知识、记忆与协作流程的组织者。  2. 这节课的核心观点2.1 从 AI Tool 到 Agentic System传统 AI 通常解决边界清晰的单一任务，例如分类、预测或生成。 Agent 系统面对的则是开放式、长周期任务。它需要自己决定：  下一步做什么； 需要调用哪些工具； 是否要搜索新知识； 如何保存中间结果； 什么时候检查、回退或请求人类介入。  因此，Agent ...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-19</div><div class="info-item-2">《CS294-196 25fall Lecture10》课堂笔记</div></div><div class="info-2"><div class="info-item-1">从 AlphaStar 到 LLM Agents1. 整体训练框架AlphaStar 的训练流程： 123456789Human Replays    ↓Imitation Learning    ↓Reinforcement Learning    ↓Multi-Agent League    ↓更强、更稳健的 Agent  对应现代 LLM：    AlphaStar 现代 LLM &#x2F; Agent    Human replay Pre-training &#x2F; Demonstration Data   Imitation Learning Pre-training &#x2F; SFT   Structured action decoder Tool Calling   Conditioning vector Prompt &#x2F; Instruction   Reinforcement Learning Post-training   KL penalty Reference Policy Regularization   League &#x2F; ...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-19</div><div class="info-item-2">《CS294-196 25fall Lecture8》课堂笔记</div></div><div class="info-2"><div class="info-item-1">AI Agents to Automate Scientific Discoveries 本节课虽然以 AI for Science 为主要场景，但真正值得关注的是其中展示的 Agent 系统设计趋势：如何让大模型组织专业角色、调用工具、管理长期状态、验证结果，并把静态知识转化为可执行能力。  1. 一句话概括AI Agent 正在从“回答问题或调用一个工具”，发展为能够围绕开放式目标，持续完成以下循环的复杂系统： 1234567理解目标→ 拆解任务→ 组建角色或调用专业能力→ 使用工具和外部知识→ 保存项目状态→ 检查与修正错误→ 输出可验证结果  核心变化不是模型单次回答得更聪明，而是 模型开始成为工具、知识、记忆与协作流程的组织者。  2. 这节课的核心观点2.1 从 AI Tool 到 Agentic System传统 AI 通常解决边界清晰的单一任务，例如分类、预测或生成。 Agent 系统面对的则是开放式、长周期任务。它需要自己决定：  下一步做什么； 需要调用哪些工具； 是否要搜索新知识； 如何保存中间结果； 什么时候检查、回退或请求人类介入。  因此，Agent ...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Practical-Lessons-from-Deploying-Real-World-AI-Agents"><span class="toc-number">1.</span> <span class="toc-text">Practical Lessons from Deploying Real-World AI Agents</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%AF%BE%E7%A8%8B%E6%A6%82%E8%A7%88"><span class="toc-number">1.1.</span> <span class="toc-text">1. 课程概览</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-Agent-%E7%9A%84%E4%B8%89%E7%A7%8D%E4%B8%BB%E8%A6%81%E5%BD%A2%E6%80%81"><span class="toc-number">1.2.</span> <span class="toc-text">2. Agent 的三种主要形态</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-AI-%E7%9A%84%E5%BA%94%E7%94%A8%E5%B1%82%EF%BC%9A%E4%BB%8E-Website%E3%80%81App-%E5%88%B0-Agent"><span class="toc-number">1.3.</span> <span class="toc-text">3. AI 的应用层：从 Website、App 到 Agent</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Outcome-based-Pricing"><span class="toc-number">1.4.</span> <span class="toc-text">4. Outcome-based Pricing</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Agent-Iceberg%EF%BC%9A%E7%9C%9F%E6%AD%A3%E5%9B%B0%E9%9A%BE%E7%9A%84%E9%83%A8%E5%88%86%E5%9C%A8%E6%B0%B4%E9%9D%A2%E4%B9%8B%E4%B8%8B"><span class="toc-number">1.5.</span> <span class="toc-text">5. Agent Iceberg：真正困难的部分在水面之下</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E4%BB%8E-Transaction-%E5%88%B0-Relationship%EF%BC%9AAgent-Memory"><span class="toc-number">1.6.</span> <span class="toc-text">6. 从 Transaction 到 Relationship：Agent Memory</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-Agent-Development-Life-Cycle"><span class="toc-number">1.7.</span> <span class="toc-text">7. Agent Development Life Cycle</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-Voice-Agent%EF%BC%9ADemo-%E5%AE%B9%E6%98%93%EF%BC%8CProduction-%E5%BE%88%E9%9A%BE"><span class="toc-number">1.8.</span> <span class="toc-text">8. Voice Agent：Demo 容易，Production 很难</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-Latency"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 Latency</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E6%89%93%E6%96%AD%E6%A3%80%E6%B5%8B"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 打断检测</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-Transcription-%E4%B8%8E-Synthesis"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 Transcription 与 Synthesis</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E4%B8%BA%E4%BB%80%E4%B9%88-Agent-%E9%9C%80%E8%A6%81%E6%96%B0%E7%9A%84%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95"><span class="toc-number">1.9.</span> <span class="toc-text">9. 为什么 Agent 需要新的测试方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-tau-Bench%EF%BC%9A%E9%9D%A2%E5%90%91%E7%9C%9F%E5%AE%9E%E4%BA%A4%E4%BA%92%E7%9A%84-Agent-Evaluation"><span class="toc-number">1.10.</span> <span class="toc-text">10. $\tau$-Bench：面向真实交互的 Agent Evaluation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E7%8E%AF%E5%A2%83%E7%BB%84%E6%88%90"><span class="toc-number">1.10.1.</span> <span class="toc-text">10.1 环境组成</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-Objective-Evaluation"><span class="toc-number">1.10.2.</span> <span class="toc-text">10.2 Objective Evaluation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#11-Pass-k-%E4%B8%8E-Pass-k"><span class="toc-number">1.11.</span> <span class="toc-text">11. Pass@k 与 Pass$^k$</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#12-Production-Simulation-%E4%B8%8E-Traces"><span class="toc-number">1.12.</span> <span class="toc-text">12. Production Simulation 与 Traces</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#13-Use-AI-to-Improve-AI"><span class="toc-number">1.13.</span> <span class="toc-text">13. Use AI to Improve AI</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#14-Prompt-Injection-%E4%B8%8E-Agent-Security"><span class="toc-number">1.14.</span> <span class="toc-text">14. Prompt Injection 与 Agent Security</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#15-%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84%E6%80%BB%E7%BB%93"><span class="toc-number">1.15.</span> <span class="toc-text">15. 整体架构总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#16-%E6%9C%AC%E8%8A%82%E8%AF%BE%E6%9C%80%E5%80%BC%E5%BE%97%E8%AE%B0%E4%BD%8F%E7%9A%84%E5%AE%9E%E8%B7%B5%E5%8E%9F%E5%88%99"><span class="toc-number">1.16.</span> <span class="toc-text">16. 本节课最值得记住的实践原则</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E4%B8%80%EF%BC%9A%E4%B8%8D%E8%A6%81%E6%8A%8A-Agent-%E7%AD%89%E5%90%8C%E4%BA%8E-LLM-RAG-Tools"><span class="toc-number">1.16.1.</span> <span class="toc-text">原则一：不要把 Agent 等同于 LLM + RAG + Tools</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E4%BA%8C%EF%BC%9A%E8%83%BD%E5%8A%9B%E5%8F%AA%E6%98%AF%E8%B5%B7%E7%82%B9%EF%BC%8C%E5%8F%AF%E9%9D%A0%E6%80%A7%E6%89%8D%E5%86%B3%E5%AE%9A%E8%83%BD%E5%90%A6%E9%83%A8%E7%BD%B2"><span class="toc-number">1.16.2.</span> <span class="toc-text">原则二：能力只是起点，可靠性才决定能否部署</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E4%B8%89%EF%BC%9A%E6%8C%87%E6%A0%87%E5%BF%85%E9%A1%BB%E8%B4%B4%E8%BF%91%E6%9C%80%E7%BB%88%E7%94%A8%E6%88%B7%E4%BD%93%E9%AA%8C%E4%B8%8E%E4%B8%9A%E5%8A%A1%E7%9B%AE%E6%A0%87"><span class="toc-number">1.16.3.</span> <span class="toc-text">原则三：指标必须贴近最终用户体验与业务目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%9B%9B%EF%BC%9A%E6%B5%8B%E8%AF%95%E7%9C%9F%E5%AE%9E-trajectory%EF%BC%8C%E8%80%8C%E4%B8%8D%E5%8F%AA%E6%98%AF%E5%8D%95%E8%BD%AE%E7%AD%94%E6%A1%88"><span class="toc-number">1.16.4.</span> <span class="toc-text">原则四：测试真实 trajectory，而不只是单轮答案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E4%BA%94%EF%BC%9A%E5%AF%B9%E5%8F%AF%E6%89%A7%E8%A1%8C%E4%BB%BB%E5%8A%A1%EF%BC%8C%E5%BA%94%E4%BC%98%E5%85%88%E4%BD%BF%E7%94%A8%E5%8F%AF%E9%AA%8C%E8%AF%81%E7%9A%84%E6%9C%80%E7%BB%88%E7%8A%B6%E6%80%81"><span class="toc-number">1.16.5.</span> <span class="toc-text">原则五：对可执行任务，应优先使用可验证的最终状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%85%AD%EF%BC%9A%E9%AB%98%E9%A3%8E%E9%99%A9%E6%93%8D%E4%BD%9C%E5%BF%85%E9%A1%BB%E7%94%B1%E7%A1%AE%E5%AE%9A%E6%80%A7%E8%BD%AF%E4%BB%B6%E7%BA%A6%E6%9D%9F"><span class="toc-number">1.16.6.</span> <span class="toc-text">原则六：高风险操作必须由确定性软件约束</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E4%B8%83%EF%BC%9AVoice-Agent-%E6%98%AF%E5%AE%8C%E6%95%B4%E5%AE%9E%E6%97%B6%E7%B3%BB%E7%BB%9F%E9%97%AE%E9%A2%98"><span class="toc-number">1.16.7.</span> <span class="toc-text">原则七：Voice Agent 是完整实时系统问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8E%9F%E5%88%99%E5%85%AB%EF%BC%9AAgent-%E9%9C%80%E8%A6%81-Build%E2%80%93Test%E2%80%93Optimize-%E7%9A%84%E6%8C%81%E7%BB%AD%E9%97%AD%E7%8E%AF"><span class="toc-number">1.16.8.</span> <span class="toc-text">原则八：Agent 需要 Build–Test–Optimize 的持续闭环</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
