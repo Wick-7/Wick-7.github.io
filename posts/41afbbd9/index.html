@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
 <meta property="article:published_time" content="2026-07-11T11:30:07.000Z">
-<meta property="article:modified_time" content="2026-07-11T11:56:07.141Z">
+<meta property="article:modified_time" content="2026-07-26T15:15:53.937Z">
 <meta property="article:author" content="Wick">
 <meta property="article:tag" content="AI">
 <meta property="article:tag" content="AI-Infra">
@@ -21,7 +21,7 @@
   "url": "https://wick-7.github.io/posts/41afbbd9/",
   "image": "https://wick-7.github.io/img/avatar.jpg",
   "datePublished": "2026-07-11T11:30:07.000Z",
-  "dateModified": "2026-07-11T11:56:07.141Z",
+  "dateModified": "2026-07-26T15:15:53.937Z",
   "author": [
     {
       "@type": "Person",
@@ -171,7 +171,7 @@
     color: #aaa !important;
   }
 </style>
-<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture2》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture2》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-11T11:30:07.000Z" title="发表于 2026-07-11 19:30:07">2026-07-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-11T11:56:07.141Z" title="更新于 2026-07-11 19:56:07">2026-07-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Evolution-of-System-Designs-from-an-AI-Engineer-Perspective"><a href="#Evolution-of-System-Designs-from-an-AI-Engineer-Perspective" class="headerlink" title="Evolution of System Designs from an AI Engineer Perspective"></a>Evolution of System Designs from an AI Engineer Perspective</h1><p>从 <strong>AI Engineer</strong> 的视角观察：</p>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《CS294-196 25fall Lecture2》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《CS294-196 25fall Lecture2》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-11T11:30:07.000Z" title="发表于 2026-07-11 19:30:07">2026-07-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-26T15:15:53.937Z" title="更新于 2026-07-26 23:15:53">2026-07-26</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="Evolution-of-System-Designs-from-an-AI-Engineer-Perspective"><a href="#Evolution-of-System-Designs-from-an-AI-Engineer-Perspective" class="headerlink" title="Evolution of System Designs from an AI Engineer Perspective"></a>Evolution of System Designs from an AI Engineer Perspective</h2><p>从 <strong>AI Engineer</strong> 的视角观察：</p>
 <ol>
 <li>模型算法为什么仍在持续进步；</li>
 <li>什么样的 AI 应用能够真正创造价值；</li>
@@ -179,14 +179,14 @@
 <li>为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。</li>
 </ol>
 <hr>
-<h2 id="1-Demystify-“LLM”-and-“AGI”"><a href="#1-Demystify-“LLM”-and-“AGI”" class="headerlink" title="1. Demystify “LLM” and “AGI”"></a>1. Demystify “LLM” and “AGI”</h2><h2 id="1-1-Chinese-Typewriter-Problem"><a href="#1-1-Chinese-Typewriter-Problem" class="headerlink" title="1.1 Chinese Typewriter Problem"></a>1.1 Chinese Typewriter Problem</h2><p>英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 <strong>bigram、n-gram</strong>，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。</p>
+<h3 id="1-Demystify-“LLM”-and-“AGI”"><a href="#1-Demystify-“LLM”-and-“AGI”" class="headerlink" title="1. Demystify “LLM” and “AGI”"></a>1. Demystify “LLM” and “AGI”</h3><h3 id="1-1-Chinese-Typewriter-Problem"><a href="#1-1-Chinese-Typewriter-Problem" class="headerlink" title="1.1 Chinese Typewriter Problem"></a>1.1 Chinese Typewriter Problem</h3><p>英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 <strong>bigram、n-gram</strong>，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。</p>
 <p>早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。</p>
-<h2 id="1-2-BERT-与-GPT-的区别"><a href="#1-2-BERT-与-GPT-的区别" class="headerlink" title="1.2 BERT 与 GPT 的区别"></a>1.2 BERT 与 GPT 的区别</h2><ul>
+<h3 id="1-2-BERT-与-GPT-的区别"><a href="#1-2-BERT-与-GPT-的区别" class="headerlink" title="1.2 BERT 与 GPT 的区别"></a>1.2 BERT 与 GPT 的区别</h3><ul>
 <li><strong>BERT</strong>：利用目标位置前后的双向上下文，预测被遮盖的 token；</li>
 <li><strong>GPT</strong>：只使用当前位置之前的历史信息，自回归地预测下一个 token。</li>
 </ul>
 <p>GPT 的生成过程与输入法或打字过程更相似：每次根据已有序列生成下一个 token，再将新 token 加入上下文继续预测。</p>
-<h2 id="2-本节课的四条主线"><a href="#2-本节课的四条主线" class="headerlink" title="2. 本节课的四条主线"></a>2. 本节课的四条主线</h2><p>讲者希望传达四个核心判断：</p>
+<h3 id="2-本节课的四条主线"><a href="#2-本节课的四条主线" class="headerlink" title="2. 本节课的四条主线"></a>2. 本节课的四条主线</h3><p>讲者希望传达四个核心判断：</p>
 <ol>
 <li><p><strong>New algorithms continue to drive LLM models</strong><br>模型能力仍未明显停滞，新的算法和训练范式继续推动性能提升。</p>
 </li>
@@ -198,7 +198,7 @@
 </li>
 </ol>
 <hr>
-<h2 id="3-新算法持续推动-LLM-演进"><a href="#3-新算法持续推动-LLM-演进" class="headerlink" title="3. 新算法持续推动 LLM 演进"></a>3. 新算法持续推动 LLM 演进</h2><h2 id="3-1-Closed-source-与-Open-weight-模型竞争"><a href="#3-1-Closed-source-与-Open-weight-模型竞争" class="headerlink" title="3.1 Closed-source 与 Open-weight 模型竞争"></a>3.1 Closed-source 与 Open-weight 模型竞争</h2><p>当前模型生态中存在两条快速发展的路线：</p>
+<h3 id="3-新算法持续推动-LLM-演进"><a href="#3-新算法持续推动-LLM-演进" class="headerlink" title="3. 新算法持续推动 LLM 演进"></a>3. 新算法持续推动 LLM 演进</h3><h3 id="3-1-Closed-source-与-Open-weight-模型竞争"><a href="#3-1-Closed-source-与-Open-weight-模型竞争" class="headerlink" title="3.1 Closed-source 与 Open-weight 模型竞争"></a>3.1 Closed-source 与 Open-weight 模型竞争</h3><p>当前模型生态中存在两条快速发展的路线：</p>
 <ul>
 <li>Closed-source models：GPT、Gemini、Claude、Grok 等；</li>
 <li>Open-weight models：DeepSeek、Qwen、Llama、GPT-OSS 等。</li>
@@ -211,9 +211,9 @@
 <li>两条路线之间的竞争有助于整个生态持续进步。</li>
 </ul>
 <p>判断 AI 是否只是“泡沫”，不能只看模型发布数量，也应观察真实使用量。课件以 OpenRouter 的 token consumption 为例，指出模型调用量持续快速增长，说明需求不只来自模型训练，也来自真实应用中的推理消费。</p>
-<p><img src="/img/posts/41afbbd9/2026-07-11-19-46-15.png"></p>
+<p><img src="/img/posts/41afbbd9/2026-07-11-19-46-15.png" alt="课程配图"></p>
 <hr>
-<h2 id="3-2-四个阶段的算法演进"><a href="#3-2-四个阶段的算法演进" class="headerlink" title="3.2 四个阶段的算法演进"></a>3.2 四个阶段的算法演进</h2><p>课件用历史类比概括了 LLM 的几个重要阶段。</p>
+<h3 id="3-2-四个阶段的算法演进"><a href="#3-2-四个阶段的算法演进" class="headerlink" title="3.2 四个阶段的算法演进"></a>3.2 四个阶段的算法演进</h3><p>课件用历史类比概括了 LLM 的几个重要阶段。</p>
 <table>
 <thead>
 <tr>
@@ -248,13 +248,13 @@
 <td>经典 RL、长期回报优化</td>
 </tr>
 </tbody></table>
-<h3 id="3-2-1-GPT：结构性创新"><a href="#3-2-1-GPT：结构性创新" class="headerlink" title="3.2.1 GPT：结构性创新"></a>3.2.1 GPT：结构性创新</h3><p>GPT &#x2F; ChatGPT 的意义类似于 AlexNet：</p>
+<h4 id="3-2-1-GPT：结构性创新"><a href="#3-2-1-GPT：结构性创新" class="headerlink" title="3.2.1 GPT：结构性创新"></a>3.2.1 GPT：结构性创新</h4><p>GPT &#x2F; ChatGPT 的意义类似于 AlexNet：</p>
 <ul>
 <li>AlexNet 使计算机视觉从 handcrafted features 转向端到端深度学习；</li>
 <li>GPT 使自然语言任务从大量专用 pipeline 转向统一的预训练生成模型。</li>
 </ul>
 <p>真正重要的不是某个单独 benchmark，而是整个问题求解范式发生了变化。</p>
-<h3 id="3-2-2-Mixture-of-Experts"><a href="#3-2-2-Mixture-of-Experts" class="headerlink" title="3.2.2 Mixture of Experts"></a>3.2.2 Mixture of Experts</h3><p>MoE 并不是让每个 token 都经过所有参数，而是通过 gating network 为输入选择少量 expert。</p>
+<h4 id="3-2-2-Mixture-of-Experts"><a href="#3-2-2-Mixture-of-Experts" class="headerlink" title="3.2.2 Mixture of Experts"></a>3.2.2 Mixture of Experts</h4><p>MoE 并不是让每个 token 都经过所有参数，而是通过 gating network 为输入选择少量 expert。</p>
 <p>这样可以：</p>
 <ul>
 <li>扩大模型总参数量；</li>
@@ -262,7 +262,7 @@
 <li>在保持计算成本相对可控的同时提升模型容量。</li>
 </ul>
 <p>它与 Ensemble Learning、Inception 中的多分支结构具有相似思想：不是依赖一个单一、稠密的大模块，而是让不同子结构承担不同模式。</p>
-<h3 id="3-2-3-Test-time-Scaling"><a href="#3-2-3-Test-time-Scaling" class="headerlink" title="3.2.3 Test-time Scaling"></a>3.2.3 Test-time Scaling</h3><p>过去主要通过扩大训练数据、参数和训练计算提升能力；Test-time Scaling 则强调：</p>
+<h4 id="3-2-3-Test-time-Scaling"><a href="#3-2-3-Test-time-Scaling" class="headerlink" title="3.2.3 Test-time Scaling"></a>3.2.3 Test-time Scaling</h4><p>过去主要通过扩大训练数据、参数和训练计算提升能力；Test-time Scaling 则强调：</p>
 <blockquote>
 <p>在推理阶段允许模型进行更长的思考、搜索、验证和反思。</p>
 </blockquote>
@@ -275,7 +275,7 @@
 <li>用更多 inference compute 换取更高的准确率。</li>
 </ul>
 <p>因此，模型能力不仅取决于参数本身，还取决于推理时分配了多少计算预算。</p>
-<h3 id="3-2-4-Reinforcement-Learning"><a href="#3-2-4-Reinforcement-Learning" class="headerlink" title="3.2.4 Reinforcement Learning"></a>3.2.4 Reinforcement Learning</h3><p>传统语言模型训练直接优化 token-level prediction，但 token 预测准确并不等价于最终任务完成得好。</p>
+<h4 id="3-2-4-Reinforcement-Learning"><a href="#3-2-4-Reinforcement-Learning" class="headerlink" title="3.2.4 Reinforcement Learning"></a>3.2.4 Reinforcement Learning</h4><p>传统语言模型训练直接优化 token-level prediction，但 token 预测准确并不等价于最终任务完成得好。</p>
 <p>强化学习允许根据完整 rollout 的最终结果提供反馈。</p>
 <p>它解决的核心问题是：</p>
 <blockquote>
@@ -283,7 +283,7 @@
 </blockquote>
 <p>对于 reasoning、coding、tool use 和 agent tasks，最终答案是否正确、程序是否通过测试、任务是否成功，往往比局部 token 是否符合参考文本更重要。</p>
 <hr>
-<h2 id="3-3-Hype-Cycle：技术热词会变化，基础能力会沉淀"><a href="#3-3-Hype-Cycle：技术热词会变化，基础能力会沉淀" class="headerlink" title="3.3 Hype Cycle：技术热词会变化，基础能力会沉淀"></a>3.3 Hype Cycle：技术热词会变化，基础能力会沉淀</h2><p>模型生态中的关注热点不断迁移：</p>
+<h3 id="3-3-Hype-Cycle：技术热词会变化，基础能力会沉淀"><a href="#3-3-Hype-Cycle：技术热词会变化，基础能力会沉淀" class="headerlink" title="3.3 Hype Cycle：技术热词会变化，基础能力会沉淀"></a>3.3 Hype Cycle：技术热词会变化，基础能力会沉淀</h3><p>模型生态中的关注热点不断迁移：</p>
 <ul>
 <li>ModelOps；</li>
 <li>Prompt Engineering；</li>
@@ -293,7 +293,7 @@
 <li>Reasoning models。</li>
 </ul>
 <p>一个技术从热点位置下降，并不意味着它失去价值。很多技术只是从“显眼的新概念”变成了默认基础设施。</p>
-<h3 id="RAG-并没有过时"><a href="#RAG-并没有过时" class="headerlink" title="RAG 并没有过时"></a>RAG 并没有过时</h3><ul>
+<h4 id="RAG-并没有过时"><a href="#RAG-并没有过时" class="headerlink" title="RAG 并没有过时"></a>RAG 并没有过时</h4><ul>
 <li>RAG 仍然是降低 hallucination、接入企业知识和获得最新信息的重要方法；</li>
 <li>只是它逐渐被产品内部吸收，用户不一定直接看到“RAG”这个词；</li>
 <li>就像今天很少有人把“使用数据库”当作产品卖点，但几乎所有产品都依赖数据库。</li>
@@ -308,7 +308,7 @@
 </ol>
 <p>其中，第一阶段偏向优化成本和召回率，第二阶段偏向优化准确率。</p>
 <hr>
-<h2 id="4-AI-应用：ToC-繁荣，ToB-仍在早期"><a href="#4-AI-应用：ToC-繁荣，ToB-仍在早期" class="headerlink" title="4. AI 应用：ToC 繁荣，ToB 仍在早期"></a>4. AI 应用：ToC 繁荣，ToB 仍在早期</h2><h2 id="4-1-好的应用体验不等于使用最强模型"><a href="#4-1-好的应用体验不等于使用最强模型" class="headerlink" title="4.1 好的应用体验不等于使用最强模型"></a>4.1 好的应用体验不等于使用最强模型</h2><blockquote>
+<h3 id="4-AI-应用：ToC-繁荣，ToB-仍在早期"><a href="#4-AI-应用：ToC-繁荣，ToB-仍在早期" class="headerlink" title="4. AI 应用：ToC 繁荣，ToB 仍在早期"></a>4. AI 应用：ToC 繁荣，ToB 仍在早期</h3><h3 id="4-1-好的应用体验不等于使用最强模型"><a href="#4-1-好的应用体验不等于使用最强模型" class="headerlink" title="4.1 好的应用体验不等于使用最强模型"></a>4.1 好的应用体验不等于使用最强模型</h3><blockquote>
 <p>Perfect app experience is correlated, but independent from models.</p>
 </blockquote>
 <p>模型能力很重要，但完整产品还取决于：</p>
@@ -325,7 +325,7 @@
 <p>讲者以浏览器扩展 Elmo 为例：工程师在很短时间内将网页解析、LLM 总结和问答结合起来，形成了真正可用的产品。</p>
 <p>这说明从一个模型 API 到一个好产品之间，仍然存在大量系统工程和产品设计工作。</p>
 <hr>
-<h2 id="4-2-Consumer-AI-Landscape-高度流动"><a href="#4-2-Consumer-AI-Landscape-高度流动" class="headerlink" title="4.2 Consumer AI Landscape 高度流动"></a>4.2 Consumer AI Landscape 高度流动</h2><p>消费级 AI 应用已经形成多个主要方向：</p>
+<h3 id="4-2-Consumer-AI-Landscape-高度流动"><a href="#4-2-Consumer-AI-Landscape-高度流动" class="headerlink" title="4.2 Consumer AI Landscape 高度流动"></a>4.2 Consumer AI Landscape 高度流动</h3><p>消费级 AI 应用已经形成多个主要方向：</p>
 <ul>
 <li>Chat；</li>
 <li>Coding；</li>
@@ -346,7 +346,7 @@
 <li>网络效应和持续反馈数据。</li>
 </ul>
 <hr>
-<h2 id="4-3-Prosumers-更愿意付费"><a href="#4-3-Prosumers-更愿意付费" class="headerlink" title="4.3 Prosumers 更愿意付费"></a>4.3 Prosumers 更愿意付费</h2><p>消费流量并不一定直接转化为收入。较明确的商业机会来自 <strong>prosumer</strong>：</p>
+<h3 id="4-3-Prosumers-更愿意付费"><a href="#4-3-Prosumers-更愿意付费" class="headerlink" title="4.3 Prosumers 更愿意付费"></a>4.3 Prosumers 更愿意付费</h3><p>消费流量并不一定直接转化为收入。较明确的商业机会来自 <strong>prosumer</strong>：</p>
 <blockquote>
 <p>以个人身份购买产品，但将其用于专业工作或生产活动的用户。</p>
 </blockquote>
@@ -370,7 +370,7 @@
 <p>这个应用是否嵌入了用户稳定、重复且高价值的工作流？</p>
 </blockquote>
 <hr>
-<h2 id="4-4-企业市场：慢，但可能更大"><a href="#4-4-企业市场：慢，但可能更大" class="headerlink" title="4.4 企业市场：慢，但可能更大"></a>4.4 企业市场：慢，但可能更大</h2><p>企业级应用的推进速度通常慢于消费应用，因为企业需要处理：</p>
+<h3 id="4-4-企业市场：慢，但可能更大"><a href="#4-4-企业市场：慢，但可能更大" class="headerlink" title="4.4 企业市场：慢，但可能更大"></a>4.4 企业市场：慢，但可能更大</h3><p>企业级应用的推进速度通常慢于消费应用，因为企业需要处理：</p>
 <ul>
 <li>数据连接；</li>
 <li>权限控制；</li>
@@ -401,7 +401,7 @@
 $$</p>
 <p>底层模型公司和应用公司不一定是零和竞争关系。一个熟悉用户、场景和业务流程的应用公司，可以借助更强的模型创造出“1 + 1 &gt; 2”的产品效果。</p>
 <hr>
-<h2 id="4-5-企业-AI-Stack"><a href="#4-5-企业-AI-Stack" class="headerlink" title="4.5 企业 AI Stack"></a>4.5 企业 AI Stack</h2><p>一个初步的 Generative AI Tech Stack：</p>
+<h3 id="4-5-企业-AI-Stack"><a href="#4-5-企业-AI-Stack" class="headerlink" title="4.5 企业 AI Stack"></a>4.5 企业 AI Stack</h3><p>一个初步的 Generative AI Tech Stack：</p>
 <ol>
 <li><p><strong>End-to-End Applications</strong><br>面向最终用户提供完整体验。</p>
 </li>
@@ -418,7 +418,7 @@ $$</p>
 </ol>
 <p>一个应用可能从调用闭源 API 开始；随着数据、用户和业务积累，再逐渐训练或定制自己的模型。</p>
 <hr>
-<h2 id="5-AI-Infra：企业-IT-的第三大支柱"><a href="#5-AI-Infra：企业-IT-的第三大支柱" class="headerlink" title="5. AI Infra：企业 IT 的第三大支柱"></a>5. AI Infra：企业 IT 的第三大支柱</h2><h2 id="5-1-The-Bitter-Lesson"><a href="#5-1-The-Bitter-Lesson" class="headerlink" title="5.1 The Bitter Lesson"></a>5.1 The Bitter Lesson</h2><p>Richard Sutton 在 <em>The Bitter Lesson</em> 中总结：</p>
+<h3 id="5-AI-Infra：企业-IT-的第三大支柱"><a href="#5-AI-Infra：企业-IT-的第三大支柱" class="headerlink" title="5. AI Infra：企业 IT 的第三大支柱"></a>5. AI Infra：企业 IT 的第三大支柱</h3><h3 id="5-1-The-Bitter-Lesson"><a href="#5-1-The-Bitter-Lesson" class="headerlink" title="5.1 The Bitter Lesson"></a>5.1 The Bitter Lesson</h3><p>Richard Sutton 在 <em>The Bitter Lesson</em> 中总结：</p>
 <blockquote>
 <p>长期来看，能够利用大规模计算的通用方法，往往比依赖人工设计知识的专用方法更有效。</p>
 </blockquote>
@@ -429,7 +429,7 @@ $$</p>
 <li>算力、网络、存储、调度和故障恢复直接决定 AI 能力能否落地。</li>
 </ul>
 <hr>
-<h2 id="5-2-从-Scientific-Computing-到-AI-Cloud"><a href="#5-2-从-Scientific-Computing-到-AI-Cloud" class="headerlink" title="5.2 从 Scientific Computing 到 AI Cloud"></a>5.2 从 Scientific Computing 到 AI Cloud</h2><p>基础设施演化时间线：</p>
+<h3 id="5-2-从-Scientific-Computing-到-AI-Cloud"><a href="#5-2-从-Scientific-Computing-到-AI-Cloud" class="headerlink" title="5.2 从 Scientific Computing 到 AI Cloud"></a>5.2 从 Scientific Computing 到 AI Cloud</h3><p>基础设施演化时间线：</p>
 <table>
 <thead>
 <tr>
@@ -466,7 +466,7 @@ $$</p>
 </tbody></table>
 <p>AI Cloud 与 Web Cloud 并不是简单的“更多机器”，而是 workload 结构发生了变化。</p>
 <hr>
-<h2 id="5-3-Data-Compute、Web-Services-与-AI-Compute"><a href="#5-3-Data-Compute、Web-Services-与-AI-Compute" class="headerlink" title="5.3 Data Compute、Web Services 与 AI Compute"></a>5.3 Data Compute、Web Services 与 AI Compute</h2><table>
+<h3 id="5-3-Data-Compute、Web-Services-与-AI-Compute"><a href="#5-3-Data-Compute、Web-Services-与-AI-Compute" class="headerlink" title="5.3 Data Compute、Web Services 与 AI Compute"></a>5.3 Data Compute、Web Services 与 AI Compute</h3><table>
 <thead>
 <tr>
 <th>特征</th>
@@ -506,20 +506,20 @@ $$</p>
 <td>很高</td>
 </tr>
 </tbody></table>
-<h3 id="Web-Services"><a href="#Web-Services" class="headerlink" title="Web Services"></a>Web Services</h3><p>Web 服务中的一个实例通常可以被复制：</p>
+<h4 id="Web-Services"><a href="#Web-Services" class="headerlink" title="Web Services"></a>Web Services</h4><p>Web 服务中的一个实例通常可以被复制：</p>
 <ul>
 <li>流量上升时增加副本；</li>
 <li>流量下降时减少副本；</li>
 <li>某个实例失败时由其他实例接管；</li>
 <li>不同实例之间耦合较弱。</li>
 </ul>
-<h3 id="Data-Compute"><a href="#Data-Compute" class="headerlink" title="Data Compute"></a>Data Compute</h3><p>Spark &#x2F; MapReduce 会将一个大任务分成多个 shard：</p>
+<h4 id="Data-Compute"><a href="#Data-Compute" class="headerlink" title="Data Compute"></a>Data Compute</h4><p>Spark &#x2F; MapReduce 会将一个大任务分成多个 shard：</p>
 <ul>
 <li>单个 shard 失败时可以重算；</li>
 <li>SQL 提供简单的用户抽象；</li>
 <li>复杂调度由基础设施隐藏。</li>
 </ul>
-<h3 id="AI-Compute"><a href="#AI-Compute" class="headerlink" title="AI Compute"></a>AI Compute</h3><p>大规模训练具有不同特征：</p>
+<h4 id="AI-Compute"><a href="#AI-Compute" class="headerlink" title="AI Compute"></a>AI Compute</h4><p>大规模训练具有不同特征：</p>
 <ul>
 <li>大量 GPU 同时参与一个 job；</li>
 <li>GPU 之间需要高带宽、低延迟通信；</li>
@@ -529,7 +529,7 @@ $$</p>
 </ul>
 <p>因此，AI workload 更接近传统 HPC &#x2F; MPI &#x2F; Slurm，而不是普通微服务。</p>
 <hr>
-<h2 id="5-4-传统-Cloud-Value-Proposition-不再完全成立"><a href="#5-4-传统-Cloud-Value-Proposition-不再完全成立" class="headerlink" title="5.4 传统 Cloud Value Proposition 不再完全成立"></a>5.4 传统 Cloud Value Proposition 不再完全成立</h2><p>传统云的两个重要价值是：</p>
+<h3 id="5-4-传统-Cloud-Value-Proposition-不再完全成立"><a href="#5-4-传统-Cloud-Value-Proposition-不再完全成立" class="headerlink" title="5.4 传统 Cloud Value Proposition 不再完全成立"></a>5.4 传统 Cloud Value Proposition 不再完全成立</h3><p>传统云的两个重要价值是：</p>
 <ol>
 <li><p><strong>Software Supply Chain</strong><br>用户无需自己安装和维护数据库、中间件等复杂软件。</p>
 </li>
@@ -537,7 +537,7 @@ $$</p>
 </li>
 </ol>
 <p>但 AI Cloud 中：</p>
-<h3 id="软件种类更少"><a href="#软件种类更少" class="headerlink" title="软件种类更少"></a>软件种类更少</h3><p>大部分训练集中在：</p>
+<h4 id="软件种类更少"><a href="#软件种类更少" class="headerlink" title="软件种类更少"></a>软件种类更少</h4><p>大部分训练集中在：</p>
 <ul>
 <li>PyTorch；</li>
 <li>CUDA 与通信库；</li>
@@ -545,7 +545,7 @@ $$</p>
 <li>vLLM、SGLang 等推理系统。</li>
 </ul>
 <p>其软件栈虽然复杂，但应用类别不像传统企业软件那样多样。</p>
-<h3 id="Workload-更统一"><a href="#Workload-更统一" class="headerlink" title="Workload 更统一"></a>Workload 更统一</h3><p>主要是：</p>
+<h4 id="Workload-更统一"><a href="#Workload-更统一" class="headerlink" title="Workload 更统一"></a>Workload 更统一</h4><p>主要是：</p>
 <ul>
 <li>矩阵乘法；</li>
 <li>attention；</li>
@@ -553,14 +553,14 @@ $$</p>
 <li>checkpoint；</li>
 <li>大模型推理。</li>
 </ul>
-<h3 id="供应链灵活性更低"><a href="#供应链灵活性更低" class="headerlink" title="供应链灵活性更低"></a>供应链灵活性更低</h3><ul>
+<h4 id="供应链灵活性更低"><a href="#供应链灵活性更低" class="headerlink" title="供应链灵活性更低"></a>供应链灵活性更低</h4><ul>
 <li>多台 GPU 需要被固定地组织在同一拓扑中；</li>
 <li>很难对正在运行的大规模训练进行 live migration；</li>
 <li>GPU 集群难以像 CPU 虚拟机一样随意拆分和重新组合；</li>
 <li>GPU 主要用于 AI 数值计算，workload interchangeability 较低。</li>
 </ul>
 <hr>
-<h2 id="5-5-Neocloud-的出现"><a href="#5-5-Neocloud-的出现" class="headerlink" title="5.5 Neocloud 的出现"></a>5.5 Neocloud 的出现</h2><p>由于传统 hyperscaler 并不总能以最简单、最低成本的方式提供大规模 GPU，市场中出现了更加聚焦 AI workload 的 neocloud，例如课上提到的：</p>
+<h3 id="5-5-Neocloud-的出现"><a href="#5-5-Neocloud-的出现" class="headerlink" title="5.5 Neocloud 的出现"></a>5.5 Neocloud 的出现</h3><p>由于传统 hyperscaler 并不总能以最简单、最低成本的方式提供大规模 GPU，市场中出现了更加聚焦 AI workload 的 neocloud，例如课上提到的：</p>
 <ul>
 <li>CoreWeave；</li>
 <li>Lambda；</li>
@@ -576,8 +576,8 @@ $$</p>
 <li>面向 AI 的成本与利用率优化。</li>
 </ul>
 <hr>
-<h2 id="5-6-“You-shouldn’t-run-on-bare-metal-Also-K8s-is-wrong-”"><a href="#5-6-“You-shouldn’t-run-on-bare-metal-Also-K8s-is-wrong-”" class="headerlink" title="5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”"></a>5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”</h2><p>这句话不是说 bare metal 和 Kubernetes 都不能使用，而是在说明两种极端都不理想。</p>
-<h3 id="直接管理裸机的问题"><a href="#直接管理裸机的问题" class="headerlink" title="直接管理裸机的问题"></a>直接管理裸机的问题</h3><p>研究人员自己维护机器时，需要处理：</p>
+<h3 id="5-6-“You-shouldn’t-run-on-bare-metal-Also-K8s-is-wrong-”"><a href="#5-6-“You-shouldn’t-run-on-bare-metal-Also-K8s-is-wrong-”" class="headerlink" title="5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”"></a>5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”</h3><p>这句话不是说 bare metal 和 Kubernetes 都不能使用，而是在说明两种极端都不理想。</p>
+<h4 id="直接管理裸机的问题"><a href="#直接管理裸机的问题" class="headerlink" title="直接管理裸机的问题"></a>直接管理裸机的问题</h4><p>研究人员自己维护机器时，需要处理：</p>
 <ul>
 <li>GPU 故障；</li>
 <li>驱动和 CUDA；</li>
@@ -587,7 +587,7 @@ $$</p>
 <li>集群健康检查。</li>
 </ul>
 <p>这会消耗宝贵的研发时间。</p>
-<h3 id="直接暴露-Kubernetes-的问题"><a href="#直接暴露-Kubernetes-的问题" class="headerlink" title="直接暴露 Kubernetes 的问题"></a>直接暴露 Kubernetes 的问题</h3><p>Kubernetes 的抽象主要面向 SRE 和平台工程师。AI 研究人员通常不希望直接理解：</p>
+<h4 id="直接暴露-Kubernetes-的问题"><a href="#直接暴露-Kubernetes-的问题" class="headerlink" title="直接暴露 Kubernetes 的问题"></a>直接暴露 Kubernetes 的问题</h4><p>Kubernetes 的抽象主要面向 SRE 和平台工程师。AI 研究人员通常不希望直接理解：</p>
 <ul>
 <li>Pod；</li>
 <li>Deployment；</li>
@@ -605,15 +605,15 @@ $$</p>
 </blockquote>
 <p>这也是 Slurm researcher mindset 与 Kubernetes operator mindset 之间的矛盾。</p>
 <hr>
-<h2 id="5-7-Developer-Efficiency-与-Infra-Efficiency"><a href="#5-7-Developer-Efficiency-与-Infra-Efficiency" class="headerlink" title="5.7 Developer Efficiency 与 Infra Efficiency"></a>5.7 Developer Efficiency 与 Infra Efficiency</h2><p>AI 平台必须同时优化两个目标。</p>
-<h3 id="Developer-Efficiency"><a href="#Developer-Efficiency" class="headerlink" title="Developer Efficiency"></a>Developer Efficiency</h3><ul>
+<h3 id="5-7-Developer-Efficiency-与-Infra-Efficiency"><a href="#5-7-Developer-Efficiency-与-Infra-Efficiency" class="headerlink" title="5.7 Developer Efficiency 与 Infra Efficiency"></a>5.7 Developer Efficiency 与 Infra Efficiency</h3><p>AI 平台必须同时优化两个目标。</p>
+<h4 id="Developer-Efficiency"><a href="#Developer-Efficiency" class="headerlink" title="Developer Efficiency"></a>Developer Efficiency</h4><ul>
 <li>研究人员的时间非常昂贵；</li>
 <li>提交实验应尽量简单；</li>
 <li>环境、资源和数据准备应自动化；</li>
 <li>失败后应快速恢复；</li>
 <li>训练、评估和部署流程应统一。</li>
 </ul>
-<h3 id="Infra-Efficiency"><a href="#Infra-Efficiency" class="headerlink" title="Infra Efficiency"></a>Infra Efficiency</h3><ul>
+<h4 id="Infra-Efficiency"><a href="#Infra-Efficiency" class="headerlink" title="Infra Efficiency"></a>Infra Efficiency</h4><ul>
 <li>GPU 价格高；</li>
 <li>GPU 会发生硬件、显存、网络和软件故障；</li>
 <li>空闲 GPU 会造成巨大浪费；</li>
@@ -627,7 +627,7 @@ $$</p>
 </ul>
 <p>平台的价值，就是在不增加开发者认知负担的情况下实现基础设施效率。</p>
 <hr>
-<h2 id="5-8-AI-Infra-Best-Practices"><a href="#5-8-AI-Infra-Best-Practices" class="headerlink" title="5.8 AI Infra Best Practices"></a>5.8 AI Infra Best Practices</h2><p>课件给出四项实践：</p>
+<h3 id="5-8-AI-Infra-Best-Practices"><a href="#5-8-AI-Infra-Best-Practices" class="headerlink" title="5.8 AI Infra Best Practices"></a>5.8 AI Infra Best Practices</h3><p>课件给出四项实践：</p>
 <ol>
 <li><p><strong>Multi-cloud supply chain management</strong><br>GPU 供应短缺时，应能够在不同云和不同地区寻找资源。</p>
 </li>
@@ -645,9 +645,9 @@ $$</p>
 <li>面向训练和推理的 AI 平台。</li>
 </ul>
 <hr>
-<h2 id="5-9-AI-Infra-不同，但也相同"><a href="#5-9-AI-Infra-不同，但也相同" class="headerlink" title="5.9 AI Infra 不同，但也相同"></a>5.9 AI Infra 不同，但也相同</h2><p>模型服务进入生产环境后，传统分布式系统经验仍然适用。</p>
+<h3 id="5-9-AI-Infra-不同，但也相同"><a href="#5-9-AI-Infra-不同，但也相同" class="headerlink" title="5.9 AI Infra 不同，但也相同"></a>5.9 AI Infra 不同，但也相同</h3><p>模型服务进入生产环境后，传统分布式系统经验仍然适用。</p>
 <hr>
-<h2 id="6-Hardware-and-Software：Back-to-the-Future"><a href="#6-Hardware-and-Software：Back-to-the-Future" class="headerlink" title="6. Hardware and Software：Back to the Future"></a>6. Hardware and Software：Back to the Future</h2><h2 id="6-1-从-Mainframe-到小型服务器"><a href="#6-1-从-Mainframe-到小型服务器" class="headerlink" title="6.1 从 Mainframe 到小型服务器"></a>6.1 从 Mainframe 到小型服务器</h2><p>早期 Cray-2 等 mainframe 将：</p>
+<h3 id="6-Hardware-and-Software：Back-to-the-Future"><a href="#6-Hardware-and-Software：Back-to-the-Future" class="headerlink" title="6. Hardware and Software：Back to the Future"></a>6. Hardware and Software：Back to the Future</h3><h3 id="6-1-从-Mainframe-到小型服务器"><a href="#6-1-从-Mainframe-到小型服务器" class="headerlink" title="6.1 从 Mainframe 到小型服务器"></a>6.1 从 Mainframe 到小型服务器</h3><p>早期 Cray-2 等 mainframe 将：</p>
 <ul>
 <li>CPU；</li>
 <li>Memory；</li>
@@ -669,7 +669,7 @@ $$</p>
 <li>通过网络和 RPC 进行通信。</li>
 </ul>
 <hr>
-<h2 id="6-2-AI-重新走向大型-Scale-up-System"><a href="#6-2-AI-重新走向大型-Scale-up-System" class="headerlink" title="6.2 AI 重新走向大型 Scale-up System"></a>6.2 AI 重新走向大型 Scale-up System</h2><p>随着模型规模增加，AI 服务器不断变大：</p>
+<h3 id="6-2-AI-重新走向大型-Scale-up-System"><a href="#6-2-AI-重新走向大型-Scale-up-System" class="headerlink" title="6.2 AI 重新走向大型 Scale-up System"></a>6.2 AI 重新走向大型 Scale-up System</h3><p>随着模型规模增加，AI 服务器不断变大：</p>
 <ol>
 <li>单机中增加 GPU accelerator；</li>
 <li>一台服务器安装 8 张 GPU，例如 DGX；</li>
@@ -687,7 +687,7 @@ $$</p>
 <p>课件配图建议：第 34 页，Cray-2、模块化服务器、DGX 与 rack-scale system 的演化图。</p>
 </blockquote>
 <hr>
-<h2 id="6-3-为什么-Scale-up-很重要"><a href="#6-3-为什么-Scale-up-很重要" class="headerlink" title="6.3 为什么 Scale-up 很重要"></a>6.3 为什么 Scale-up 很重要</h2><p>传统 scale-out 集群中，每个节点是独立故障域和内存域。跨节点访问通常需要：</p>
+<h3 id="6-3-为什么-Scale-up-很重要"><a href="#6-3-为什么-Scale-up-很重要" class="headerlink" title="6.3 为什么 Scale-up 很重要"></a>6.3 为什么 Scale-up 很重要</h3><p>传统 scale-out 集群中，每个节点是独立故障域和内存域。跨节点访问通常需要：</p>
 <ul>
 <li>RPC；</li>
 <li>MPI；</li>
@@ -706,7 +706,7 @@ $$</p>
 </ul>
 <p>但硬件能力的变化需要软件栈同步演进。PyTorch、推理框架和调度系统仍需进一步利用 rack-scale architecture。</p>
 <hr>
-<h2 id="7-从语言模型走向真实世界"><a href="#7-从语言模型走向真实世界" class="headerlink" title="7. 从语言模型走向真实世界"></a>7. 从语言模型走向真实世界</h2><h2 id="7-1-Smart-Airport-Digital-Twin-案例"><a href="#7-1-Smart-Airport-Digital-Twin-案例" class="headerlink" title="7.1 Smart Airport &#x2F; Digital Twin 案例"></a>7.1 Smart Airport &#x2F; Digital Twin 案例</h2><p>以智能机场项目说明真实世界问题的复杂性。</p>
+<h3 id="7-从语言模型走向真实世界"><a href="#7-从语言模型走向真实世界" class="headerlink" title="7. 从语言模型走向真实世界"></a>7. 从语言模型走向真实世界</h3><h3 id="7-1-Smart-Airport-Digital-Twin-案例"><a href="#7-1-Smart-Airport-Digital-Twin-案例" class="headerlink" title="7.1 Smart Airport &#x2F; Digital Twin 案例"></a>7.1 Smart Airport &#x2F; Digital Twin 案例</h3><p>以智能机场项目说明真实世界问题的复杂性。</p>
 <p>机场希望减少飞机降落后到达登机口之间的等待时间，需要综合处理：</p>
 <ul>
 <li>地图与跑道拓扑；</li>
@@ -744,7 +744,7 @@ $$</p>
 <li>工业调度与控制。</li>
 </ul>
 <hr>
-<h2 id="8-问答与创业经验"><a href="#8-问答与创业经验" class="headerlink" title="8. 问答与创业经验"></a>8. 问答与创业经验</h2><h2 id="8-1-Hyperscaler：从卖资源转向卖结果"><a href="#8-1-Hyperscaler：从卖资源转向卖结果" class="headerlink" title="8.1 Hyperscaler：从卖资源转向卖结果"></a>8.1 Hyperscaler：从卖资源转向卖结果</h2><p>传统 hyperscaler 主要销售：</p>
+<h3 id="8-问答与创业经验"><a href="#8-问答与创业经验" class="headerlink" title="8. 问答与创业经验"></a>8. 问答与创业经验</h3><h3 id="8-1-Hyperscaler：从卖资源转向卖结果"><a href="#8-1-Hyperscaler：从卖资源转向卖结果" class="headerlink" title="8.1 Hyperscaler：从卖资源转向卖结果"></a>8.1 Hyperscaler：从卖资源转向卖结果</h3><p>传统 hyperscaler 主要销售：</p>
 <ul>
 <li>虚拟机；</li>
 <li>存储；</li>
@@ -776,7 +776,7 @@ $$</p>
 </ul>
 <p>例如，一个理想训练任务应能从 checkpoint 恢复，而不是某个节点失败后完全重来。</p>
 <hr>
-<h2 id="8-2-Token-Economics"><a href="#8-2-Token-Economics" class="headerlink" title="8.2 Token Economics"></a>8.2 Token Economics</h2><p>部分 AI 应用采用固定订阅价格，但重度用户产生的 token 成本可能超过订阅收入。</p>
+<h3 id="8-2-Token-Economics"><a href="#8-2-Token-Economics" class="headerlink" title="8.2 Token Economics"></a>8.2 Token Economics</h3><p>部分 AI 应用采用固定订阅价格，但重度用户产生的 token 成本可能超过订阅收入。</p>
 <p>这类似“保险模型”：</p>
 <ul>
 <li>价格建立在大多数用户不会消耗到极限的假设上；</li>
@@ -791,8 +791,8 @@ $$</p>
 </ul>
 <p>风险在于：如果没有真实价值，只依赖资本补贴，商业模式就会成为 house of cards。</p>
 <hr>
-<h2 id="8-3-Multi-cloud-为什么仍然困难"><a href="#8-3-Multi-cloud-为什么仍然困难" class="headerlink" title="8.3 Multi-cloud 为什么仍然困难"></a>8.3 Multi-cloud 为什么仍然困难</h2><p>“在任意云上启动相同 AI workload”比启动普通微服务难得多。</p>
-<h3 id="Compute-Locality"><a href="#Compute-Locality" class="headerlink" title="Compute Locality"></a>Compute Locality</h3><p>大规模训练希望 GPU：</p>
+<h3 id="8-3-Multi-cloud-为什么仍然困难"><a href="#8-3-Multi-cloud-为什么仍然困难" class="headerlink" title="8.3 Multi-cloud 为什么仍然困难"></a>8.3 Multi-cloud 为什么仍然困难</h3><p>“在任意云上启动相同 AI workload”比启动普通微服务难得多。</p>
+<h4 id="Compute-Locality"><a href="#Compute-Locality" class="headerlink" title="Compute Locality"></a>Compute Locality</h4><p>大规模训练希望 GPU：</p>
 <ul>
 <li>位于同一 rack；</li>
 <li>连接同一高速 switch；</li>
@@ -800,7 +800,7 @@ $$</p>
 <li>通信延迟足够低。</li>
 </ul>
 <p>因此，VM 抽象无法完全隐藏物理位置。</p>
-<h3 id="Data-Locality"><a href="#Data-Locality" class="headerlink" title="Data Locality"></a>Data Locality</h3><p>训练可能需要 TB 或 PB 级数据。即使可以在另一家云上快速安装 PyTorch，也不能快速迁移全部数据。</p>
+<h4 id="Data-Locality"><a href="#Data-Locality" class="headerlink" title="Data Locality"></a>Data Locality</h4><p>训练可能需要 TB 或 PB 级数据。即使可以在另一家云上快速安装 PyTorch，也不能快速迁移全部数据。</p>
 <p>不同环境可能使用：</p>
 <ul>
 <li>Object Storage；</li>
@@ -812,7 +812,7 @@ $$</p>
 </ul>
 <p>真正的 multi-cloud 不仅要迁移程序，还要处理数据复制、缓存和一致性。</p>
 <hr>
-<h2 id="8-4-创业：产品之外还需要-Attention"><a href="#8-4-创业：产品之外还需要-Attention" class="headerlink" title="8.4 创业：产品之外还需要 Attention"></a>8.4 创业：产品之外还需要 Attention</h2><p>技术团队容易采用 inside-out 思维：</p>
+<h3 id="8-4-创业：产品之外还需要-Attention"><a href="#8-4-创业：产品之外还需要-Attention" class="headerlink" title="8.4 创业：产品之外还需要 Attention"></a>8.4 创业：产品之外还需要 Attention</h3><p>技术团队容易采用 inside-out 思维：</p>
 <blockquote>
 <p>先把产品做得非常好，用户自然会发现它。</p>
 </blockquote>
@@ -831,7 +831,7 @@ $$</p>
 </blockquote>
 <p>这里并不是鼓励夸大，而是强调优秀产品若没有被用户看见，也难以形成增长飞轮。</p>
 <hr>
-<h2 id="8-5-连接-Research-与-Engineering"><a href="#8-5-连接-Research-与-Engineering" class="headerlink" title="8.5 连接 Research 与 Engineering"></a>8.5 连接 Research 与 Engineering</h2><p>研究人员通常关注：</p>
+<h3 id="8-5-连接-Research-与-Engineering"><a href="#8-5-连接-Research-与-Engineering" class="headerlink" title="8.5 连接 Research 与 Engineering"></a>8.5 连接 Research 与 Engineering</h3><p>研究人员通常关注：</p>
 <ul>
 <li>模型质量；</li>
 <li>算法创新；</li>
@@ -852,7 +852,7 @@ $$</p>
 <p>不只理解模型，也能将模型转化为可靠、可扩展的系统。</p>
 </blockquote>
 <hr>
-<h2 id="8-6-Startup-的差异化机会"><a href="#8-6-Startup-的差异化机会" class="headerlink" title="8.6 Startup 的差异化机会"></a>8.6 Startup 的差异化机会</h2><p>若没有极强的研究团队和巨额资本，直接训练“又一个通用 foundation model”通常很难形成优势。</p>
+<h3 id="8-6-Startup-的差异化机会"><a href="#8-6-Startup-的差异化机会" class="headerlink" title="8.6 Startup 的差异化机会"></a>8.6 Startup 的差异化机会</h3><p>若没有极强的研究团队和巨额资本，直接训练“又一个通用 foundation model”通常很难形成优势。</p>
 <p>更现实的创业方向是：</p>
 <ul>
 <li>选择尚未被解决的 vertical domain；</li>
@@ -863,7 +863,7 @@ $$</p>
 </ul>
 <p>企业服务尤其适合这种路径，因为通用模型公司不可能深入覆盖每一个行业。</p>
 <hr>
-<h2 id="8-7-Centralized-Scaling-与-Edge-AI"><a href="#8-7-Centralized-Scaling-与-Edge-AI" class="headerlink" title="8.7 Centralized Scaling 与 Edge AI"></a>8.7 Centralized Scaling 与 Edge AI</h2><p>近两年的主要趋势是：</p>
+<h3 id="8-7-Centralized-Scaling-与-Edge-AI"><a href="#8-7-Centralized-Scaling-与-Edge-AI" class="headerlink" title="8.7 Centralized Scaling 与 Edge AI"></a>8.7 Centralized Scaling 与 Edge AI</h3><p>近两年的主要趋势是：</p>
 <ul>
 <li>追求更大的集中式训练集群；</li>
 <li>使用更多 inference compute；</li>
@@ -883,7 +883,7 @@ $$</p>
 <li><strong>Exploitation</strong>：压缩模型和系统成本，使其进入真实应用。</li>
 </ul>
 <hr>
-<h2 id="8-8-Lepton-AI-最大的现实挑战"><a href="#8-8-Lepton-AI-最大的现实挑战" class="headerlink" title="8.8 Lepton AI 最大的现实挑战"></a>8.8 Lepton AI 最大的现实挑战</h2><p>讲者认为，最大的困难不一定是某个纯技术问题，而是 GPU supply chain management：</p>
+<h3 id="8-8-Lepton-AI-最大的现实挑战"><a href="#8-8-Lepton-AI-最大的现实挑战" class="headerlink" title="8.8 Lepton AI 最大的现实挑战"></a>8.8 Lepton AI 最大的现实挑战</h3><p>讲者认为，最大的困难不一定是某个纯技术问题，而是 GPU supply chain management：</p>
 <ul>
 <li>GPU 稀缺；</li>
 <li>不同供应商价格差异大；</li>
@@ -900,9 +900,9 @@ $$</p>
 <li>管理利用率。</li>
 </ul>
 <p>理想的未来是形成更加流动的全球算力市场，使模型和应用团队专注于核心创新，而不是持续进行 InfraOps。</p>
-</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/41afbbd9/">https://wick-7.github.io/posts/41afbbd9/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/AI-Infra/">AI-Infra</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-15</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/41afbbd9/">https://wick-7.github.io/posts/41afbbd9/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Agents/">Agents</a><a class="post-meta__tags" href="/tags/AI-Infra/">AI-Infra</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-15</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a><a class="pagination-related" href="/posts/71390b19/" title="《CS294-196 24fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">《CS294-196 24fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Enterprise GenAI Trends &amp; AI Agents0. 课程主线这节课不是深入讲某一种 Agent 算法，而是从企业应用视角回答三个问题：  为什么 Generative AI 在近几年快速爆发？ 企业采用大模型时，技术与产品形态正在发生什么变化？ 要把基础模型变成可用的 AI Agent，需要哪些关键组件？  课程后半部分将 Agent 应用的核心能力归纳为四块：  Fine-tuning &#x2F; 模型适配：让通用模型更适合具体任务； Distillation &#x2F; 蒸馏：把大模型能力压缩到更小、更快的模型； Grounding &#x2F; 外部知识对齐：结合 Search、RAG 和可信数据，提高事实性； Function Calling &#x2F; Tool Use：调用外部函数与系统，让模型能够执行真实动作。  可以把整节课概括为： 1234567891011Foundation Model      ↓企业选择模型与平台      ↓适配任务：Prompt / Fine-tuning / Distillation      ...</div></div></div></a><a class="pagination-related" href="/posts/c8d1d50a/" title="《CS294-196 25fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-10</div><div class="info-item-2">《CS294-196 25fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Introduction to Training LLMs for AI Agents1. 课程核心问题：一个 LLM 是怎样被训练出来的？一个现代大语言模型通常不是通过一次训练直接得到的，而是经历多个阶段：   Pretraining &#x2F; 预训练：从海量文本中学习语言、知识和一般能力； Reasoning RL &#x2F; 推理强化学习：在具有可验证答案的任务上学习推理，仅用于 reasoning model； Classic Post-training &#x2F; 经典后训练：学习遵循指令、帮助用户并符合人类偏好； 在模型发布后，还可以通过 Prompting 或 Finetuning 将模型适配到具体场景。  1.1 三个主要训练阶段   阶段 主要目标 数据规模 训练时间 计算成本 主要瓶颈 示例    Pretraining 预测互联网文本的下一个 token，学习世界知识 $&gt;10$T tokens 数月 $&gt;\$10$M 数据与算力 LLaMA、DeepSeek-V3   Reasoning RL 在有客观答案的问题上学习推理 约 $1$M...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
 <p>课程笔记由 AI 结合课件、录音整理</p>
-</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Evolution-of-System-Designs-from-an-AI-Engineer-Perspective"><span class="toc-number">1.</span> <span class="toc-text">Evolution of System Designs from an AI Engineer Perspective</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-Demystify-%E2%80%9CLLM%E2%80%9D-and-%E2%80%9CAGI%E2%80%9D"><span class="toc-number">1.1.</span> <span class="toc-text">1. Demystify “LLM” and “AGI”</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-Chinese-Typewriter-Problem"><span class="toc-number">1.2.</span> <span class="toc-text">1.1 Chinese Typewriter Problem</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-BERT-%E4%B8%8E-GPT-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.3.</span> <span class="toc-text">1.2 BERT 与 GPT 的区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%9C%AC%E8%8A%82%E8%AF%BE%E7%9A%84%E5%9B%9B%E6%9D%A1%E4%B8%BB%E7%BA%BF"><span class="toc-number">1.4.</span> <span class="toc-text">2. 本节课的四条主线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%96%B0%E7%AE%97%E6%B3%95%E6%8C%81%E7%BB%AD%E6%8E%A8%E5%8A%A8-LLM-%E6%BC%94%E8%BF%9B"><span class="toc-number">1.5.</span> <span class="toc-text">3. 新算法持续推动 LLM 演进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-Closed-source-%E4%B8%8E-Open-weight-%E6%A8%A1%E5%9E%8B%E7%AB%9E%E4%BA%89"><span class="toc-number">1.6.</span> <span class="toc-text">3.1 Closed-source 与 Open-weight 模型竞争</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E5%9B%9B%E4%B8%AA%E9%98%B6%E6%AE%B5%E7%9A%84%E7%AE%97%E6%B3%95%E6%BC%94%E8%BF%9B"><span class="toc-number">1.7.</span> <span class="toc-text">3.2 四个阶段的算法演进</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-1-GPT%EF%BC%9A%E7%BB%93%E6%9E%84%E6%80%A7%E5%88%9B%E6%96%B0"><span class="toc-number">1.7.1.</span> <span class="toc-text">3.2.1 GPT：结构性创新</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-2-Mixture-of-Experts"><span class="toc-number">1.7.2.</span> <span class="toc-text">3.2.2 Mixture of Experts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-3-Test-time-Scaling"><span class="toc-number">1.7.3.</span> <span class="toc-text">3.2.3 Test-time Scaling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-4-Reinforcement-Learning"><span class="toc-number">1.7.4.</span> <span class="toc-text">3.2.4 Reinforcement Learning</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-Hype-Cycle%EF%BC%9A%E6%8A%80%E6%9C%AF%E7%83%AD%E8%AF%8D%E4%BC%9A%E5%8F%98%E5%8C%96%EF%BC%8C%E5%9F%BA%E7%A1%80%E8%83%BD%E5%8A%9B%E4%BC%9A%E6%B2%89%E6%B7%80"><span class="toc-number">1.8.</span> <span class="toc-text">3.3 Hype Cycle：技术热词会变化，基础能力会沉淀</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#RAG-%E5%B9%B6%E6%B2%A1%E6%9C%89%E8%BF%87%E6%97%B6"><span class="toc-number">1.8.1.</span> <span class="toc-text">RAG 并没有过时</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-AI-%E5%BA%94%E7%94%A8%EF%BC%9AToC-%E7%B9%81%E8%8D%A3%EF%BC%8CToB-%E4%BB%8D%E5%9C%A8%E6%97%A9%E6%9C%9F"><span class="toc-number">1.9.</span> <span class="toc-text">4. AI 应用：ToC 繁荣，ToB 仍在早期</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1-%E5%A5%BD%E7%9A%84%E5%BA%94%E7%94%A8%E4%BD%93%E9%AA%8C%E4%B8%8D%E7%AD%89%E4%BA%8E%E4%BD%BF%E7%94%A8%E6%9C%80%E5%BC%BA%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.10.</span> <span class="toc-text">4.1 好的应用体验不等于使用最强模型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-2-Consumer-AI-Landscape-%E9%AB%98%E5%BA%A6%E6%B5%81%E5%8A%A8"><span class="toc-number">1.11.</span> <span class="toc-text">4.2 Consumer AI Landscape 高度流动</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3-Prosumers-%E6%9B%B4%E6%84%BF%E6%84%8F%E4%BB%98%E8%B4%B9"><span class="toc-number">1.12.</span> <span class="toc-text">4.3 Prosumers 更愿意付费</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-4-%E4%BC%81%E4%B8%9A%E5%B8%82%E5%9C%BA%EF%BC%9A%E6%85%A2%EF%BC%8C%E4%BD%86%E5%8F%AF%E8%83%BD%E6%9B%B4%E5%A4%A7"><span class="toc-number">1.13.</span> <span class="toc-text">4.4 企业市场：慢，但可能更大</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-5-%E4%BC%81%E4%B8%9A-AI-Stack"><span class="toc-number">1.14.</span> <span class="toc-text">4.5 企业 AI Stack</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-AI-Infra%EF%BC%9A%E4%BC%81%E4%B8%9A-IT-%E7%9A%84%E7%AC%AC%E4%B8%89%E5%A4%A7%E6%94%AF%E6%9F%B1"><span class="toc-number">1.15.</span> <span class="toc-text">5. AI Infra：企业 IT 的第三大支柱</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-1-The-Bitter-Lesson"><span class="toc-number">1.16.</span> <span class="toc-text">5.1 The Bitter Lesson</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-2-%E4%BB%8E-Scientific-Computing-%E5%88%B0-AI-Cloud"><span class="toc-number">1.17.</span> <span class="toc-text">5.2 从 Scientific Computing 到 AI Cloud</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-3-Data-Compute%E3%80%81Web-Services-%E4%B8%8E-AI-Compute"><span class="toc-number">1.18.</span> <span class="toc-text">5.3 Data Compute、Web Services 与 AI Compute</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Web-Services"><span class="toc-number">1.18.1.</span> <span class="toc-text">Web Services</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-Compute"><span class="toc-number">1.18.2.</span> <span class="toc-text">Data Compute</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AI-Compute"><span class="toc-number">1.18.3.</span> <span class="toc-text">AI Compute</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-4-%E4%BC%A0%E7%BB%9F-Cloud-Value-Proposition-%E4%B8%8D%E5%86%8D%E5%AE%8C%E5%85%A8%E6%88%90%E7%AB%8B"><span class="toc-number">1.19.</span> <span class="toc-text">5.4 传统 Cloud Value Proposition 不再完全成立</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BD%AF%E4%BB%B6%E7%A7%8D%E7%B1%BB%E6%9B%B4%E5%B0%91"><span class="toc-number">1.19.1.</span> <span class="toc-text">软件种类更少</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Workload-%E6%9B%B4%E7%BB%9F%E4%B8%80"><span class="toc-number">1.19.2.</span> <span class="toc-text">Workload 更统一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BE%9B%E5%BA%94%E9%93%BE%E7%81%B5%E6%B4%BB%E6%80%A7%E6%9B%B4%E4%BD%8E"><span class="toc-number">1.19.3.</span> <span class="toc-text">供应链灵活性更低</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-5-Neocloud-%E7%9A%84%E5%87%BA%E7%8E%B0"><span class="toc-number">1.20.</span> <span class="toc-text">5.5 Neocloud 的出现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-6-%E2%80%9CYou-shouldn%E2%80%99t-run-on-bare-metal-Also-K8s-is-wrong-%E2%80%9D"><span class="toc-number">1.21.</span> <span class="toc-text">5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%B4%E6%8E%A5%E7%AE%A1%E7%90%86%E8%A3%B8%E6%9C%BA%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.21.1.</span> <span class="toc-text">直接管理裸机的问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%B4%E6%8E%A5%E6%9A%B4%E9%9C%B2-Kubernetes-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.21.2.</span> <span class="toc-text">直接暴露 Kubernetes 的问题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-7-Developer-Efficiency-%E4%B8%8E-Infra-Efficiency"><span class="toc-number">1.22.</span> <span class="toc-text">5.7 Developer Efficiency 与 Infra Efficiency</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Developer-Efficiency"><span class="toc-number">1.22.1.</span> <span class="toc-text">Developer Efficiency</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Infra-Efficiency"><span class="toc-number">1.22.2.</span> <span class="toc-text">Infra Efficiency</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-8-AI-Infra-Best-Practices"><span class="toc-number">1.23.</span> <span class="toc-text">5.8 AI Infra Best Practices</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-9-AI-Infra-%E4%B8%8D%E5%90%8C%EF%BC%8C%E4%BD%86%E4%B9%9F%E7%9B%B8%E5%90%8C"><span class="toc-number">1.24.</span> <span class="toc-text">5.9 AI Infra 不同，但也相同</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Hardware-and-Software%EF%BC%9ABack-to-the-Future"><span class="toc-number">1.25.</span> <span class="toc-text">6. Hardware and Software：Back to the Future</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-1-%E4%BB%8E-Mainframe-%E5%88%B0%E5%B0%8F%E5%9E%8B%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="toc-number">1.26.</span> <span class="toc-text">6.1 从 Mainframe 到小型服务器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-2-AI-%E9%87%8D%E6%96%B0%E8%B5%B0%E5%90%91%E5%A4%A7%E5%9E%8B-Scale-up-System"><span class="toc-number">1.27.</span> <span class="toc-text">6.2 AI 重新走向大型 Scale-up System</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-3-%E4%B8%BA%E4%BB%80%E4%B9%88-Scale-up-%E5%BE%88%E9%87%8D%E8%A6%81"><span class="toc-number">1.28.</span> <span class="toc-text">6.3 为什么 Scale-up 很重要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E4%BB%8E%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%B5%B0%E5%90%91%E7%9C%9F%E5%AE%9E%E4%B8%96%E7%95%8C"><span class="toc-number">1.29.</span> <span class="toc-text">7. 从语言模型走向真实世界</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-1-Smart-Airport-Digital-Twin-%E6%A1%88%E4%BE%8B"><span class="toc-number">1.30.</span> <span class="toc-text">7.1 Smart Airport &#x2F; Digital Twin 案例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E9%97%AE%E7%AD%94%E4%B8%8E%E5%88%9B%E4%B8%9A%E7%BB%8F%E9%AA%8C"><span class="toc-number">1.31.</span> <span class="toc-text">8. 问答与创业经验</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-1-Hyperscaler%EF%BC%9A%E4%BB%8E%E5%8D%96%E8%B5%84%E6%BA%90%E8%BD%AC%E5%90%91%E5%8D%96%E7%BB%93%E6%9E%9C"><span class="toc-number">1.32.</span> <span class="toc-text">8.1 Hyperscaler：从卖资源转向卖结果</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-2-Token-Economics"><span class="toc-number">1.33.</span> <span class="toc-text">8.2 Token Economics</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-3-Multi-cloud-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E7%84%B6%E5%9B%B0%E9%9A%BE"><span class="toc-number">1.34.</span> <span class="toc-text">8.3 Multi-cloud 为什么仍然困难</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Compute-Locality"><span class="toc-number">1.34.1.</span> <span class="toc-text">Compute Locality</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Data-Locality"><span class="toc-number">1.34.2.</span> <span class="toc-text">Data Locality</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-4-%E5%88%9B%E4%B8%9A%EF%BC%9A%E4%BA%A7%E5%93%81%E4%B9%8B%E5%A4%96%E8%BF%98%E9%9C%80%E8%A6%81-Attention"><span class="toc-number">1.35.</span> <span class="toc-text">8.4 创业：产品之外还需要 Attention</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-5-%E8%BF%9E%E6%8E%A5-Research-%E4%B8%8E-Engineering"><span class="toc-number">1.36.</span> <span class="toc-text">8.5 连接 Research 与 Engineering</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-6-Startup-%E7%9A%84%E5%B7%AE%E5%BC%82%E5%8C%96%E6%9C%BA%E4%BC%9A"><span class="toc-number">1.37.</span> <span class="toc-text">8.6 Startup 的差异化机会</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-7-Centralized-Scaling-%E4%B8%8E-Edge-AI"><span class="toc-number">1.38.</span> <span class="toc-text">8.7 Centralized Scaling 与 Edge AI</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-8-Lepton-AI-%E6%9C%80%E5%A4%A7%E7%9A%84%E7%8E%B0%E5%AE%9E%E6%8C%91%E6%88%98"><span class="toc-number">1.39.</span> <span class="toc-text">8.8 Lepton AI 最大的现实挑战</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/Infinity/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Evolution-of-System-Designs-from-an-AI-Engineer-Perspective"><span class="toc-number">1.</span> <span class="toc-text">Evolution of System Designs from an AI Engineer Perspective</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Demystify-%E2%80%9CLLM%E2%80%9D-and-%E2%80%9CAGI%E2%80%9D"><span class="toc-number">1.1.</span> <span class="toc-text">1. Demystify “LLM” and “AGI”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-Chinese-Typewriter-Problem"><span class="toc-number">1.2.</span> <span class="toc-text">1.1 Chinese Typewriter Problem</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-BERT-%E4%B8%8E-GPT-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.3.</span> <span class="toc-text">1.2 BERT 与 GPT 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E6%9C%AC%E8%8A%82%E8%AF%BE%E7%9A%84%E5%9B%9B%E6%9D%A1%E4%B8%BB%E7%BA%BF"><span class="toc-number">1.4.</span> <span class="toc-text">2. 本节课的四条主线</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E6%96%B0%E7%AE%97%E6%B3%95%E6%8C%81%E7%BB%AD%E6%8E%A8%E5%8A%A8-LLM-%E6%BC%94%E8%BF%9B"><span class="toc-number">1.5.</span> <span class="toc-text">3. 新算法持续推动 LLM 演进</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-Closed-source-%E4%B8%8E-Open-weight-%E6%A8%A1%E5%9E%8B%E7%AB%9E%E4%BA%89"><span class="toc-number">1.6.</span> <span class="toc-text">3.1 Closed-source 与 Open-weight 模型竞争</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%9B%9B%E4%B8%AA%E9%98%B6%E6%AE%B5%E7%9A%84%E7%AE%97%E6%B3%95%E6%BC%94%E8%BF%9B"><span class="toc-number">1.7.</span> <span class="toc-text">3.2 四个阶段的算法演进</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-1-GPT%EF%BC%9A%E7%BB%93%E6%9E%84%E6%80%A7%E5%88%9B%E6%96%B0"><span class="toc-number">1.7.1.</span> <span class="toc-text">3.2.1 GPT：结构性创新</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-2-Mixture-of-Experts"><span class="toc-number">1.7.2.</span> <span class="toc-text">3.2.2 Mixture of Experts</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-3-Test-time-Scaling"><span class="toc-number">1.7.3.</span> <span class="toc-text">3.2.3 Test-time Scaling</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-4-Reinforcement-Learning"><span class="toc-number">1.7.4.</span> <span class="toc-text">3.2.4 Reinforcement Learning</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-Hype-Cycle%EF%BC%9A%E6%8A%80%E6%9C%AF%E7%83%AD%E8%AF%8D%E4%BC%9A%E5%8F%98%E5%8C%96%EF%BC%8C%E5%9F%BA%E7%A1%80%E8%83%BD%E5%8A%9B%E4%BC%9A%E6%B2%89%E6%B7%80"><span class="toc-number">1.8.</span> <span class="toc-text">3.3 Hype Cycle：技术热词会变化，基础能力会沉淀</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#RAG-%E5%B9%B6%E6%B2%A1%E6%9C%89%E8%BF%87%E6%97%B6"><span class="toc-number">1.8.1.</span> <span class="toc-text">RAG 并没有过时</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-AI-%E5%BA%94%E7%94%A8%EF%BC%9AToC-%E7%B9%81%E8%8D%A3%EF%BC%8CToB-%E4%BB%8D%E5%9C%A8%E6%97%A9%E6%9C%9F"><span class="toc-number">1.9.</span> <span class="toc-text">4. AI 应用：ToC 繁荣，ToB 仍在早期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%A5%BD%E7%9A%84%E5%BA%94%E7%94%A8%E4%BD%93%E9%AA%8C%E4%B8%8D%E7%AD%89%E4%BA%8E%E4%BD%BF%E7%94%A8%E6%9C%80%E5%BC%BA%E6%A8%A1%E5%9E%8B"><span class="toc-number">1.10.</span> <span class="toc-text">4.1 好的应用体验不等于使用最强模型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Consumer-AI-Landscape-%E9%AB%98%E5%BA%A6%E6%B5%81%E5%8A%A8"><span class="toc-number">1.11.</span> <span class="toc-text">4.2 Consumer AI Landscape 高度流动</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Prosumers-%E6%9B%B4%E6%84%BF%E6%84%8F%E4%BB%98%E8%B4%B9"><span class="toc-number">1.12.</span> <span class="toc-text">4.3 Prosumers 更愿意付费</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E4%BC%81%E4%B8%9A%E5%B8%82%E5%9C%BA%EF%BC%9A%E6%85%A2%EF%BC%8C%E4%BD%86%E5%8F%AF%E8%83%BD%E6%9B%B4%E5%A4%A7"><span class="toc-number">1.13.</span> <span class="toc-text">4.4 企业市场：慢，但可能更大</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-5-%E4%BC%81%E4%B8%9A-AI-Stack"><span class="toc-number">1.14.</span> <span class="toc-text">4.5 企业 AI Stack</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-AI-Infra%EF%BC%9A%E4%BC%81%E4%B8%9A-IT-%E7%9A%84%E7%AC%AC%E4%B8%89%E5%A4%A7%E6%94%AF%E6%9F%B1"><span class="toc-number">1.15.</span> <span class="toc-text">5. AI Infra：企业 IT 的第三大支柱</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-The-Bitter-Lesson"><span class="toc-number">1.16.</span> <span class="toc-text">5.1 The Bitter Lesson</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%BB%8E-Scientific-Computing-%E5%88%B0-AI-Cloud"><span class="toc-number">1.17.</span> <span class="toc-text">5.2 从 Scientific Computing 到 AI Cloud</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Data-Compute%E3%80%81Web-Services-%E4%B8%8E-AI-Compute"><span class="toc-number">1.18.</span> <span class="toc-text">5.3 Data Compute、Web Services 与 AI Compute</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Web-Services"><span class="toc-number">1.18.1.</span> <span class="toc-text">Web Services</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Data-Compute"><span class="toc-number">1.18.2.</span> <span class="toc-text">Data Compute</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#AI-Compute"><span class="toc-number">1.18.3.</span> <span class="toc-text">AI Compute</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E4%BC%A0%E7%BB%9F-Cloud-Value-Proposition-%E4%B8%8D%E5%86%8D%E5%AE%8C%E5%85%A8%E6%88%90%E7%AB%8B"><span class="toc-number">1.19.</span> <span class="toc-text">5.4 传统 Cloud Value Proposition 不再完全成立</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E8%BD%AF%E4%BB%B6%E7%A7%8D%E7%B1%BB%E6%9B%B4%E5%B0%91"><span class="toc-number">1.19.1.</span> <span class="toc-text">软件种类更少</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Workload-%E6%9B%B4%E7%BB%9F%E4%B8%80"><span class="toc-number">1.19.2.</span> <span class="toc-text">Workload 更统一</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BE%9B%E5%BA%94%E9%93%BE%E7%81%B5%E6%B4%BB%E6%80%A7%E6%9B%B4%E4%BD%8E"><span class="toc-number">1.19.3.</span> <span class="toc-text">供应链灵活性更低</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-Neocloud-%E7%9A%84%E5%87%BA%E7%8E%B0"><span class="toc-number">1.20.</span> <span class="toc-text">5.5 Neocloud 的出现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6-%E2%80%9CYou-shouldn%E2%80%99t-run-on-bare-metal-Also-K8s-is-wrong-%E2%80%9D"><span class="toc-number">1.21.</span> <span class="toc-text">5.6 “You shouldn’t run on bare metal. Also, K8s is wrong.”</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9B%B4%E6%8E%A5%E7%AE%A1%E7%90%86%E8%A3%B8%E6%9C%BA%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.21.1.</span> <span class="toc-text">直接管理裸机的问题</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%9B%B4%E6%8E%A5%E6%9A%B4%E9%9C%B2-Kubernetes-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.21.2.</span> <span class="toc-text">直接暴露 Kubernetes 的问题</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-7-Developer-Efficiency-%E4%B8%8E-Infra-Efficiency"><span class="toc-number">1.22.</span> <span class="toc-text">5.7 Developer Efficiency 与 Infra Efficiency</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Developer-Efficiency"><span class="toc-number">1.22.1.</span> <span class="toc-text">Developer Efficiency</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Infra-Efficiency"><span class="toc-number">1.22.2.</span> <span class="toc-text">Infra Efficiency</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-8-AI-Infra-Best-Practices"><span class="toc-number">1.23.</span> <span class="toc-text">5.8 AI Infra Best Practices</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-9-AI-Infra-%E4%B8%8D%E5%90%8C%EF%BC%8C%E4%BD%86%E4%B9%9F%E7%9B%B8%E5%90%8C"><span class="toc-number">1.24.</span> <span class="toc-text">5.9 AI Infra 不同，但也相同</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-Hardware-and-Software%EF%BC%9ABack-to-the-Future"><span class="toc-number">1.25.</span> <span class="toc-text">6. Hardware and Software：Back to the Future</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E4%BB%8E-Mainframe-%E5%88%B0%E5%B0%8F%E5%9E%8B%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="toc-number">1.26.</span> <span class="toc-text">6.1 从 Mainframe 到小型服务器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-AI-%E9%87%8D%E6%96%B0%E8%B5%B0%E5%90%91%E5%A4%A7%E5%9E%8B-Scale-up-System"><span class="toc-number">1.27.</span> <span class="toc-text">6.2 AI 重新走向大型 Scale-up System</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E4%B8%BA%E4%BB%80%E4%B9%88-Scale-up-%E5%BE%88%E9%87%8D%E8%A6%81"><span class="toc-number">1.28.</span> <span class="toc-text">6.3 为什么 Scale-up 很重要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-%E4%BB%8E%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E8%B5%B0%E5%90%91%E7%9C%9F%E5%AE%9E%E4%B8%96%E7%95%8C"><span class="toc-number">1.29.</span> <span class="toc-text">7. 从语言模型走向真实世界</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Smart-Airport-Digital-Twin-%E6%A1%88%E4%BE%8B"><span class="toc-number">1.30.</span> <span class="toc-text">7.1 Smart Airport &#x2F; Digital Twin 案例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-%E9%97%AE%E7%AD%94%E4%B8%8E%E5%88%9B%E4%B8%9A%E7%BB%8F%E9%AA%8C"><span class="toc-number">1.31.</span> <span class="toc-text">8. 问答与创业经验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-Hyperscaler%EF%BC%9A%E4%BB%8E%E5%8D%96%E8%B5%84%E6%BA%90%E8%BD%AC%E5%90%91%E5%8D%96%E7%BB%93%E6%9E%9C"><span class="toc-number">1.32.</span> <span class="toc-text">8.1 Hyperscaler：从卖资源转向卖结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Token-Economics"><span class="toc-number">1.33.</span> <span class="toc-text">8.2 Token Economics</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-Multi-cloud-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BB%8D%E7%84%B6%E5%9B%B0%E9%9A%BE"><span class="toc-number">1.34.</span> <span class="toc-text">8.3 Multi-cloud 为什么仍然困难</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Compute-Locality"><span class="toc-number">1.34.1.</span> <span class="toc-text">Compute Locality</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Data-Locality"><span class="toc-number">1.34.2.</span> <span class="toc-text">Data Locality</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-4-%E5%88%9B%E4%B8%9A%EF%BC%9A%E4%BA%A7%E5%93%81%E4%B9%8B%E5%A4%96%E8%BF%98%E9%9C%80%E8%A6%81-Attention"><span class="toc-number">1.35.</span> <span class="toc-text">8.4 创业：产品之外还需要 Attention</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-5-%E8%BF%9E%E6%8E%A5-Research-%E4%B8%8E-Engineering"><span class="toc-number">1.36.</span> <span class="toc-text">8.5 连接 Research 与 Engineering</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-6-Startup-%E7%9A%84%E5%B7%AE%E5%BC%82%E5%8C%96%E6%9C%BA%E4%BC%9A"><span class="toc-number">1.37.</span> <span class="toc-text">8.6 Startup 的差异化机会</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-7-Centralized-Scaling-%E4%B8%8E-Edge-AI"><span class="toc-number">1.38.</span> <span class="toc-text">8.7 Centralized Scaling 与 Edge AI</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-8-Lepton-AI-%E6%9C%80%E5%A4%A7%E7%9A%84%E7%8E%B0%E5%AE%9E%E6%8C%91%E6%88%98"><span class="toc-number">1.39.</span> <span class="toc-text">8.8 Lepton AI 最大的现实挑战</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/4e475140/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记">《CS294-196 25fall Lecture7》课堂笔记</a><time datetime="2026-07-18T11:12:22.000Z" title="发表于 2026-07-18 19:12:22">2026-07-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记">《CS294-196 25fall Lecture5》课堂笔记</a><time datetime="2026-07-18T07:16:28.000Z" title="发表于 2026-07-18 15:16:28">2026-07-18</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
   const loadMathjax = () => {
     if (!window.MathJax) {
       window.MathJax = {
