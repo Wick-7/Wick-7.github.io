@@ -12569,4 +12569,406 @@ AdamW
         <tag>随笔</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</title>
+    <url>/posts/33601be1/</url>
+    <content><![CDATA[Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。
+
+1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。
+与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。
+
+2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：
+
+
+
+模块
+核心问题
+主要内容
+作业目标
+
+
+
+Basics
+如何训练出第一个 LM？
+BPE、Transformer、loss、optimizer、训练循环
+从零训练小型语言模型
+
+
+Systems
+如何榨取硬件性能？
+资源核算、GPU kernel、分布式训练、推理
+Triton kernel 与并行训练
+
+
+Scaling Laws
+如何安全地扩大规模？
+scaling recipe、超参数迁移、loss 外推
+用小规模实验预测大规模结果
+
+
+Data
+模型应该学什么？
+evaluation、抓取、清洗、过滤、去重、数据混合
+从原始网页构造训练语料
+
+
+Alignment
+如何从弱监督继续改进？
+PPO、DPO、GRPO、RL 基础设施
+偏好优化与推理能力训练
+
+
+这五个模块不是彼此独立的课程章节。它们共享同一个目标：
+$$
+\boxed{
+\text{Best model quality}
+\quad \text{subject to} \quad
+\text{data, FLOPs, memory, bandwidth and time budgets}
+}
+$$
+
+Tokenization 用更少的计算单元表示原始字节；
+Architecture 在表达能力、训练稳定性和硬件效率之间权衡；
+Systems 减少数据搬运并提高硬件利用率；
+Scaling Laws 用小实验降低大规模试错成本；
+Data filtering 避免把有限算力浪费在重复和低质量文本上；
+Alignment 用较弱但更容易获得的反馈继续提升模型。
+
+这就是 Lecture 1 最值得带走的统一视角。
+
+3. Basics：能训练只是起点3.1 Tokenizer 决定模型处理的“原子”原始文本是字节或 Unicode 字符串，模型实际处理的却是一串整数 token ID。Tokenizer 的作用是将长字节流压缩成更短、更适合建模的序列。
+更重要的是，它实现了 adaptive computation（自适应计算）：
+
+常见、可预测的字节片段可以合并为一个 token，只分配一次模型计算；
+罕见或信息量高的片段保留为多个 token，获得更细粒度的计算。
+
+所以 tokenization 不只是文本预处理，也是一种计算预算分配机制。
+3.2 Transformer 不是一个固定配方课程以 Transformer 为起点，但现代语言模型已经对原始结构做了大量改造：
+
+
+激活函数、位置编码和 normalization 的形式不断变化；
+完整 attention 的复杂度随序列长度 $n$ 呈 $O(n^2)$ 增长，因此出现了各种稀疏或低成本 attention；
+Mamba、Gated DeltaNet 等 state-space model &#x2F; linear attention 常与 attention 组成 hybrid architecture；
+MLP 从 dense layer 逐渐走向 Mixture of Experts，以更少的每-token 计算扩大模型容量；
+层数、hidden dimension、head 数和 expert 数并非无关紧要的配置，它们直接影响扩展行为与系统效率。
+
+3.3 训练超参数决定一次 run 是成功还是爆炸训练端需要共同设计：
+
+next-token 或 multi-token prediction loss；
+AdamW、SOAP、Muon 等 optimizer；
+initialization；
+learning-rate schedule；
+regularization 与 batch size；
+MoE 的路由与负载均衡策略。
+
+这些不能只被当作“多跑几组搜索一下”的普通超参数。大规模训练往往只有一次机会，初始化或学习率设置不当就可能导致梯度爆炸、训练不稳定，最终浪费整个计算预算。
+因此 Basics 的核心权衡是：
+$$
+\text{Expressivity}
+\quad \leftrightarrow \quad
+\text{Stability}
+\quad \leftrightarrow \quad
+\text{Efficiency}
+$$
+模型既要有能力表示复杂数据，又要让参数和梯度范数处于不过大也不过小的区间，还要能在真实硬件上快速运行。
+
+4. Systems：瓶颈通常不是算术，而是数据搬运4.1 先做资源核算对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，一次完整训练的计算量可以粗略估计为：
+$$
+C \approx 6ND \quad \text{FLOPs}.
+$$
+例如，在 $1$T tokens 上训练 $70$B 参数模型：
+$$
+C \approx 6 \times 70 \times 10^9 \times 10^{12}
+= 4.2 \times 10^{23}\ \text{FLOPs}.
+$$
+但 FLOPs 只是一个维度。还必须追踪参数、activation、gradient 和 optimizer state 占用的显存，以及设备间通信量。
+4.2 Compute 与 Memory 不在同一个地方GPU 的计算单元与 HBM 是分离的。计算之前要把参数或 activation 从内存搬入计算单元，计算后再写回。现代 GPU 的算力增长远快于显存带宽，因此许多操作不是 compute-bound，而是 memory-bound。
+
+以课上 B200 的例子为例，bf16 峰值约为 $2.25$ PFLOP&#x2F;s，显存带宽约为 $8$ TB&#x2F;s。Roofline analysis 的作用，就是根据算术强度判断一个计算受算力还是带宽限制。
+4.3 Kernel 优化的核心：少搬一次数据PyTorch 中每个基础算子通常对应一次 GPU kernel launch。如果连续执行两个简单操作，朴素做法可能是：读 HBM、计算、写回，再次读 HBM、计算、写回。
+Operator fusion 将两个操作合为一个 kernel：只读一次，在片上完成连续计算，最后只写一次。Tiling 也是同一原则的更精细应用：把数据分块放进更快的局部存储中，提高复用率。
+4.4 多 GPU 训练仍然是在优化数据移动扩展到成百上千张 GPU 后，跨设备通信比 HBM 访问更昂贵。分布式训练需要利用 gather、reduce、all-reduce 等 collective operation，在不同设备间组织：
+
+parameters；
+activations；
+gradients；
+optimizer states。
+
+可按 data、model、layer&#x2F;pipeline、sequence 或 expert 维度进行切分。各种并行方式的本质问题都是：哪些状态留在本地，哪些状态必须在何时被传到哪张卡上。
+4.5 推理分为 Prefill 和 Decode
+
+
+
+阶段
+工作方式
+主要特征
+
+
+
+Prefill
+一次处理全部 prompt tokens，并构建 KV cache
+类似训练，可进行较大规模并行计算
+
+
+Decode
+利用 KV cache，每次只生成一个新 token
+算术强度低，容易受显存带宽限制
+
+
+推理优化可从不同层面进行：pruning、quantization、distillation、推理专用 kernel，以及 speculative decoding。后者让小模型先猜一段 token，再由大模型并行验证；若猜测被接受，就能减少逐 token 调用大模型的次数。
+在线服务还多出一个调度难题：请求到达时间和序列长度都不同，系统必须持续重组 batch；训练的 batch 则通常固定且可预测。
+
+5. Scaling Laws：预测性和最优性同样重要如果一次训练要消耗 $10^{25}$ FLOPs、价值数千万美元，就无法在目标规模上反复调参。思维方式必须从“训练某个模型”切换成设计 scaling recipe：
+$$
+\text{Scaling recipe}: C \mapsto
+\{N,D,\eta,B,\text{architecture},\ldots\},
+$$
+即把给定计算预算 $C$ 映射为模型大小、数据量、学习率、batch size 和结构配置。
+实际流程是：
+
+在多个较小计算预算下运行实验；
+对观测到的 loss 拟合 scaling law；
+外推目标规模的 loss；
+比较不同 scaling recipe，选择在目标预算下最有希望的一条；
+在真正开始昂贵训练之前，预注册预测结果并检验是否命中。
+
+5.1 Scaling law 不是自然定律课上特别强调：Scaling Laws 不会自动出现，而要靠精心设计的 recipe“构造出来”。如果学习率、batch size 等超参数随规模毫无规律地变化，小规模实验就无法预测大规模设置。
+这要求 hyperparameter transfer：小规模的最优超参数能够直接迁移，或至少能表示成规模的可预测函数。由此得到一个反直觉但重要的原则：
+
+在大模型训练中，predictability 至少和 optimality 一样重要。
+
+某个小规模配置即使稍优，只要扩展行为不稳定，也可能不如略逊但能够可靠外推的配置。
+5.2 Compute-optimal 的模型大小与数据量在固定 FLOPs 预算下，可以扫描多个模型大小，为每个预算寻找最低 loss 的模型，再拟合 compute-optimal curve。
+
+课程给出的粗略经验是：
+$$
+D \approx 20N,
+$$
+其中 $N$ 是参数量，$D$ 是训练 token 数。因此 $70$B 参数模型对应约 $1.4$T tokens。
+这只是粗略起点，具体比例还会受数据和架构影响。它也没有计入 inference cost：如果部署成本更重要，实践中往往会训练一个更小的模型，并给它远多于 compute-optimal 比例的数据，以换取更低的长期推理成本。
+
+6. Data：数据定义模型会成为什么6.1 先定义 Evaluation，再收集 Data“模型应该会什么”必须先由 evaluation 表达。课程区分两类评测：
+
+
+
+类型
+服务对象
+关键要求
+例子
+
+
+
+Internal evaluation
+模型开发者
+跨规模平滑、噪声小、能可靠比较相对变化
+held-out loss、perplexity
+
+
+External evaluation
+用户、客户或论文读者
+具有 ecological validity，反映真实用途
+对话、代码、agentic task
+
+
+Perplexity 至今仍是很好的内部指标，因为它能平滑反映模型的内在建模质量；但单个 benchmark 或平均分常把不同能力混成一个数字。通用模型需要一组覆盖面足够广的评测，并尽量使用未出现在互联网中的数据，降低 contamination 风险。
+6.2 数据不是天然的文本文件训练数据来自网页、书籍、arXiv、GitHub 等多种来源，同时伴随版权和许可证问题。原始载体往往是 HTML、PDF 或代码目录，而不是清洁文本。
+
+典型数据流水线包括：
+
+Transformation：把 HTML、PDF、代码仓库转换成可训练文本；
+Filtering：去除低质量、有害或无信息内容；
+Deduplication：删除完全重复和近似重复文本；
+Mixture：控制不同来源、领域与语言的采样比例；
+Synthetic data：把真实文本改写成更高质量或更贴近下游任务的形式。
+
+过滤可以从效率角度理解：在固定计算预算下，每次在重复垃圾文本上更新梯度，就少了一次学习高价值数据的机会。
+6.3 不同训练阶段使用不同数据
+Pretraining data：规模大、领域广，负责获得通用语言与知识能力；
+Mid-training data：更高质量，常包含长上下文，如完整书籍或大型代码仓库；
+Post-training data：对话、指令、带工具调用的 agent trajectory 等行为数据。
+
+数据不仅影响模型的分数，也直接定义模型是否擅长多语言、对话、长上下文或 agentic coding。
+
+7. Alignment：当评价比示范更容易预训练提供的是 full supervision：序列中每个位置都有真实的下一个 token。模型已经足够合理后，可以利用较弱的监督继续改进，因为很多任务存在一个普遍的不对称性：
+
+生成一个完美答案很难，但判断两个答案哪个更好，往往容易得多。
+
+Alignment 的统一模板是：
+$$
+\text{Generate responses}
+\rightarrow
+\text{Score with human / verifier / LM judge}
+\rightarrow
+\text{Prefer better responses}
+$$
+常见方法包括：
+
+PPO：经典 policy-gradient 方法；
+DPO：直接使用偏好对优化，流程更简单；
+GRPO：用组内相对回报代替单独的 value function。
+
+RL 的困难不只在算法不稳定。大规模 RL 同时运行训练服务、推理服务和代码执行环境：推理端持续生成 rollout，训练端更新参数，worker 的延迟又会造成数据变旧。系统必须在高吞吐和 on-policy 程度之间不断权衡。
+
+8. Tokenization：字符串与 token 之间的可逆映射8.1 Tokenizer 的基本接口原始文本通常是 Unicode string，语言模型则在整数 token 序列上定义概率分布。因此 tokenizer 至少需要两个操作：
+$$
+\operatorname{encode}: \text{string} \rightarrow [i_1,i_2,\ldots,i_n],
+$$
+$$
+\operatorname{decode}: [i_1,i_2,\ldots,i_n] \rightarrow \text{string}.
+$$
+最基本的正确性条件是 round trip：
+$$
+\operatorname{decode}(\operatorname{encode}(s)) = s.
+$$
+如果这个等式不成立，tokenizer 就丢失了原始信息。
+真实 tokenizer 还会产生一些看似奇怪的现象：词首的 hello 与前面带空格的  hello 可能是完全不同的 token；数字可能按不固定的几位一组切开。原因是 tokenizer 学到的是数据中的高频字节片段，而不是人类规定的语言学单位。
+
+8.2 压缩率课程用每个 token 平均承载的 UTF-8 字节数衡量压缩率：
+$$
+\text{compression ratio}
+=
+\frac{\text{number of UTF-8 bytes}}
+{\text{number of tokens}}.
+$$
+压缩率越大，token 序列越短，对 $O(n^2)$ attention 越有利。但这不能靠无限增大 vocabulary 免费获得：词表越大，embedding 与输出层越大，稀有 token 的训练也越稀疏。现代多语言 tokenizer 的词表通常已经达到 $100$K–$200$K，词表大小本身就是重要权衡。
+8.3 三种直接方案为什么都不理想
+
+
+方法
+Vocabulary
+优点
+主要问题
+
+
+
+Character-level
+约 $150$K Unicode code points
+直观、可逆
+词表大，很多字符极少出现，压缩率仍低
+
+
+Byte-level
+固定 $256$
+能表示任意 UTF-8 文本，无 OOV
+压缩率恒为 $1$ byte&#x2F;token，序列太长
+
+
+Word-level
+训练集中全部不同词块
+token 有较稳定的语义，压缩率高
+词表近乎无界，稀有词多，测试时出现 OOV&#x2F;UNK
+
+
+Character tokenizer 同时具有大词表和低压缩率，几乎是“两边都差”；byte tokenizer 的词表非常干净，却把多字节字符展开成更长序列；word tokenizer 看似符合语义，却无法用固定词表优雅覆盖新词。
+
+9. Byte Pair Encoding（BPE）9.1 核心思想BPE 最早由 Philip Gage 在 1994 年用于数据压缩，2015 年被引入神经机器翻译，随后被 GPT-2 用于语言模型。
+其目标是在 byte-level 与 word-level 之间取得折中：
+
+从 256 个基础 byte token 出发，因此任何 UTF-8 文本都可表示；
+从训练语料中学习高频相邻片段，把常见序列合成一个 token；
+固定合并次数，因此 vocabulary 大小可控；
+稀有字符串不会变成 UNK，只会退化为多个较小 token。
+
+一句话概括：
+
+Common byte sequences use one token; rare sequences use many tokens.
+
+9.2 训练算法给定训练语料的 byte token 序列 $x$，重复执行：
+
+统计所有相邻 token pair 的频次；
+找到出现次数最多的 pair $(a,b)$；
+创建新的 token ID；
+令新 token 的 bytes 为 vocab[a] + vocab[b]；
+用新 token 替换序列中所有 $(a,b)$；
+直到达到预设 merge 次数。
+
+初始词表和新 token ID 为：
+$$
+V_0 = \{0,1,\ldots,255\},
+\qquad
+\operatorname{id}_{\text{new}} = 256+i.
+$$
+伪代码如下：
+indices = list(text.encode(&quot;utf-8&quot;))vocab = &#123;i: bytes([i]) for i in range(256)&#125;merges = &#123;&#125;for i in range(num_merges):    counts = count_adjacent_pairs(indices)    pair = max(counts, key=counts.get)    new_id = 256 + i    merges[pair] = new_id    vocab[new_id] = vocab[pair[0]] + vocab[pair[1]]    indices = merge_all(indices, pair, new_id)
+
+训练完成后，词表大小为：
+$$
+|V| = 256 + \text{num\_merges}
+$$
+不计 special tokens 时，这个关系是精确的。
+9.3 课堂示例：the cat in the hat初始时，每个字符按 UTF-8 byte 表示。训练算法发现 (116, 104)，也就是 t 与 h，出现频率很高，于是合并：
+$$
+(116,104) \rightarrow 256, \qquad V[256]=\texttt{th}.
+$$
+第二轮再把 (256, 101) 合并：
+$$
+(256,101) \rightarrow 257, \qquad V[257]=\texttt{the}.
+$$
+第三轮可以继续把 the 与后面的空格合并成新 token。每执行一次 merge：
+
+序列长度缩短；
+vocabulary 增加一个条目；
+常见片段的计算成本降低。
+
+这清楚展示了 BPE 的本质：它并不理解 the 是一个英语单词，只是从统计上发现这串 bytes 值得作为一个整体。
+9.4 Encode 与 Decode训练阶段得到两项参数：
+vocab:  token_id -&gt; bytesmerges: (left_id, right_id) -&gt; merged_id
+
+对新文本执行 encode 时，先转为 UTF-8 bytes，再按训练顺序应用已学习的 merge。decode 则把每个 token ID 映射回 bytes，拼接后按 UTF-8 解码：
+def encode(text):    indices = list(text.encode(&quot;utf-8&quot;))    for pair, new_id in merges.items():        indices = merge_all(indices, pair, new_id)    return indicesdef decode(indices):    raw = b&quot;&quot;.join(vocab[i] for i in indices)    return raw.decode(&quot;utf-8&quot;)
+
+merge 的顺序是模型参数的一部分。新 token 可能依赖更早创建的 token，不能任意重新排列规则。
+9.5 这个实现正确，但很慢朴素 encode 会遍历全部 merge，并且每次重新扫描整个序列。若 merge 数为 $M$、序列长度为 $n$，计算代价接近 $O(Mn)$，现代大词表下会非常慢。
+实际实现还需处理：
+
+只更新受本次合并影响的 pair count，而非每轮从头统计；
+建立索引，只检查当前文本中可能发生的 merge；
+先用正则把长文切成较小 chunk，再分别应用 BPE；
+保证 special tokens 被原样识别；
+并行处理大语料；
+必要时用 Rust 或 C&#x2F;C++ 实现性能关键路径。
+
+因此，BPE 的概念代码很短，真正困难的是把它变成一个对大语料、并发与特殊输入都正确且高效的 tokenizer。
+
+10. Tokenizer 会被端到端 byte model 取代吗？Tokenizer 存在明显缺点：它是与模型分离的固定预处理步骤，会受训练语料影响，对不同语言和数字产生不均匀切分，也可能破坏字符级任务。
+ByT5、MEGABYTE、Byte Latent Transformer（BLT）和 H-Net 等工作尝试直接从 bytes 学习。但课程认为，即使未来不再使用显式 BPE，替代方案仍必须满足两个条件：
+
+模型需要在抽象 chunk 上运行。 文本、视频和 DNA 的最小原始单元通常信号很弱，必须先提升到更有意义的表示层级；
+chunk 应当是可变的。 可预测区域用大 chunk、少计算，复杂区域用小 chunk、多计算，从而实现 adaptive computation。
+
+换言之，未来可能消失的是“固定、独立训练的 tokenizer”，而不是层次化抽象和不均匀分配计算的需求。
+
+11. 本节课的核心结论
+从零构建的价值是扩大研究设计空间。 Prompting 很强，但不能替代理解完整技术栈。
+小规模实验不必然代表前沿规模。 计算分布、最优设计与能力都可能随规模变化。
+整个课程由效率统一。 数据、模型、系统、Scaling Laws 和 Alignment 都是在固定资源下优化最终能力。
+可预测性是大规模训练的必要条件。 Scaling recipe 必须支持超参数迁移与可靠外推。
+系统优化的关键通常是减少数据移动。 Kernel fusion、并行策略与推理优化都围绕带宽瓶颈展开。
+Tokenizer 是一种计算分配机制。 它把常见片段压缩成少量 token，把更多计算留给稀有片段。
+BPE 的优势来自可控折中。 它兼具 byte-level 的完备覆盖、word-level 的部分压缩能力和固定词表大小。
+BPE 算法简单，工程实现并不简单。 Pair 统计、增量更新、special token 和高性能编码才是落地难点。
+
+下一讲将从 resource accounting 开始，具体分析语言模型的 FLOPs、显存占用与硬件瓶颈。
+
+延伸阅读
+CS336 Course Website
+Neural Machine Translation of Rare Words with Subword Units
+Language Models are Unsupervised Multitask Learners
+Training Compute-Optimal Large Language Models
+Byte Latent Transformer: Patches Scale Better Than Tokens
+Dynamic Chunking for End-to-End Hierarchical Sequence Modeling
+
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>CS336</tag>
+        <tag>Tokenization</tag>
+        <tag>BPE</tag>
+        <tag>Scaling-Laws</tag>
+      </tags>
+  </entry>
 </search>
