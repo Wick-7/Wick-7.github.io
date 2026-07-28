@@ -1,0 +1,614 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/8a6e2d41/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-28T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-28T02:40:46.935Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="CS336">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="PyTorch">
+<meta property="article:tag" content="Systems">
+<meta property="article:tag" content="Training">
+<meta property="article:tag" content="einops">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记",
+  "url": "https://wick-7.github.io/posts/8a6e2d41/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-28T01:00:00.000Z",
+  "dateModified": "2026-07-28T02:40:46.935Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/8a6e2d41/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">26</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">48</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-28T01:00:00.000Z" title="发表于 2026-07-28 09:00:00">2026-07-28</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-28T02:40:46.935Z" title="更新于 2026-07-28 10:40:46">2026-07-28</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>这节课借助 PyTorch 张量和 <code>einops</code>，建立 <strong>resource accounting（资源核算）</strong> 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。</p>
+<p>核心目标是：</p>
+<p>$$
+\text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。}
+$$</p>
+<hr>
+<h2 id="1-先做一页纸的资源估算"><a href="#1-先做一页纸的资源估算" class="headerlink" title="1. 先做一页纸的资源估算"></a>1. 先做一页纸的资源估算</h2><p>课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。</p>
+<h3 id="1-1-训练需要多久？"><a href="#1-1-训练需要多久？" class="headerlink" title="1.1 训练需要多久？"></a>1.1 训练需要多久？</h3><p>对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是：</p>
+<p>$$
+C \approx 6ND.
+$$</p>
+<p>因此，$70$B 参数、$15$T tokens 的训练约需要：</p>
+<p>$$
+C = 6 \times 70\times 10^9 \times 15\times 10^{12}
+  = 6.3\times 10^{24}\ \text{FLOPs}.
+$$</p>
+<p>H100 的 dense bf16 峰值约为 $1979/2$ TFLOP&#x2F;s。若取 model FLOPs utilization（MFU）为 $0.5$，使用 $1024$ 张卡，则：</p>
+<p>$$
+\text{days}
+= \frac{6ND}{\text{H100 FLOP/s}\times 0.5\times 1024\times 86400}
+\approx 143\ \text{天}.
+$$</p>
+<p>这里没有把通信、启动开销、评测和故障重试算进去；结论的价值在于量级判断。</p>
+<h3 id="1-2-8-张-H100-能放下多大的-AdamW-模型？"><a href="#1-2-8-张-H100-能放下多大的-AdamW-模型？" class="headerlink" title="1.2 8 张 H100 能放下多大的 AdamW 模型？"></a>1.2 8 张 H100 能放下多大的 AdamW 模型？</h3><p>每张 H100 有约 $80$ GB HBM。只计算模型状态，不计算 activation：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th align="right">每个参数的存储</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>bf16 参数</td>
+<td align="right">2 bytes</td>
+</tr>
+<tr>
+<td>bf16 梯度</td>
+<td align="right">2 bytes</td>
+</tr>
+<tr>
+<td>AdamW 的 fp32 一阶矩</td>
+<td align="right">4 bytes</td>
+</tr>
+<tr>
+<td>AdamW 的 fp32 二阶矩</td>
+<td align="right">4 bytes</td>
+</tr>
+<tr>
+<td>合计</td>
+<td align="right">12 bytes</td>
+</tr>
+</tbody></table>
+<p>$$
+N_{\max}\approx \frac{8\times80\times10^9}{2+2+4+4}
+\approx 53\text{B}.
+$$</p>
+<p>这是偏乐观的上界：activation 还会随 batch size、sequence length 和层数增加，而且需要为临时 buffer、CUDA workspace 等留出空间。</p>
+<blockquote>
+<p><strong>习惯</strong>：先用公式得到粗略形状，再用 profiler 验证细节。不要在没有量级判断时直接开始昂贵的实验。</p>
+</blockquote>
+<hr>
+<h2 id="2-Tensor：所有状态的共同载体"><a href="#2-Tensor：所有状态的共同载体" class="headerlink" title="2. Tensor：所有状态的共同载体"></a>2. Tensor：所有状态的共同载体</h2><p>参数、梯度、activation、optimizer state 和 batch 中的数据，最终都表示成 tensor。Tensor 可以看作带有 <code>shape</code>、<code>dtype</code> 和 <code>device</code> 的多维数组；rank 是维度数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">x = torch.zeros(<span class="number">4</span>)        <span class="comment"># rank 1</span></span><br><span class="line">x = torch.zeros(<span class="number">4</span>, <span class="number">8</span>)     <span class="comment"># rank 2</span></span><br><span class="line">x = torch.zeros(<span class="number">4</span>, <span class="number">8</span>, <span class="number">2</span>)  <span class="comment"># rank 3</span></span><br></pre></td></tr></table></figure>
+
+<p>Transformer 中经常遇到 rank-4 张量。下面约定 batch、序列、attention head 和每个 head 的 hidden dimension：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">B, S, H, D = <span class="number">32</span>, <span class="number">16</span>, <span class="number">16</span>, <span class="number">64</span></span><br><span class="line">x = torch.zeros(B, S, H, D)</span><br></pre></td></tr></table></figure>
+
+<p>同一个张量的 shape 只告诉我们有多少个元素；要算显存，还必须知道每个元素的 dtype。</p>
+<h3 id="2-1-dtype-决定显存与数值范围"><a href="#2-1-dtype-决定显存与数值范围" class="headerlink" title="2.1 dtype 决定显存与数值范围"></a>2.1 dtype 决定显存与数值范围</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th align="right">每个元素</th>
+<th>指数位&#x2F;动态范围</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>fp32</td>
+<td align="right">4 bytes</td>
+<td>精度和动态范围都较好</td>
+<td>默认 dtype、稳定的累计状态</td>
+</tr>
+<tr>
+<td>fp16</td>
+<td align="right">2 bytes</td>
+<td>动态范围较窄</td>
+<td>节省显存，但容易 underflow&#x2F;overflow</td>
+</tr>
+<tr>
+<td>bf16</td>
+<td align="right">2 bytes</td>
+<td>指数位与 fp32 相同，精度较低</td>
+<td>现代训练的常用折中</td>
+</tr>
+<tr>
+<td>fp8</td>
+<td align="right">1 byte</td>
+<td>E4M3 或 E5M2</td>
+<td>专用硬件和 Transformer Engine</td>
+</tr>
+<tr>
+<td>nvfp4</td>
+<td align="right">0.5 byte</td>
+<td>块级缩放，分辨率很低</td>
+<td>更激进的低精度方案</td>
+</tr>
+</tbody></table>
+<p><img src="/img/posts/8a6e2d41/fp32.png" alt="fp32 的位分配"></p>
+<p><img src="/img/posts/8a6e2d41/fp16.png" alt="fp16 的位分配"></p>
+<p><img src="/img/posts/8a6e2d41/bf16.png" alt="bf16 的位分配"></p>
+<p>fp32 有 1 个符号位、8 个指数位和 23 个尾数位。fp16 把总位数减半，却也减少了指数位，因此很小的数可能直接下溢为 0：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">x = torch.zeros(<span class="number">4</span>, <span class="number">8</span>)</span><br><span class="line"><span class="keyword">assert</span> x.dtype == torch.float32</span><br><span class="line"><span class="keyword">assert</span> x.numel() == <span class="number">4</span> * <span class="number">8</span></span><br><span class="line"><span class="keyword">assert</span> x.element_size() == <span class="number">4</span></span><br><span class="line"></span><br><span class="line">x = torch.tensor([<span class="number">1e-8</span>], dtype=torch.float16)</span><br><span class="line"><span class="keyword">assert</span> x == <span class="number">0</span>                    <span class="comment"># underflow</span></span><br></pre></td></tr></table></figure>
+
+<p>bf16 保留了 fp32 的指数位，只牺牲尾数精度。深度学习中的噪声和近似通常使这个交换非常划算：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = torch.tensor([<span class="number">1e-8</span>], dtype=torch.bfloat16)</span><br><span class="line"><span class="keyword">assert</span> x != <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-Mixed-precision"><a href="#2-2-Mixed-precision" class="headerlink" title="2.2 Mixed precision"></a>2.2 Mixed precision</h3><p>实践中常见的分工是：参数、activation 和梯度使用 bf16，optimizer state 使用 fp32。后者会跨多个 step 累加或平方平均，使用 fp32 更稳定。</p>
+<p>PyTorch 的 AMP 会在安全时自动选择低精度，例如矩阵乘法通常可用 bf16，而指数运算更适合保留 fp32：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> torch.amp.autocast(<span class="string">&quot;cuda&quot;</span>, dtype=torch.bfloat16):</span><br><span class="line">    y = x @ w</span><br></pre></td></tr></table></figure>
+
+<p>fp8 有 E4M3、E5M2 两种格式，分别在分辨率和动态范围之间取不同折中。nvfp4 则为每个 block 配置 scale，不能让每个值独立覆盖完整动态范围；这类格式往往由 NVIDIA 的底层库处理，不能简单地把任意 PyTorch tensor 改成“fp4”。</p>
+<h3 id="2-3-CPU-tensor-与-GPU-tensor"><a href="#2-3-CPU-tensor-与-GPU-tensor" class="headerlink" title="2.3 CPU tensor 与 GPU tensor"></a>2.3 CPU tensor 与 GPU tensor</h3><p>PyTorch 默认在 CPU 内存创建 tensor。GPU 的并行计算单元只有在数据位于 GPU memory 时才能高效工作：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">x = torch.zeros(<span class="number">32</span>, <span class="number">32</span>)       <span class="comment"># CPU</span></span><br><span class="line">device = torch.device(<span class="string">&quot;cuda&quot;</span> <span class="keyword">if</span> torch.cuda.is_available() <span class="keyword">else</span> <span class="string">&quot;cpu&quot;</span>)</span><br><span class="line">x = x.to(device)               <span class="comment"># 搬到 GPU</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> torch.device(device):</span><br><span class="line">    y = torch.zeros(<span class="number">32</span>, <span class="number">32</span>)    <span class="comment"># 直接在目标设备创建</span></span><br></pre></td></tr></table></figure>
+
+<p>这一步不只是 API 细节：<code>.to(device)</code> 会产生设备间的数据搬运，反复在 CPU&#x2F;GPU 之间移动数据会成为瓶颈。</p>
+<p><img src="/img/posts/8a6e2d41/cpu-gpu.png" alt="CPU 与 GPU 之间的数据搬运"></p>
+<hr>
+<h2 id="3-用-einops-写清楚张量维度"><a href="#3-用-einops-写清楚张量维度" class="headerlink" title="3. 用 einops 写清楚张量维度"></a>3. 用 einops 写清楚张量维度</h2><p>PyTorch 原生写法经常出现 <code>transpose(-2, -1)</code>、<code>view</code> 和难以记忆的负索引。<code>einops</code> 借鉴 Einstein notation，把维度名称直接写进表达式，减少“形状看起来能跑、语义却错了”的 bug。</p>
+<h3 id="3-1-einsum：带形状账本的广义矩阵乘法"><a href="#3-1-einsum：带形状账本的广义矩阵乘法" class="headerlink" title="3.1 einsum：带形状账本的广义矩阵乘法"></a>3.1 <code>einsum</code>：带形状账本的广义矩阵乘法</h3><p>传统写法：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">x = torch.ones(<span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>)  <span class="comment"># batch, seq, hidden</span></span><br><span class="line">y = torch.ones(<span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>)  <span class="comment"># batch, seq, hidden</span></span><br><span class="line">z = x @ y.transpose(-<span class="number">2</span>, -<span class="number">1</span>)  <span class="comment"># batch, seq, seq</span></span><br></pre></td></tr></table></figure>
+
+<p>使用 <code>einops.einsum</code> 后，参与计算的维度和被求和的维度都显式可见：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> einops <span class="keyword">import</span> einsum</span><br><span class="line"></span><br><span class="line">z = einsum(</span><br><span class="line">    x, y,</span><br><span class="line">    <span class="string">&quot;batch seq1 hidden, batch seq2 hidden -&gt; batch seq1 seq2&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>输出中没有出现的维度会被求和。<code>...</code> 表示任意数量的广播维度：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">z = einsum(</span><br><span class="line">    x, y,</span><br><span class="line">    <span class="string">&quot;... seq1 hidden, ... seq2 hidden -&gt; ... seq1 seq2&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>矩阵乘法只是一个特例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">x = torch.ones(<span class="number">3</span>, <span class="number">4</span>)  <span class="comment"># seq1, hidden</span></span><br><span class="line">y = torch.ones(<span class="number">4</span>, <span class="number">3</span>)  <span class="comment"># hidden, seq2</span></span><br><span class="line">z = einsum(x, y, <span class="string">&quot;seq1 hidden, hidden seq2 -&gt; seq1 seq2&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-reduce：显式写出归约维度"><a href="#3-2-reduce：显式写出归约维度" class="headerlink" title="3.2 reduce：显式写出归约维度"></a>3.2 <code>reduce</code>：显式写出归约维度</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = torch.ones(<span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>)  <span class="comment"># batch, seq, hidden</span></span><br><span class="line">y = reduce(x, <span class="string">&quot;... hidden -&gt; ...&quot;</span>, <span class="string">&quot;sum&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>同样的模式可替换为 <code>mean</code>、<code>max</code>、<code>min</code> 等操作。重点不是少写几个字符，而是让代码和推导中的维度命名保持一致。</p>
+<h3 id="3-3-rearrange：拆分和合并复合维度"><a href="#3-3-rearrange：拆分和合并复合维度" class="headerlink" title="3.3 rearrange：拆分和合并复合维度"></a>3.3 <code>rearrange</code>：拆分和合并复合维度</h3><p>例如，<code>total_hidden = heads * hidden1</code> 被展平在最后一维，现在想对每个 head 应用同一个矩阵：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> einops <span class="keyword">import</span> rearrange</span><br><span class="line"></span><br><span class="line">x = torch.ones(<span class="number">3</span>, <span class="number">8</span>)  <span class="comment"># seq, total_hidden</span></span><br><span class="line">w = torch.ones(<span class="number">4</span>, <span class="number">4</span>)  <span class="comment"># hidden1, hidden2</span></span><br><span class="line"></span><br><span class="line">x = rearrange(x, <span class="string">&quot;... (heads hidden1) -&gt; ... heads hidden1&quot;</span>, heads=<span class="number">2</span>)</span><br><span class="line">x = einsum(x, w, <span class="string">&quot;... hidden1, hidden1 hidden2 -&gt; ... hidden2&quot;</span>)</span><br><span class="line">x = rearrange(x, <span class="string">&quot;... heads hidden2 -&gt; ... (heads hidden2)&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这里 <code>rearrange</code> 只改变索引视图（必要时才复制），没有进行数值归约；<code>einsum</code> 才执行了真正的线性变换。</p>
+<hr>
+<h2 id="4-FLOPs：从操作数到硬件利用率"><a href="#4-FLOPs：从操作数到硬件利用率" class="headerlink" title="4. FLOPs：从操作数到硬件利用率"></a>4. FLOPs：从操作数到硬件利用率</h2><h3 id="4-1-FLOP、FLOP-s-与-MFU"><a href="#4-1-FLOP、FLOP-s-与-MFU" class="headerlink" title="4.1 FLOP、FLOP&#x2F;s 与 MFU"></a>4.1 FLOP、FLOP&#x2F;s 与 MFU</h3><p>FLOP（floating-point operation）是一次加法或乘法等基本浮点操作；FLOP&#x2F;s 是单位时间完成的操作数。两者不要混淆：</p>
+<ul>
+<li><strong>FLOPs</strong>：一个任务总共要做多少工作；</li>
+<li><strong>FLOP&#x2F;s</strong>：硬件或实现每秒能做多少工作。</li>
+</ul>
+<p>以 $x\in\mathbb{R}^{B\times D}$、$W\in\mathbb{R}^{D\times K}$ 的线性层为例，每个 $(i,j,k)$ 组合包含一次乘法和一次加法：</p>
+<p>$$
+\text{FLOPs}(xW)=2BDK.
+$$</p>
+<p>更精确地说，$xW$ 的每个输出元素都是一个长度为 $D$ 的点积，需要 $D$ 次乘法和 $D-1$ 次加法，因此精确计数是：</p>
+<p>$$
+BK(2D-1)=2BDK-BK.
+$$</p>
+<p>课上通常写成 $2BDK$，因为在大规模矩阵乘法中，少掉的 $BK$ 项相对较小；同时 GPU 常用 FMA（fused multiply-add）指令，通常把一次乘加按 2 FLOPs 统计。于是，点积处的 $2n-1$ 是精确的标量计数，而矩阵乘法处的 $2BDK$ 是常用近似，两者口径并不矛盾。</p>
+<p>实际运行时间可以用 benchmark 测出：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">actual_num_flops = <span class="number">2</span> * B * D * K</span><br><span class="line">actual_time = benchmark(<span class="keyword">lambda</span>: x @ w)</span><br><span class="line">actual_flop_per_sec = actual_num_flops / actual_time</span><br></pre></td></tr></table></figure>
+
+<p>硬件规格给出 promised FLOP&#x2F;s。忽略通信和框架开销时，<strong>MFU</strong> 定义为：</p>
+<p>$$
+\mathrm{MFU}=\frac{\text{actual FLOP/s}}{\text{promised FLOP/s}}.
+$$</p>
+<p>大规模训练中 MFU 达到 $0.5$ 通常已经很好，因为内存访问、kernel launch、形状、通信和同步都不可能完全消失。</p>
+<h3 id="4-2-Arithmetic-intensity-与-Roofline"><a href="#4-2-Arithmetic-intensity-与-Roofline" class="headerlink" title="4.2 Arithmetic intensity 与 Roofline"></a>4.2 Arithmetic intensity 与 Roofline</h3><p>GPU 的计算单元和 HBM 之间需要搬运数据。一个操作的总耗时至少受以下两者中较大的那个限制：</p>
+<p>$$
+t\approx \max\left(\frac{\text{bytes}}{\text{memory bandwidth}},
+\frac{\text{FLOPs}}{\text{peak FLOP/s}}\right).
+$$</p>
+<p>定义：</p>
+<p>$$
+\text{arithmetic intensity}
+=\frac{\text{FLOPs}}{\text{bytes moved}},
+\qquad
+\text{accelerator intensity}
+=\frac{\text{peak FLOP/s}}{\text{memory bandwidth}}.
+$$</p>
+<p>如果前者较小，程序是 <strong>memory-bound</strong>；如果前者超过后者，才有机会 <strong>compute-bound</strong>。对应的理想化 MFU 可写成：</p>
+<p>$$
+\mathrm{MFU}\approx\min\left(1,
+\frac{\text{arithmetic intensity}}{\text{accelerator intensity}}\right).
+$$</p>
+<p>以 H100 的约 $3.35$ TB&#x2F;s 带宽和 dense bf16 峰值为例：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th align="right">近似 FLOPs</th>
+<th align="right">读写数据</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ReLU</td>
+<td align="right">$n$</td>
+<td align="right">$4n$ bytes</td>
+<td>memory-bound</td>
+</tr>
+<tr>
+<td>GELU</td>
+<td align="right">约 $20n$</td>
+<td align="right">$4n$ bytes</td>
+<td>仍 memory-bound</td>
+</tr>
+<tr>
+<td>向量点积</td>
+<td align="right">$2n-1$</td>
+<td align="right">约 $4n$ bytes</td>
+<td>memory-bound</td>
+</tr>
+<tr>
+<td>矩阵-向量乘</td>
+<td align="right">$n(2n-1)$</td>
+<td align="right">约 $2n^2$ bytes</td>
+<td>memory-bound</td>
+</tr>
+<tr>
+<td>$n\times n$ 矩阵乘</td>
+<td align="right">$n^2(2n-1)$</td>
+<td align="right">$6n^2$ bytes</td>
+<td>compute-bound（$n$ 足够大时）</td>
+</tr>
+</tbody></table>
+<p>这解释了几个容易反直觉的现象：</p>
+<ul>
+<li>GELU 的算术操作比 ReLU 多，但两者都要读一次、写一次；单独看时 GELU 不一定更慢；</li>
+<li>Transformer 训练含有大矩阵乘法，通常能够吃满计算单元；</li>
+<li>自回归推理每次更接近矩阵-向量乘，往往受显存带宽限制；</li>
+<li>降低 dtype 的字节数会改变 arithmetic intensity，因此精度也会影响性能边界。</li>
+</ul>
+<p><img src="/img/posts/8a6e2d41/compute-memory.png" alt="计算与内存之间的数据搬运"></p>
+<p><img src="/img/posts/8a6e2d41/roofline.webp" alt="Roofline：算术强度与可达到性能"></p>
+<hr>
+<h2 id="5-Autograd-与训练-FLOPs"><a href="#5-Autograd-与训练-FLOPs" class="headerlink" title="5. Autograd 与训练 FLOPs"></a>5. Autograd 与训练 FLOPs</h2><h3 id="5-1-forward-和-backward"><a href="#5-1-forward-和-backward" class="headerlink" title="5.1 forward 和 backward"></a>5.1 forward 和 backward</h3><p>最小例子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">x = torch.tensor([<span class="number">1.</span>, <span class="number">2</span>, <span class="number">3</span>])</span><br><span class="line">w = torch.tensor([<span class="number">1.</span>, <span class="number">1</span>, <span class="number">1</span>], requires_grad=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">pred_y = x @ w</span><br><span class="line">loss = <span class="number">0.5</span> * (pred_y - <span class="number">5</span>).<span class="built_in">pow</span>(<span class="number">2</span>)</span><br><span class="line">loss.backward()</span><br><span class="line"></span><br><span class="line"><span class="keyword">assert</span> torch.equal(w.grad, torch.tensor([<span class="number">1.</span>, <span class="number">2</span>, <span class="number">3</span>]))</span><br></pre></td></tr></table></figure>
+
+<p><code>requires_grad=True</code> 告诉 autograd 为这个 tensor 建立反向传播所需的记录；<code>loss.backward()</code> 计算 $\frac{\partial\text{loss}}{\partial w}$，并把结果累加到 <code>w.grad</code>。</p>
+<h3 id="5-2-为什么会出现-6ND-？"><a href="#5-2-为什么会出现-6ND-？" class="headerlink" title="5.2 为什么会出现 $6ND$？"></a>5.2 为什么会出现 $6ND$？</h3><p>考虑两层线性网络：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">x = torch.ones(B, D)</span><br><span class="line">w1 = torch.randn(D, D, requires_grad=<span class="literal">True</span>)</span><br><span class="line">w2 = torch.randn(D, D, requires_grad=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line">h1 = einsum(x,  w1, <span class="string">&quot;batch in, in out -&gt; batch out&quot;</span>)</span><br><span class="line">h2 = einsum(h1, w2, <span class="string">&quot;batch in, in out -&gt; batch out&quot;</span>)</span><br><span class="line">loss = (h2.mean() - <span class="number">0</span>) ** <span class="number">2</span></span><br><span class="line">loss.backward()</span><br></pre></td></tr></table></figure>
+
+<p>只看第二层 $h_2=h_1W_2$：</p>
+<ul>
+<li>forward 需要计算一次矩阵乘：$2BDD$ FLOPs；</li>
+<li>backward 要同时得到输入梯度和参数梯度：</li>
+</ul>
+<p>$$
+\frac{\partial L}{\partial h_1}
+=\operatorname{einsum}(\frac{\partial L}{\partial h_2},W_2),
+\qquad
+\frac{\partial L}{\partial W_2}
+=\operatorname{einsum}(\frac{\partial L}{\partial h_2},h_1),
+$$</p>
+<p>两项各需约 $2BDD$ FLOPs，所以 backward 约为 forward 的两倍。对所有层求和：</p>
+<p>$$
+\text{forward}\approx 2BN,
+\qquad
+\text{backward}\approx 4BN,
+\qquad
+\boxed{\text{training}\approx 6BN}.
+$$</p>
+<p>其中 $N$ 是参数量，$B$ 是本次处理的 data points 数量。对 context length 不太长的 Transformer，这个估算仍然是很好的第一近似；长上下文时，attention 的 $S^2$ 项需要单独加上。</p>
+<hr>
+<h2 id="6-一个可追踪的-PyTorch-训练循环"><a href="#6-一个可追踪的-PyTorch-训练循环" class="headerlink" title="6. 一个可追踪的 PyTorch 训练循环"></a>6. 一个可追踪的 PyTorch 训练循环</h2><p>为了把模型、梯度、optimizer state 和 batch 串起来，课上定义了一个简单的深层网络：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Block</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dim: <span class="built_in">int</span></span>):</span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        <span class="variable language_">self</span>.weight = nn.Parameter(torch.randn(dim, dim) / math.sqrt(dim))</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        <span class="keyword">return</span> F.relu(x @ <span class="variable language_">self</span>.weight)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">DeepNetwork</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, dim: <span class="built_in">int</span>, num_layers: <span class="built_in">int</span></span>):</span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        <span class="variable language_">self</span>.layers = nn.ModuleList([Block(dim) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(num_layers)])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        <span class="keyword">for</span> layer <span class="keyword">in</span> <span class="variable language_">self</span>.layers:</span><br><span class="line">            x = layer(x)</span><br><span class="line">        <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+
+<p>参数量为 $D^2L$；若每层保存一个 $B\times D$ activation，则 activation 数量近似为 $BDL$。</p>
+<h3 id="6-1-AdaGrad-与-optimizer-state"><a href="#6-1-AdaGrad-与-optimizer-state" class="headerlink" title="6.1 AdaGrad 与 optimizer state"></a>6.1 AdaGrad 与 optimizer state</h3><p>Lecture 1 作业会实现 Adam，这里用 AdaGrad 说明 optimizer state 的本质。AdaGrad 为每个参数保存历史梯度平方和：</p>
+<p>$$
+g_{2,t}=g_{2,t-1}+g_t^2,
+\qquad
+w_{t+1}=w_t-\eta\frac{g_t}{\sqrt{g_{2,t}+\epsilon}}.
+$$</p>
+<p>对应的核心代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">AdaGrad</span>(torch.optim.Optimizer):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">step</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">for</span> group <span class="keyword">in</span> <span class="variable language_">self</span>.param_groups:</span><br><span class="line">            lr = group[<span class="string">&quot;lr&quot;</span>]</span><br><span class="line">            <span class="keyword">for</span> p <span class="keyword">in</span> group[<span class="string">&quot;params&quot;</span>]:</span><br><span class="line">                state = <span class="variable language_">self</span>.state[p]</span><br><span class="line">                grad = p.grad.data</span><br><span class="line">                g2 = state.get(<span class="string">&quot;g2&quot;</span>, torch.zeros_like(grad))</span><br><span class="line">                g2 += torch.square(grad)</span><br><span class="line">                state[<span class="string">&quot;g2&quot;</span>] = g2</span><br><span class="line">                p.data -= lr * grad / torch.sqrt(g2 + <span class="number">1e-5</span>)</span><br></pre></td></tr></table></figure>
+
+<p>训练循环的顺序是固定的：取 batch、forward 得到 loss、<code>backward()</code>、<code>optimizer.step()</code>，最后清空梯度。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(num_train_steps):</span><br><span class="line">    x, y = get_batch()</span><br><span class="line">    pred_y = model(x).mean()</span><br><span class="line">    loss = F.mse_loss(pred_y, y)</span><br><span class="line">    loss.backward()</span><br><span class="line">    optimizer.step()</span><br><span class="line">    optimizer.zero_grad(set_to_none=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p><code>zero_grad(set_to_none=True)</code> 通常比把梯度张量填零更省内存和写入；关键是不要忘记清理，否则梯度会跨 step 累加。</p>
+<h3 id="6-2-一次训练-step-的显存账本"><a href="#6-2-一次训练-step-的显存账本" class="headerlink" title="6.2 一次训练 step 的显存账本"></a>6.2 一次训练 step 的显存账本</h3><p>对 $D^2L$ 个参数，使用 bf16 参数&#x2F;梯度、fp32 AdaGrad state 时：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th align="right">近似显存</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>参数</td>
+<td align="right">$2D^2L$ bytes</td>
+</tr>
+<tr>
+<td>梯度</td>
+<td align="right">$2D^2L$ bytes</td>
+</tr>
+<tr>
+<td>AdaGrad state</td>
+<td align="right">$4D^2L$ bytes</td>
+</tr>
+<tr>
+<td>activation</td>
+<td align="right">$2BDL$ bytes</td>
+</tr>
+<tr>
+<td>合计</td>
+<td align="right">$2D^2L+2D^2L+4D^2L+2BDL$ bytes</td>
+</tr>
+</tbody></table>
+<p>Adam 还要保存一阶矩和二阶矩，因此 optimizer state 约为每参数 8 bytes。optimizer state 往往是显存中很大的一项；它不一定直接限制 FLOP&#x2F;s，却会决定模型能否放入 HBM，以及分布式训练时需要传输多少状态。</p>
+<hr>
+<h2 id="7-两种常用的显存优化"><a href="#7-两种常用的显存优化" class="headerlink" title="7. 两种常用的显存优化"></a>7. 两种常用的显存优化</h2><h3 id="7-1-Gradient-accumulation"><a href="#7-1-Gradient-accumulation" class="headerlink" title="7.1 Gradient accumulation"></a>7.1 Gradient accumulation</h3><p>大 batch 通常有助于训练稳定性，但 activation memory 随 batch size 线性增长。Gradient accumulation 将一个大 batch 拆成多个 micro-batch：每个 micro-batch 都反向传播，但暂时不更新参数；累计到目标 batch 后再 <code>step()</code> 并清零。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">optimizer.zero_grad(set_to_none=<span class="literal">True</span>)</span><br><span class="line"><span class="keyword">for</span> micro_step <span class="keyword">in</span> <span class="built_in">range</span>(num_micro_batches):</span><br><span class="line">    x, y = get_micro_batch()</span><br><span class="line">    loss = loss_fn(model(x), y) / num_micro_batches</span><br><span class="line">    loss.backward()              <span class="comment"># 梯度累加</span></span><br><span class="line"></span><br><span class="line">optimizer.step()</span><br><span class="line">optimizer.zero_grad(set_to_none=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这样可以用较小的峰值 activation memory 模拟更大的 effective batch size。代价是每个 optimizer update 需要更多次 forward&#x2F;backward 和更多 kernel launch；它没有让总 FLOPs 消失。</p>
+<h3 id="7-2-Activation-checkpointing"><a href="#7-2-Activation-checkpointing" class="headerlink" title="7.2 Activation checkpointing"></a>7.2 Activation checkpointing</h3><p>训练的 backward 需要用到中间 activation，而推理不计算梯度，只需保留当前层附近的 activation。因此训练时 activation memory 近似随 $L$ 增长：</p>
+<p>$$
+M_{\text{activation}}\approx 2BDL\quad(\text{bf16}).
+$$</p>
+<p>Activation checkpointing（也叫 gradient checkpointing、rematerialization）的做法是：forward 只保存少量 checkpoint，backward 时从最近 checkpoint 重新计算中间结果。典型用法：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">DeepNetworkCheckpointed</span>(<span class="title class_ inherited__">DeepNetwork</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        <span class="keyword">for</span> layer <span class="keyword">in</span> <span class="variable language_">self</span>.layers:</span><br><span class="line">            x = torch.utils.checkpoint.checkpoint(layer, x)</span><br><span class="line">        <span class="keyword">return</span> x</span><br></pre></td></tr></table></figure>
+
+<p>这是一个明确的 memory-compute trade-off：</p>
+<ul>
+<li>保存所有层：显存约为 $O(L)$，重计算少；</li>
+<li>一个 checkpoint 都不保存：显存最低，但可能需要 $O(L^2)$ 的重计算；</li>
+<li>每隔约 $\sqrt L$ 层保存一次：activation memory 和重计算开销都可做到约 $O(\sqrt L)$ 的量级。</li>
+</ul>
+<p><img src="/img/posts/8a6e2d41/deep-network.png" alt="深层网络中的 activation 与 checkpoint"></p>
+<hr>
+<h2 id="8-本讲总结"><a href="#8-本讲总结" class="headerlink" title="8. 本讲总结"></a>8. 本讲总结</h2><ol>
+<li><strong>Tensor 是统一的资源对象</strong>：参数、梯度、activation、optimizer state 和数据都要从 <code>shape</code>、<code>dtype</code>、<code>device</code> 三个维度理解。</li>
+<li><strong>dtype 是系统设计的一部分</strong>：bf16 常用于参数、activation 和梯度，fp32 常用于需要长期累积的 optimizer state；低精度的收益必须和数值稳定性一起评估。</li>
+<li><strong>einops 把形状写成可读的数学表达式</strong>：<code>einsum</code> 显式指定相乘和归约的维度，<code>reduce</code> 描述归约，<code>rearrange</code> 拆分或合并维度。</li>
+<li><strong>FLOPs 不是速度</strong>：速度还取决于 FLOP&#x2F;s、内存带宽、kernel 和通信。用 arithmetic intensity 与 roofline 判断一个操作是 memory-bound 还是 compute-bound。</li>
+<li><strong>$6ND$ 来自 forward + backward</strong>：对于短上下文的 dense Transformer，这是训练总 FLOPs 的有用一阶估计。</li>
+<li><strong>省显存通常是在用计算换显存</strong>：gradient accumulation 降低单次 micro-batch 的峰值，activation checkpointing 通过重算中间结果降低保存量。</li>
+</ol>
+<p>这一讲最重要的 mindset 是：<strong>不要把 PyTorch 代码当作黑盒 API 调用；看到一个 tensor 操作，就同时想到它的形状、数据类型、设备、FLOPs 和数据搬运。</strong></p>
+<hr>
+<h2 id="延伸阅读"><a href="#延伸阅读" class="headerlink" title="延伸阅读"></a>延伸阅读</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://cs336.stanford.edu/lectures/?trace=lecture_02">CS336 Lecture 2 Trace</a></li>
+<li><a target="_blank" rel="noopener" href="https://einops.rocks/">einops documentation</a></li>
+<li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/amp.html">PyTorch Automatic Mixed Precision</a></li>
+<li><a target="_blank" rel="noopener" href="https://pytorch.org/docs/stable/checkpoint.html">PyTorch activation checkpointing</a></li>
+<li><a target="_blank" rel="noopener" href="https://jax-ml.github.io/scaling-book/roofline/">Roofline: An Insightful Visual Performance Model for Multicore Architectures</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/8a6e2d41/">https://wick-7.github.io/posts/8a6e2d41/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Training/">Training</a><a class="post-meta__tags" href="/tags/CS336/">CS336</a><a class="post-meta__tags" href="/tags/PyTorch/">PyTorch</a><a class="post-meta__tags" href="/tags/einops/">einops</a><a class="post-meta__tags" href="/tags/Systems/">Systems</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。  1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。 与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。  2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：    模块 核心问题 主要内容 作业目标    Basics 如何训练出第一个 LM？ BPE、Transformer、loss、optimizer、训练循环 从零训练小型语言模...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-27</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。  1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。 与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。  2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：    模块 核心问题 主要内容 作业目标    Basics 如何训练出第一个 LM？ BPE、Transformer、loss、optimizer、训练循环 从零训练小型语言模...</div></div></div></a><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a><a class="pagination-related" href="/posts/8cc0f36c/" title="《CS294-196 24fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Agentic AI Frameworks &#x2F; AutoGen &amp; Multimodal Knowledge Assistant由两个相互衔接的部分组成：  Agentic AI Frameworks &amp; AutoGen  为什么未来的 AI 应用会从单一模型转向 Agentic &#x2F; Compound AI Systems； 如何用统一的 Agent 抽象组织 LLM、工具与人类； AutoGen 如何以 multi-agent conversation programming 为核心实现复杂工作流。   Multimodal Knowledge Assistant  为什么 Basic RAG 无法支撑真正的企业级知识助手； 如何处理含有文本、表格、图片、图表和复杂版式的文档； 如何在 Multimodal RAG 之上加入 Tool Use、Planning、Memory、Reflection； 如何把 Agent workflow 部署成可扩展的生产系统。    两部分共同说明：  Agent 应用不只是“调用一个更强的 LLM”，而是围...</div></div></div></a><a class="pagination-related" href="/posts/71390b19/" title="《CS294-196 24fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-13</div><div class="info-item-2">《CS294-196 24fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Enterprise GenAI Trends &amp; AI Agents0. 课程主线这节课不是深入讲某一种 Agent 算法，而是从企业应用视角回答三个问题：  为什么 Generative AI 在近几年快速爆发？ 企业采用大模型时，技术与产品形态正在发生什么变化？ 要把基础模型变成可用的 AI Agent，需要哪些关键组件？  课程后半部分将 Agent 应用的核心能力归纳为四块：  Fine-tuning &#x2F; 模型适配：让通用模型更适合具体任务； Distillation &#x2F; 蒸馏：把大模型能力压缩到更小、更快的模型； Grounding &#x2F; 外部知识对齐：结合 Search、RAG 和可信数据，提高事实性； Function Calling &#x2F; Tool Use：调用外部函数与系统，让模型能够执行真实动作。  可以把整节课概括为： 1234567891011Foundation Model      ↓企业选择模型与平台      ↓适配任务：Prompt / Fine-tuning / Distillation      ...</div></div></div></a><a class="pagination-related" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture7》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Predictable Noise and Patterns from Millions of Questions本节课主线现代评测正在发生一个明显变化：  过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本； 当前的代码生成与 Agent benchmark 往往只有几百道题； 单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压缩成一个二元结果：成功或失败； 在不同模型、不同题目之间，结果存在明显的不一致性：强模型会错简单题，弱模型也可能偶然做对困难题； 因此，仅看平均 Accuracy &#x2F; Pass@1 不足以判断一个改进是否可靠，仍需进行统计分析。  本节课的核心结论是：  当前的小型 generative &#x2F; agentic benchmark 即使包含困难任务，也往往仍然具有较大的统计噪声。困难题本身不能自动弥补样本规模不足。  课程进一步给出了一套分析框架：  将 benchmark 中的问题看成从一个 super-population 中抽取的样本； 区分 题目抽样噪声 与 模型...</div></div></div></a><a class="pagination-related" href="/posts/22a862fd/" title="《CS294-196 24fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agents：历史、核心范式与未来方向1. 什么是 Agent1.1 基本定义一个宽泛定义是：  Agent 是一个能够与某种环境交互的“智能”系统。  Agent 与环境之间形成持续的交互闭环： $$ \text{Agent} \xrightarrow{\text{Action}} \text{Environment} \xrightarrow{\text{Observation}} \text{Agent}. $$ 环境可以是：  Physical Environment：机器人、自动驾驶汽车、现实世界； Digital Environment：游戏、网页、操作系统、软件与 API； Human Environment：对话机器人通过语言与人类交互。  因此，AlphaGo、Atari Agent、自动驾驶汽车、Alexa 和 Chatbot 都可以被视为不同形式的 Agent。 1.2 Agent 的定义会随时代变化要严格定义 Agent，还需要回答两个问题：  什么叫作 intelligent？ 什么属于 environment？  这两个概念并非固定不变。早期只...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">26</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">48</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%85%88%E5%81%9A%E4%B8%80%E9%A1%B5%E7%BA%B8%E7%9A%84%E8%B5%84%E6%BA%90%E4%BC%B0%E7%AE%97"><span class="toc-number">1.</span> <span class="toc-text">1. 先做一页纸的资源估算</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E8%AE%AD%E7%BB%83%E9%9C%80%E8%A6%81%E5%A4%9A%E4%B9%85%EF%BC%9F"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 训练需要多久？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-8-%E5%BC%A0-H100-%E8%83%BD%E6%94%BE%E4%B8%8B%E5%A4%9A%E5%A4%A7%E7%9A%84-AdamW-%E6%A8%A1%E5%9E%8B%EF%BC%9F"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 8 张 H100 能放下多大的 AdamW 模型？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-Tensor%EF%BC%9A%E6%89%80%E6%9C%89%E7%8A%B6%E6%80%81%E7%9A%84%E5%85%B1%E5%90%8C%E8%BD%BD%E4%BD%93"><span class="toc-number">2.</span> <span class="toc-text">2. Tensor：所有状态的共同载体</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-dtype-%E5%86%B3%E5%AE%9A%E6%98%BE%E5%AD%98%E4%B8%8E%E6%95%B0%E5%80%BC%E8%8C%83%E5%9B%B4"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 dtype 决定显存与数值范围</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Mixed-precision"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 Mixed precision</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-CPU-tensor-%E4%B8%8E-GPU-tensor"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 CPU tensor 与 GPU tensor</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E7%94%A8-einops-%E5%86%99%E6%B8%85%E6%A5%9A%E5%BC%A0%E9%87%8F%E7%BB%B4%E5%BA%A6"><span class="toc-number">3.</span> <span class="toc-text">3. 用 einops 写清楚张量维度</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-einsum%EF%BC%9A%E5%B8%A6%E5%BD%A2%E7%8A%B6%E8%B4%A6%E6%9C%AC%E7%9A%84%E5%B9%BF%E4%B9%89%E7%9F%A9%E9%98%B5%E4%B9%98%E6%B3%95"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 einsum：带形状账本的广义矩阵乘法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-reduce%EF%BC%9A%E6%98%BE%E5%BC%8F%E5%86%99%E5%87%BA%E5%BD%92%E7%BA%A6%E7%BB%B4%E5%BA%A6"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 reduce：显式写出归约维度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-rearrange%EF%BC%9A%E6%8B%86%E5%88%86%E5%92%8C%E5%90%88%E5%B9%B6%E5%A4%8D%E5%90%88%E7%BB%B4%E5%BA%A6"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 rearrange：拆分和合并复合维度</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-FLOPs%EF%BC%9A%E4%BB%8E%E6%93%8D%E4%BD%9C%E6%95%B0%E5%88%B0%E7%A1%AC%E4%BB%B6%E5%88%A9%E7%94%A8%E7%8E%87"><span class="toc-number">4.</span> <span class="toc-text">4. FLOPs：从操作数到硬件利用率</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-FLOP%E3%80%81FLOP-s-%E4%B8%8E-MFU"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 FLOP、FLOP&#x2F;s 与 MFU</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-Arithmetic-intensity-%E4%B8%8E-Roofline"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 Arithmetic intensity 与 Roofline</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Autograd-%E4%B8%8E%E8%AE%AD%E7%BB%83-FLOPs"><span class="toc-number">5.</span> <span class="toc-text">5. Autograd 与训练 FLOPs</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-forward-%E5%92%8C-backward"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 forward 和 backward</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%87%BA%E7%8E%B0-6ND-%EF%BC%9F"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 为什么会出现 $6ND$？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E4%B8%80%E4%B8%AA%E5%8F%AF%E8%BF%BD%E8%B8%AA%E7%9A%84-PyTorch-%E8%AE%AD%E7%BB%83%E5%BE%AA%E7%8E%AF"><span class="toc-number">6.</span> <span class="toc-text">6. 一个可追踪的 PyTorch 训练循环</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-AdaGrad-%E4%B8%8E-optimizer-state"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 AdaGrad 与 optimizer state</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E4%B8%80%E6%AC%A1%E8%AE%AD%E7%BB%83-step-%E7%9A%84%E6%98%BE%E5%AD%98%E8%B4%A6%E6%9C%AC"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 一次训练 step 的显存账本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E4%B8%A4%E7%A7%8D%E5%B8%B8%E7%94%A8%E7%9A%84%E6%98%BE%E5%AD%98%E4%BC%98%E5%8C%96"><span class="toc-number">7.</span> <span class="toc-text">7. 两种常用的显存优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Gradient-accumulation"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 Gradient accumulation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-Activation-checkpointing"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 Activation checkpointing</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%9C%AC%E8%AE%B2%E6%80%BB%E7%BB%93"><span class="toc-number">8.</span> <span class="toc-text">8. 本讲总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BB%B6%E4%BC%B8%E9%98%85%E8%AF%BB"><span class="toc-number">9.</span> <span class="toc-text">延伸阅读</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</a><time datetime="2026-07-28T01:00:00.000Z" title="发表于 2026-07-28 09:00:00">2026-07-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</a><time datetime="2026-07-27T01:18:27.000Z" title="发表于 2026-07-27 09:18:27">2026-07-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/4e475140/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/b51c01f5/" title="《CS294-196 25fall Lecture8》课堂笔记">《CS294-196 25fall Lecture8》课堂笔记</a><time datetime="2026-07-19T05:56:31.000Z" title="发表于 2026-07-19 13:56:31">2026-07-19</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>

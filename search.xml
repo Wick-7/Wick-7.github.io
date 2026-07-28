@@ -12971,4 +12971,374 @@ Dynamic Chunking for End-to-End Hierarchical Sequence Modeling
         <tag>Scaling-Laws</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</title>
+    <url>/posts/8a6e2d41/</url>
+    <content><![CDATA[这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。
+核心目标是：
+$$
+\text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。}
+$$
+
+1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。
+1.1 训练需要多久？对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是：
+$$
+C \approx 6ND.
+$$
+因此，$70$B 参数、$15$T tokens 的训练约需要：
+$$
+C = 6 \times 70\times 10^9 \times 15\times 10^{12}
+  = 6.3\times 10^{24}\ \text{FLOPs}.
+$$
+H100 的 dense bf16 峰值约为 $1979/2$ TFLOP&#x2F;s。若取 model FLOPs utilization（MFU）为 $0.5$，使用 $1024$ 张卡，则：
+$$
+\text{days}
+= \frac{6ND}{\text{H100 FLOP/s}\times 0.5\times 1024\times 86400}
+\approx 143\ \text{天}.
+$$
+这里没有把通信、启动开销、评测和故障重试算进去；结论的价值在于量级判断。
+1.2 8 张 H100 能放下多大的 AdamW 模型？每张 H100 有约 $80$ GB HBM。只计算模型状态，不计算 activation：
+
+
+
+状态
+每个参数的存储
+
+
+
+bf16 参数
+2 bytes
+
+
+bf16 梯度
+2 bytes
+
+
+AdamW 的 fp32 一阶矩
+4 bytes
+
+
+AdamW 的 fp32 二阶矩
+4 bytes
+
+
+合计
+12 bytes
+
+
+$$
+N_{\max}\approx \frac{8\times80\times10^9}{2+2+4+4}
+\approx 53\text{B}.
+$$
+这是偏乐观的上界：activation 还会随 batch size、sequence length 和层数增加，而且需要为临时 buffer、CUDA workspace 等留出空间。
+
+习惯：先用公式得到粗略形状，再用 profiler 验证细节。不要在没有量级判断时直接开始昂贵的实验。
+
+
+2. Tensor：所有状态的共同载体参数、梯度、activation、optimizer state 和 batch 中的数据，最终都表示成 tensor。Tensor 可以看作带有 shape、dtype 和 device 的多维数组；rank 是维度数：
+x = torch.zeros(4)        # rank 1x = torch.zeros(4, 8)     # rank 2x = torch.zeros(4, 8, 2)  # rank 3
+
+Transformer 中经常遇到 rank-4 张量。下面约定 batch、序列、attention head 和每个 head 的 hidden dimension：
+B, S, H, D = 32, 16, 16, 64x = torch.zeros(B, S, H, D)
+
+同一个张量的 shape 只告诉我们有多少个元素；要算显存，还必须知道每个元素的 dtype。
+2.1 dtype 决定显存与数值范围
+
+
+类型
+每个元素
+指数位&#x2F;动态范围
+典型用途
+
+
+
+fp32
+4 bytes
+精度和动态范围都较好
+默认 dtype、稳定的累计状态
+
+
+fp16
+2 bytes
+动态范围较窄
+节省显存，但容易 underflow&#x2F;overflow
+
+
+bf16
+2 bytes
+指数位与 fp32 相同，精度较低
+现代训练的常用折中
+
+
+fp8
+1 byte
+E4M3 或 E5M2
+专用硬件和 Transformer Engine
+
+
+nvfp4
+0.5 byte
+块级缩放，分辨率很低
+更激进的低精度方案
+
+
+
+
+
+fp32 有 1 个符号位、8 个指数位和 23 个尾数位。fp16 把总位数减半，却也减少了指数位，因此很小的数可能直接下溢为 0：
+x = torch.zeros(4, 8)assert x.dtype == torch.float32assert x.numel() == 4 * 8assert x.element_size() == 4x = torch.tensor([1e-8], dtype=torch.float16)assert x == 0                    # underflow
+
+bf16 保留了 fp32 的指数位，只牺牲尾数精度。深度学习中的噪声和近似通常使这个交换非常划算：
+x = torch.tensor([1e-8], dtype=torch.bfloat16)assert x != 0
+
+2.2 Mixed precision实践中常见的分工是：参数、activation 和梯度使用 bf16，optimizer state 使用 fp32。后者会跨多个 step 累加或平方平均，使用 fp32 更稳定。
+PyTorch 的 AMP 会在安全时自动选择低精度，例如矩阵乘法通常可用 bf16，而指数运算更适合保留 fp32：
+with torch.amp.autocast(&quot;cuda&quot;, dtype=torch.bfloat16):    y = x @ w
+
+fp8 有 E4M3、E5M2 两种格式，分别在分辨率和动态范围之间取不同折中。nvfp4 则为每个 block 配置 scale，不能让每个值独立覆盖完整动态范围；这类格式往往由 NVIDIA 的底层库处理，不能简单地把任意 PyTorch tensor 改成“fp4”。
+2.3 CPU tensor 与 GPU tensorPyTorch 默认在 CPU 内存创建 tensor。GPU 的并行计算单元只有在数据位于 GPU memory 时才能高效工作：
+x = torch.zeros(32, 32)       # CPUdevice = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)x = x.to(device)               # 搬到 GPUwith torch.device(device):    y = torch.zeros(32, 32)    # 直接在目标设备创建
+
+这一步不只是 API 细节：.to(device) 会产生设备间的数据搬运，反复在 CPU&#x2F;GPU 之间移动数据会成为瓶颈。
+
+
+3. 用 einops 写清楚张量维度PyTorch 原生写法经常出现 transpose(-2, -1)、view 和难以记忆的负索引。einops 借鉴 Einstein notation，把维度名称直接写进表达式，减少“形状看起来能跑、语义却错了”的 bug。
+3.1 einsum：带形状账本的广义矩阵乘法传统写法：
+x = torch.ones(2, 3, 4)  # batch, seq, hiddeny = torch.ones(2, 3, 4)  # batch, seq, hiddenz = x @ y.transpose(-2, -1)  # batch, seq, seq
+
+使用 einops.einsum 后，参与计算的维度和被求和的维度都显式可见：
+from einops import einsumz = einsum(    x, y,    &quot;batch seq1 hidden, batch seq2 hidden -&gt; batch seq1 seq2&quot;,)
+
+输出中没有出现的维度会被求和。... 表示任意数量的广播维度：
+z = einsum(    x, y,    &quot;... seq1 hidden, ... seq2 hidden -&gt; ... seq1 seq2&quot;,)
+
+矩阵乘法只是一个特例：
+x = torch.ones(3, 4)  # seq1, hiddeny = torch.ones(4, 3)  # hidden, seq2z = einsum(x, y, &quot;seq1 hidden, hidden seq2 -&gt; seq1 seq2&quot;)
+
+3.2 reduce：显式写出归约维度x = torch.ones(2, 3, 4)  # batch, seq, hiddeny = reduce(x, &quot;... hidden -&gt; ...&quot;, &quot;sum&quot;)
+
+同样的模式可替换为 mean、max、min 等操作。重点不是少写几个字符，而是让代码和推导中的维度命名保持一致。
+3.3 rearrange：拆分和合并复合维度例如，total_hidden = heads * hidden1 被展平在最后一维，现在想对每个 head 应用同一个矩阵：
+from einops import rearrangex = torch.ones(3, 8)  # seq, total_hiddenw = torch.ones(4, 4)  # hidden1, hidden2x = rearrange(x, &quot;... (heads hidden1) -&gt; ... heads hidden1&quot;, heads=2)x = einsum(x, w, &quot;... hidden1, hidden1 hidden2 -&gt; ... hidden2&quot;)x = rearrange(x, &quot;... heads hidden2 -&gt; ... (heads hidden2)&quot;)
+
+这里 rearrange 只改变索引视图（必要时才复制），没有进行数值归约；einsum 才执行了真正的线性变换。
+
+4. FLOPs：从操作数到硬件利用率4.1 FLOP、FLOP&#x2F;s 与 MFUFLOP（floating-point operation）是一次加法或乘法等基本浮点操作；FLOP&#x2F;s 是单位时间完成的操作数。两者不要混淆：
+
+FLOPs：一个任务总共要做多少工作；
+FLOP&#x2F;s：硬件或实现每秒能做多少工作。
+
+以 $x\in\mathbb{R}^{B\times D}$、$W\in\mathbb{R}^{D\times K}$ 的线性层为例，每个 $(i,j,k)$ 组合包含一次乘法和一次加法：
+$$
+\text{FLOPs}(xW)=2BDK.
+$$
+更精确地说，$xW$ 的每个输出元素都是一个长度为 $D$ 的点积，需要 $D$ 次乘法和 $D-1$ 次加法，因此精确计数是：
+$$
+BK(2D-1)=2BDK-BK.
+$$
+课上通常写成 $2BDK$，因为在大规模矩阵乘法中，少掉的 $BK$ 项相对较小；同时 GPU 常用 FMA（fused multiply-add）指令，通常把一次乘加按 2 FLOPs 统计。于是，点积处的 $2n-1$ 是精确的标量计数，而矩阵乘法处的 $2BDK$ 是常用近似，两者口径并不矛盾。
+实际运行时间可以用 benchmark 测出：
+actual_num_flops = 2 * B * D * Kactual_time = benchmark(lambda: x @ w)actual_flop_per_sec = actual_num_flops / actual_time
+
+硬件规格给出 promised FLOP&#x2F;s。忽略通信和框架开销时，MFU 定义为：
+$$
+\mathrm{MFU}=\frac{\text{actual FLOP/s}}{\text{promised FLOP/s}}.
+$$
+大规模训练中 MFU 达到 $0.5$ 通常已经很好，因为内存访问、kernel launch、形状、通信和同步都不可能完全消失。
+4.2 Arithmetic intensity 与 RooflineGPU 的计算单元和 HBM 之间需要搬运数据。一个操作的总耗时至少受以下两者中较大的那个限制：
+$$
+t\approx \max\left(\frac{\text{bytes}}{\text{memory bandwidth}},
+\frac{\text{FLOPs}}{\text{peak FLOP/s}}\right).
+$$
+定义：
+$$
+\text{arithmetic intensity}
+=\frac{\text{FLOPs}}{\text{bytes moved}},
+\qquad
+\text{accelerator intensity}
+=\frac{\text{peak FLOP/s}}{\text{memory bandwidth}}.
+$$
+如果前者较小，程序是 memory-bound；如果前者超过后者，才有机会 compute-bound。对应的理想化 MFU 可写成：
+$$
+\mathrm{MFU}\approx\min\left(1,
+\frac{\text{arithmetic intensity}}{\text{accelerator intensity}}\right).
+$$
+以 H100 的约 $3.35$ TB&#x2F;s 带宽和 dense bf16 峰值为例：
+
+
+
+操作
+近似 FLOPs
+读写数据
+结论
+
+
+
+ReLU
+$n$
+$4n$ bytes
+memory-bound
+
+
+GELU
+约 $20n$
+$4n$ bytes
+仍 memory-bound
+
+
+向量点积
+$2n-1$
+约 $4n$ bytes
+memory-bound
+
+
+矩阵-向量乘
+$n(2n-1)$
+约 $2n^2$ bytes
+memory-bound
+
+
+$n\times n$ 矩阵乘
+$n^2(2n-1)$
+$6n^2$ bytes
+compute-bound（$n$ 足够大时）
+
+
+这解释了几个容易反直觉的现象：
+
+GELU 的算术操作比 ReLU 多，但两者都要读一次、写一次；单独看时 GELU 不一定更慢；
+Transformer 训练含有大矩阵乘法，通常能够吃满计算单元；
+自回归推理每次更接近矩阵-向量乘，往往受显存带宽限制；
+降低 dtype 的字节数会改变 arithmetic intensity，因此精度也会影响性能边界。
+
+
+
+
+5. Autograd 与训练 FLOPs5.1 forward 和 backward最小例子：
+x = torch.tensor([1., 2, 3])w = torch.tensor([1., 1, 1], requires_grad=True)pred_y = x @ wloss = 0.5 * (pred_y - 5).pow(2)loss.backward()assert torch.equal(w.grad, torch.tensor([1., 2, 3]))
+
+requires_grad=True 告诉 autograd 为这个 tensor 建立反向传播所需的记录；loss.backward() 计算 $\frac{\partial\text{loss}}{\partial w}$，并把结果累加到 w.grad。
+5.2 为什么会出现 $6ND$？考虑两层线性网络：
+x = torch.ones(B, D)w1 = torch.randn(D, D, requires_grad=True)w2 = torch.randn(D, D, requires_grad=True)h1 = einsum(x,  w1, &quot;batch in, in out -&gt; batch out&quot;)h2 = einsum(h1, w2, &quot;batch in, in out -&gt; batch out&quot;)loss = (h2.mean() - 0) ** 2loss.backward()
+
+只看第二层 $h_2=h_1W_2$：
+
+forward 需要计算一次矩阵乘：$2BDD$ FLOPs；
+backward 要同时得到输入梯度和参数梯度：
+
+$$
+\frac{\partial L}{\partial h_1}
+=\operatorname{einsum}(\frac{\partial L}{\partial h_2},W_2),
+\qquad
+\frac{\partial L}{\partial W_2}
+=\operatorname{einsum}(\frac{\partial L}{\partial h_2},h_1),
+$$
+两项各需约 $2BDD$ FLOPs，所以 backward 约为 forward 的两倍。对所有层求和：
+$$
+\text{forward}\approx 2BN,
+\qquad
+\text{backward}\approx 4BN,
+\qquad
+\boxed{\text{training}\approx 6BN}.
+$$
+其中 $N$ 是参数量，$B$ 是本次处理的 data points 数量。对 context length 不太长的 Transformer，这个估算仍然是很好的第一近似；长上下文时，attention 的 $S^2$ 项需要单独加上。
+
+6. 一个可追踪的 PyTorch 训练循环为了把模型、梯度、optimizer state 和 batch 串起来，课上定义了一个简单的深层网络：
+class Block(nn.Module):    def __init__(self, dim: int):        super().__init__()        self.weight = nn.Parameter(torch.randn(dim, dim) / math.sqrt(dim))    def forward(self, x):        return F.relu(x @ self.weight)class DeepNetwork(nn.Module):    def __init__(self, dim: int, num_layers: int):        super().__init__()        self.layers = nn.ModuleList([Block(dim) for _ in range(num_layers)])    def forward(self, x):        for layer in self.layers:            x = layer(x)        return x
+
+参数量为 $D^2L$；若每层保存一个 $B\times D$ activation，则 activation 数量近似为 $BDL$。
+6.1 AdaGrad 与 optimizer stateLecture 1 作业会实现 Adam，这里用 AdaGrad 说明 optimizer state 的本质。AdaGrad 为每个参数保存历史梯度平方和：
+$$
+g_{2,t}=g_{2,t-1}+g_t^2,
+\qquad
+w_{t+1}=w_t-\eta\frac{g_t}{\sqrt{g_{2,t}+\epsilon}}.
+$$
+对应的核心代码：
+class AdaGrad(torch.optim.Optimizer):    def step(self):        for group in self.param_groups:            lr = group[&quot;lr&quot;]            for p in group[&quot;params&quot;]:                state = self.state[p]                grad = p.grad.data                g2 = state.get(&quot;g2&quot;, torch.zeros_like(grad))                g2 += torch.square(grad)                state[&quot;g2&quot;] = g2                p.data -= lr * grad / torch.sqrt(g2 + 1e-5)
+
+训练循环的顺序是固定的：取 batch、forward 得到 loss、backward()、optimizer.step()，最后清空梯度。
+for _ in range(num_train_steps):    x, y = get_batch()    pred_y = model(x).mean()    loss = F.mse_loss(pred_y, y)    loss.backward()    optimizer.step()    optimizer.zero_grad(set_to_none=True)
+
+zero_grad(set_to_none=True) 通常比把梯度张量填零更省内存和写入；关键是不要忘记清理，否则梯度会跨 step 累加。
+6.2 一次训练 step 的显存账本对 $D^2L$ 个参数，使用 bf16 参数&#x2F;梯度、fp32 AdaGrad state 时：
+
+
+
+项目
+近似显存
+
+
+
+参数
+$2D^2L$ bytes
+
+
+梯度
+$2D^2L$ bytes
+
+
+AdaGrad state
+$4D^2L$ bytes
+
+
+activation
+$2BDL$ bytes
+
+
+合计
+$2D^2L+2D^2L+4D^2L+2BDL$ bytes
+
+
+Adam 还要保存一阶矩和二阶矩，因此 optimizer state 约为每参数 8 bytes。optimizer state 往往是显存中很大的一项；它不一定直接限制 FLOP&#x2F;s，却会决定模型能否放入 HBM，以及分布式训练时需要传输多少状态。
+
+7. 两种常用的显存优化7.1 Gradient accumulation大 batch 通常有助于训练稳定性，但 activation memory 随 batch size 线性增长。Gradient accumulation 将一个大 batch 拆成多个 micro-batch：每个 micro-batch 都反向传播，但暂时不更新参数；累计到目标 batch 后再 step() 并清零。
+optimizer.zero_grad(set_to_none=True)for micro_step in range(num_micro_batches):    x, y = get_micro_batch()    loss = loss_fn(model(x), y) / num_micro_batches    loss.backward()              # 梯度累加optimizer.step()optimizer.zero_grad(set_to_none=True)
+
+这样可以用较小的峰值 activation memory 模拟更大的 effective batch size。代价是每个 optimizer update 需要更多次 forward&#x2F;backward 和更多 kernel launch；它没有让总 FLOPs 消失。
+7.2 Activation checkpointing训练的 backward 需要用到中间 activation，而推理不计算梯度，只需保留当前层附近的 activation。因此训练时 activation memory 近似随 $L$ 增长：
+$$
+M_{\text{activation}}\approx 2BDL\quad(\text{bf16}).
+$$
+Activation checkpointing（也叫 gradient checkpointing、rematerialization）的做法是：forward 只保存少量 checkpoint，backward 时从最近 checkpoint 重新计算中间结果。典型用法：
+class DeepNetworkCheckpointed(DeepNetwork):    def forward(self, x):        for layer in self.layers:            x = torch.utils.checkpoint.checkpoint(layer, x)        return x
+
+这是一个明确的 memory-compute trade-off：
+
+保存所有层：显存约为 $O(L)$，重计算少；
+一个 checkpoint 都不保存：显存最低，但可能需要 $O(L^2)$ 的重计算；
+每隔约 $\sqrt L$ 层保存一次：activation memory 和重计算开销都可做到约 $O(\sqrt L)$ 的量级。
+
+
+
+8. 本讲总结
+Tensor 是统一的资源对象：参数、梯度、activation、optimizer state 和数据都要从 shape、dtype、device 三个维度理解。
+dtype 是系统设计的一部分：bf16 常用于参数、activation 和梯度，fp32 常用于需要长期累积的 optimizer state；低精度的收益必须和数值稳定性一起评估。
+einops 把形状写成可读的数学表达式：einsum 显式指定相乘和归约的维度，reduce 描述归约，rearrange 拆分或合并维度。
+FLOPs 不是速度：速度还取决于 FLOP&#x2F;s、内存带宽、kernel 和通信。用 arithmetic intensity 与 roofline 判断一个操作是 memory-bound 还是 compute-bound。
+$6ND$ 来自 forward + backward：对于短上下文的 dense Transformer，这是训练总 FLOPs 的有用一阶估计。
+省显存通常是在用计算换显存：gradient accumulation 降低单次 micro-batch 的峰值，activation checkpointing 通过重算中间结果降低保存量。
+
+这一讲最重要的 mindset 是：不要把 PyTorch 代码当作黑盒 API 调用；看到一个 tensor 操作，就同时想到它的形状、数据类型、设备、FLOPs 和数据搬运。
+
+延伸阅读
+CS336 Lecture 2 Trace
+einops documentation
+PyTorch Automatic Mixed Precision
+PyTorch activation checkpointing
+Roofline: An Insightful Visual Performance Model for Multicore Architectures
+
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>Training</tag>
+        <tag>CS336</tag>
+        <tag>PyTorch</tag>
+        <tag>einops</tag>
+        <tag>Systems</tag>
+      </tags>
+  </entry>
 </search>
