@@ -13341,4 +13341,342 @@ Roofline: An Insightful Visual Performance Model for Multicore Architectures
         <tag>Systems</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</title>
+    <url>/posts/f2c7d9a4/</url>
+    <content><![CDATA[这节课的标题很诚实：Everything You Didn’t Want to Know About Architectures and Hyperparameters。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。
+课程给出的学习优先级也很值得记住：
+
+最好的方法是自己训练模型、亲手比较不同架构。
+第二好的方法是系统地学习其他人的训练经验。
+
+这里的“经验”不是简单抄一份 LLaMA 配置，而是理解每个选择同时受到三件事约束：表达能力、训练稳定性和真实硬件上的运行效率。
+1. 先建立一张现代 Transformer 的地图原始 Transformer 的经典配置是：正弦&#x2F;余弦位置编码、ReLU FFN，以及残差路径上的 post-LayerNorm。现代 decoder-only 语言模型的常见默认值则更接近下面这张表：
+
+
+
+组件
+原始 Transformer
+现代语言模型的常见选择
+主要原因
+
+
+
+残差块中的归一化
+post-norm
+non-residual norm，通常是 pre-norm
+梯度传播更直接，深层训练更稳定
+
+
+归一化形式
+LayerNorm
+RMSNorm
+少一次均值计算，也通常去掉 bias，数据搬运更少
+
+
+FFN 激活
+ReLU
+SwiGLU 或 GeGLU
+gating 带来稳定的 loss 改善
+
+
+位置依赖
+sine&#x2F;cosine 或绝对 embedding
+RoPE；长上下文时再与局部 attention 混合
+attention 需要位置信息，且相对位置更适合迁移
+
+
+线性层 bias
+有
+通常没有
+参数和内存访问收益，通常不损失表现
+
+
+block 顺序
+attention 后接 MLP
+仍以串行为主
+并行层有系统收益，但可能牺牲有效深度
+
+
+attention 的 KV
+每个 head 独立
+GQA&#x2F;MQA 越来越常见
+缩小 KV cache，降低 decode 成本
+
+
+课上将许多模型的这些选项放在一张总表中。最明显的趋势是：LLaMA-like 配置已经成为默认起点，但位置编码、attention 形态和长上下文方案仍然很活跃。这不应被理解为“所有模型都一样”。更准确的结论是：核心 block 已经高度收敛，差异主要集中在 position、attention 和稳定性技巧。
+2. 为什么要把 LayerNorm 移出残差流？设一个 Transformer 子层为 $F$，输入残差流为 $x_l$。原始 Transformer 的形式可以写成：
+$$
+x_{l+1}=\operatorname{LN}\bigl(x_l+F(x_l)\bigr).
+$$
+LayerNorm 位于残差相加之后，因而会直接改变贯穿整个网络的主路径。现代模型更常用 pre-norm：
+$$
+x_{l+1}=x_l+F\bigl(\operatorname{LN}(x_l)\bigr).
+$$
+这里的关键不是“LayerNorm 必须在计算之前”，而是不要让归一化操作阻断干净的 residual stream。在反向传播时，pre-norm 保留了一条近似恒等的梯度路径：
+$$
+\frac{\partial x_{l+1}}{\partial x_l}
+ = I + \frac{\partial F(\operatorname{LN}(x_l))}{\partial x_l}.
+$$
+这使得信号可以更平稳地跨越很多层。早期工作把它解释为可以减少或取消 warmup；在现代大模型里，更重要的收益是：
+
+梯度衰减更少，深层模型更容易优化；
+梯度 spike 更少，训练曲线不容易中途爆炸；
+通常可以使用更大的学习率。
+
+下面的实验图把这两点放在一起：左侧是不同层的梯度期望，post-LN 在初始化时随深度明显放大；右侧是训练过程中的 global gradient norm，post-norm 的 spike 更频繁、更高。
+
+因此，几乎所有现代语言模型都采用 non-residual norm。严格说，仍有把 norm 放在计算之后、但仍位于残差流之外的设计，例如 Grok、Gemma 2 和 OLMo 2；遇到稳定性问题时，有些模型还会在一个 block 内增加第二个 norm。
+3. LayerNorm 为什么常被换成 RMSNorm？LayerNorm 会减去均值、除以标准差，再乘以可学习的 scale 并加 bias。RMSNorm 只根据均方根缩放：
+$$
+\operatorname{RMSNorm}(x)
+ = \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^{d}x_i^2+\epsilon}}\odot\gamma.
+$$
+LayerNorm 的表达能力更强，但语言模型实践中通常看不到相应的收益。RMSNorm 因而成为 LLaMA、PaLM、Chinchilla、T5 等模型的常见选择。
+更重要的是，FLOPs 不是 runtime。矩阵乘法占据绝大多数 FLOPs，但 normalization 往往是低算术强度、以读写 activation 为主的操作。在小模型或 memory-bound workload 中，一次均值计算和额外的参数读写都可能成为可见开销。RMSNorm 带来：
+
+更少的归约操作；
+更少的参数（没有 bias）；
+更少的数据搬运，常常还有实际吞吐收益。
+
+同一条系统原则也解释了为什么现代实现通常把线性层的 bias 一并删除：它增加了参数读写，却很少提供可测的表达能力收益。当然，这不是数学定理，而是大量语言模型实验形成的工程共识。
+4. 激活函数：真正重要的是 gating普通两层 FFN 可以写成：
+$$
+\operatorname{FFN}(x)=\sigma(xW_1)W_2,
+$$
+其中 $\sigma$ 可以是 ReLU 或 GeLU。GeLU 相比 ReLU 主要改变零点附近的梯度形状；GPT-1&#x2F;2&#x2F;3 等模型已经证明，普通 GeLU 也能训练出很好的语言模型。
+现代模型最常见的是 gated linear unit。以 ReGLU 为例：
+$$
+\operatorname{ReGLU}(x)=\bigl(\operatorname{ReLU}(xW_1)\odot xV\bigr)W_2.
+$$
+它在原来的非线性分支之外增加了一个逐元素 gate。把 ReLU 换成 GeLU 或 Swish，就分别得到 GeGLU 或 SwiGLU：
+$$
+\operatorname{SwiGLU}(x)=\bigl(\operatorname{Swish}(xW)\odot xV\bigr)W_2,
+\qquad
+\operatorname{Swish}(z)=z\,\operatorname{sigmoid}(z).
+$$
+命名很容易让人迷失，但真正值得记住的轴只有一个：有没有 gate。Shazeer 以及后续受控比较普遍发现，在匹配参数量后，GLU 变体的 loss 通常稳定更好。它不是训练成功的必要条件（GPT-3、Nemotron 340B 等非 GLU 模型也可以工作），但 2023 年之后的可信大模型几乎都使用 SwiGLU 或 GeGLU。
+增加 gate 会多出一个矩阵 $V$。为了让参数量和普通 FFN 大致相同，通常把 $d_{ff}$ 乘以 $2/3$。所以：
+$$
+d_{ff}=4d_{model}\quad\text{（非 GLU 的常见起点）},
+$$
+$$
+d_{ff}\approx\frac{8}{3}d_{model}\quad\text{（参数匹配后的 GLU 起点）}.
+$$
+5. 串行 block 还是并行 block？标准 block 是串行的：
+$$
+x' = x+\operatorname{Attention}(\operatorname{Norm}(x)),
+\qquad
+x_{next}=x'+\operatorname{FFN}(\operatorname{Norm}(x')).
+$$
+GPT-J、PaLM、GPT-NeoX 等模型尝试过并行形式：attention 和 MLP 都读取同一个 $x$，最后一起加回残差流：
+$$
+x_{next}=x+\operatorname{Attention}(\operatorname{Norm}(x))
+        +\operatorname{FFN}(\operatorname{Norm}(x)).
+$$
+并行形式允许共享 norm、融合矩阵乘法，并减少某些等待。但代价是有效深度近似减少一半：每一层不再使用上一子层的输出。随着串行实现和 kernel 优化越来越好，系统收益通常不足以抵消表达能力损失，因此近年的主流又回到了串行 block。
+6. 位置编码：从绝对位置到 RoPEattention 本身只计算向量内积。如果同时打乱 token 和位置，内积并不会自动知道顺序，因此必须显式注入位置信息。
+
+
+
+方法
+注入位置的方式
+代表模型
+局限&#x2F;特点
+
+
+
+正弦&#x2F;余弦
+加到 token embedding
+原始 Transformer
+能表达位置，但内积含有绝对位置交叉项
+
+
+绝对 embedding
+每个位置一个可学习向量
+GPT-1&#x2F;2&#x2F;3、OPT
+直接，但长度外推不自然
+
+
+相对 bias
+直接加到 attention score
+T5、Gopher、Chinchilla
+是相对的，但不再是纯 inner-product embedding
+
+
+RoPE
+对 Q&#x2F;K 的坐标做位置相关旋转
+GPT-J、PaLM、LLaMA 及多数 2024+ 模型
+内积只依赖相对位移，易于多频率建模
+
+
+RoPE 想满足的目标是：存在一个位置编码 $f$，使得
+$$
+\left\langle f(x,i),f(y,j)\right\rangle
+ = g(x,y,i-j).
+$$
+也就是说，attention 分数应该依赖两个 token 的相对距离，而不是它们同时向后平移了多少位置。
+6.1 RoPE 的几何直觉先得到与位置无关的语义向量，再按位置把向量旋转一个角度。若两个 token 同时向后移动 $k$ 个位置，它们的旋转角度都增加相同的量，二者的夹角不变，因此内积只保留相对位置。
+在 $d$ 维向量中，RoPE 把坐标两两配对，每一对在二维平面中旋转。不同坐标对使用不同频率：低频分量适合长距离关系，高频分量适合邻近关系。
+图中两段文本虽然处于不同的绝对位置，但 we 和 know 同时旋转后仍保持相同夹角。这正是“整体平移不改变 attention 内积”的几何来源。
+
+实现时不要把 sine&#x2F;cosine 当作 embedding 加到输入上，而是用它们构造旋转并同时作用于 query 与 key：
+q, k, v = project(x)cos, sin = rotary_frequencies(position_ids)q = apply_rotary(q, cos, sin)k = apply_rotary(k, cos, sin)scores = q @ k.transpose(-2, -1) / math.sqrt(head_dim)
+
+RoPE 通常在每一次 attention 内应用，而不是只在网络最底部加一次。Gemma 4 的 p-RoPE 只旋转前两个坐标，是这个设计空间里的一个轻量变体；它说明 RoPE 的具体细节仍可按模型规模调整。
+7. 超参数：先用共识缩小搜索空间架构研究容易让人误以为每个数字都需要大规模搜索。课上对几个常见超参数的结论是：大多数存在一个很宽的“够好区域”，先采用成熟默认值，再把算力留给真正重要的实验。
+7.1 FFN 宽度非 GLU 模型通常从 $d_{ff}=4d_{model}$ 开始；参数匹配后的 GLU 通常落在 $2.5\sim2.7$ 倍，LLaMA 2、Mistral 等也会取约 $3.5$ 倍。受控实验显示，$d_{ff}/d_{model}$ 在约 $1\sim10$ 的区间内往往都处于较平坦的低 loss basin；超过这个范围，收益会迅速变差。
+T5 v1 的 $64$ 倍是著名例外，它可能提高矩阵乘法的硬件利用率，但并不意味着更高表达能力。后续的 T5 v1.1 又回到了更保守的 $2.5$ 倍 GeGLU 配置，这反而是一个很好的工程信号：能工作不等于 compute-optimal。
+Kaplan 等人的实验给出了这个“宽容区间”的形状：在 50M 参数模型上，FFN ratio 位于约 $1\sim10$ 时 loss 几乎不变；ratio 继续增大后，loss 才明显恶化。
+
+7.2 head dimension 与 head 数最常见的规则是：
+$$
+n_{heads}\times d_{head}\approx d_{model}.
+$$
+这不是必须满足的约束。T5、LaMDA、PaLM 等 Google 模型曾使用明显更大的比例，但多数模型仍选择约等于 $1$ 的比值。已有实验表明这个超参数也相当宽容；只要矩阵尺寸对硬件友好，通常没有必要为它进行巨大的搜索。
+7.3 深度与宽度用 $d_{model}/n_{layers}$ 表示宽深比，现代模型常落在约 $100$ 左右，合理范围大致为 $60\sim200$：
+
+
+
+模型族
+$d_{model}/n_{layers}$（约）
+
+
+
+GPT-3、OPT、Mistral、Qwen
+128
+
+
+LLaMA &#x2F; LLaMA 2
+102
+
+
+Gemma 3
+87
+
+
+Gemma 4
+61
+
+
+BLOOM
+205
+
+
+更深的网络表达能力可能更强，但 pipeline parallel 更难，推理延迟也更高；更宽的网络更容易做 tensor parallel。实际的 aspect ratio 往往由系统可并行性决定，而不是单纯由理论表达能力决定。
+7.4 词表大小词表是 tokenizer、模型参数量和序列长度的共同接口：
+
+
+
+场景
+常见词表规模
+
+
+
+单语、主要面向英语
+30k-50k
+
+
+多语或生产系统
+100k-250k
+
+
+LLaMA 早期使用 32k 左右，而 mT5、PaLM、GPT-4、Gemma 4 等多语&#x2F;生产模型通常使用 100k 以上。多语模型需要更大的词表覆盖不同语言和脚本，但词表过大也会增加 embedding 与输出层的参数和内存，因此它是明确的系统权衡。
+7.5 预训练还要不要正则化？预训练数据通常多到模型只遍历一次，经典的“防止过拟合”解释因此并不充分。实际模型仍然会使用 weight decay，有些还使用 dropout。课上强调：weight decay 在语言模型中可能主要影响优化动力学，而不是验证集上的过拟合。
+尤其在 cosine learning-rate schedule 下，weight decay 与 learning rate 会相互作用；较强的 weight decay 可能让模型后期收敛到更好的区域。不要把它简单等同于一个独立的正则化旋钮，最好把它和学习率一起做小规模 ablation。
+左图显示不同 weight decay 下 training loss 和 validation loss 基本沿 $y=x$ 分布，没有表现出传统意义上的过拟合差异；中、右图则表明 weight decay 的效果会随 learning-rate schedule 改变。
+
+8. 稳定性：不要让昂贵的训练在中途爆炸架构选择的目标不只是最终 loss，还包括训练过程中不能出现不可恢复的梯度 spike。随着模型和训练预算变大，稳定性本身就是一等公民。
+同一规模的两个 OLMo 训练中，蓝色曲线出现频繁的 loss 和梯度尖峰，而橙色曲线明显更平稳。这类曲线比单个最终 loss 更能说明稳定性设计的必要性。
+
+8.1 输出 softmax 与 z-loss输出 logits 为 $u(x)$ 时：
+$$
+\log p(x)=u(x)-\log Z(x),
+\qquad
+Z(x)=\sum_{r=1}^{|V|}e^{u_r(x)}.
+$$
+指数和归一化项 $Z$ 可能迅速变大，导致数值不稳定。由于给所有 logits 加一个常数不会改变 softmax 概率，PaLM 等模型会增加辅助项，把 $\log Z$ 拉回零附近：
+$$
+\mathcal{L}_{z}=\mathcal{L}_{LM}+\alpha\,[\log Z(x)]^2.
+$$
+这就是 z-loss。它利用了 softmax 的平移不变性，在不显著改变概率分布的情况下约束数值范围。
+8.2 QK-normattention 里还有一个 softmax：
+$$
+\operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_{head}}}\right).
+$$
+如果 $Q$ 或 $K$ 的范数变大，score 会变得极端，attention 可能退化为几乎 one-hot。QK-norm 在点积之前对 query 和 key 做 RMSNorm&#x2F;LayerNorm：
+$$
+\operatorname{softmax}\left(
+\frac{\operatorname{Norm}(Q)\operatorname{Norm}(K)^T}{\sqrt{d_{head}}}
+\right).
+$$
+这会把进入 softmax 的量控制在更稳定的尺度，也常允许使用稍大的学习率。DCLM、OLMo 2、Gemma 2、Qwen 3、OLMo 3、Gemma 4 等模型都采用了类似思路。
+8.3 logit soft-capping如果希望直接限制 attention logits，可以使用带上限的 soft cap，例如：
+$$
+s' = c\tanh(s/c).
+$$
+这样 $s'$ 永远落在 $[-c,c]$ 内。它是很强的稳定性干预，Gemma 系列使用过，但也可能损失模型表达非常尖锐 attention 分布的能力。因此它更像是“训练快要爆炸时的保险丝”，而不是无条件的默认配置。
+9. Attention 的两个系统问题9.1 Prefill 与 decode 的差异训练和 prefill 可以并行处理一整段序列，矩阵乘法的算术强度较高。decode 则是自回归的：生成一个 token，才能生成下一个 token。KV cache 让模型复用过去的 key&#x2F;value，避免每一步重新计算完整历史，但也把瓶颈推向显存读写。
+因此，推理时不能只看 FLOPs，还要看每个 token 需要从 KV cache 和权重中搬运多少数据。
+9.2 MQA 与 GQA：用更小的 KV cache 换吞吐标准 multi-head attention 为每个 head 保存独立的 $K,V$。Multi-Query Attention（MQA）让所有 query heads 共享一组 $K,V$，显著缩小 KV cache，但表达能力会有可见损失。
+Grouped-Query Attention（GQA）处于两者之间：保留很多 query heads，只让若干 query heads 共享一组 key&#x2F;value heads。设 query head 数为 $h$，KV head 数为 $h_{kv}$，则 $h_{kv}/h$ 是一个直接控制表达能力与推理内存的旋钮：
+
+$h_{kv}=h$：标准 MHA，表达能力最强，KV cache 最大；
+$h_{kv}=1$：MQA，KV cache 最小，但可能损失质量；
+$1&lt;h_{kv}&lt;h$：GQA，通常能取得最好的折中。
+
+下图直接展示了三种结构的差别：MHA 为每个 query head 保留独立的 key&#x2F;value；GQA 让一组 query 共享一组 KV；MQA 则让所有 query 共享同一组 KV。
+
+这也是为什么今天多数大模型采用 GQA：相较 MQA，它保留了更多独立的 key&#x2F;value 子空间，却已经拿到大部分推理内存收益。
+9.3 Sliding Window 与混合 attention全局 attention 的序列长度复杂度是二次的。Sliding Window Attention（SWA）把每个 token 能看到的范围限制在局部窗口，从而降低长上下文成本，但单独使用会削弱远距离信息交换。
+attention matrix 的可视化能直观看出计算被省在哪里：标准 causal attention 填满下三角；strided 和 fixed sparse pattern 只保留局部带状区域与少量跨区连接。
+
+近年的折中方案是交错使用 local attention 和 full attention。例如 Cohere Command A 每四层放一个 full attention，其余层使用 sliding window；LLaMA 4、Gemma 3&#x2F;4、OLMo 3 也探索了类似混合结构。局部层逐步聚合信息，周期性的全局层负责跨窗口传播。
+有些模型还对不同范围使用不同的位置处理：远距离层可以不加 RoPE，局部层保留 RoPE。Qwen 3.5 则把 cheap attention 换成 gated delta net，形成另一种 hybrid architecture。
+
+长上下文仍是当前架构变化最集中的区域。趋势并不是“找到一个新的 attention 并淘汰 Transformer”，而是把全局信息、局部信息和状态空间模块组合起来，按预算分配计算。
+10. 给 A1 的默认配置与实验建议如果目标是先写出一个可靠的 decoder-only Transformer，再逐项做实验，可以从下面的配置开始：
+
+non-residual pre-norm；
+RMSNorm，线性层和 norm 不使用 bias；
+RoPE 应用于每层 attention 的 Q&#x2F;K；
+SwiGLU，取 $d_{ff}\approx 8d_{model}/3$；
+attention 和 MLP 使用串行 block；
+$n_{heads}d_{head}\approx d_{model}$；
+单语 tokenizer 从 30k-50k 词表开始，多语任务再考虑 100k 以上；
+先使用成熟的 weight decay 与 warmup，再根据训练曲线决定是否加入 QK-norm、z-loss 或 soft cap。
+
+这些默认值不是“真理”，而是把搜索空间压缩到值得研究的地方。一个有信息量的实验应该一次只改变一个轴，并同时记录：训练 loss、梯度范数、吞吐、显存、通信和最终评测。只看最终 loss，无法判断一个改动究竟带来了表达能力收益，还是只是让 GPU 更忙。
+本讲总结
+现代语言模型的核心 Transformer block 已经高度收敛：干净的 residual stream、RMSNorm、GLU 和无 bias 是强默认值。
+RoPE 通过旋转 Q&#x2F;K，让内积天然表达相对位置；它是目前最普遍的位置方案，但长上下文仍会继续演化。
+FFN 比例、head 比例和宽深比都有相当宽的可用区间。优先采用 $4d_{model}$（非 GLU）、$8d_{model}/3$（GLU）和约 $100$ 的宽深比。
+词表大小取决于语言覆盖和部署需求；多语&#x2F;生产模型通常需要远大于单语模型的词表。
+weight decay、z-loss、QK-norm 和 logit soft-capping 说明：稳定性技巧往往同时改变优化动力学，不能只用“防过拟合”来解释。
+GQA&#x2F;MQA 通过缩小 KV cache 降低 decode 成本；sliding window 与 full attention 的混合则是当前长上下文的重要路线。
+
+最后，架构选择的正确工作方式不是背诵一张表，而是形成一个闭环：先从共识配置开始，做资源核算，跑小规模对照实验，再决定哪些差异值得带到更大训练中。
+延伸阅读
+CS336 Lecture 3 Trace
+On Layer Normalization in the Transformer Architecture
+Root Mean Square Layer Normalization
+GLU Variants Improve Transformer
+RoFormer: Enhanced Transformer with Rotary Position Embedding
+Fast Transformer Decoding: One Write-Head is All You Need
+GQA: Training Generalized Multi-Query Transformer Models
+
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>Training</tag>
+        <tag>Transformer</tag>
+        <tag>CS336</tag>
+        <tag>Architecture</tag>
+        <tag>Hyperparameters</tag>
+      </tags>
+  </entry>
 </search>

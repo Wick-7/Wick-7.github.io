@@ -1,0 +1,582 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="这节课的标题很诚实：Everything You Didn’t Want to Know About Architectures and Hyperparameters。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。 课程给出的学习优先级也很值得记住：  最好的方法是自己训练模型、亲手比较不同架构。 第二好的方法">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/f2c7d9a4/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="这节课的标题很诚实：Everything You Didn’t Want to Know About Architectures and Hyperparameters。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。 课程给出的学习优先级也很值得记住：  最好的方法是自己训练模型、亲手比较不同架构。 第二好的方法">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-29T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-29T02:28:25.072Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Architecture">
+<meta property="article:tag" content="CS336">
+<meta property="article:tag" content="Hyperparameters">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Training">
+<meta property="article:tag" content="Transformer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记",
+  "url": "https://wick-7.github.io/posts/f2c7d9a4/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-29T01:00:00.000Z",
+  "dateModified": "2026-07-29T02:28:25.072Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/f2c7d9a4/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">50</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-29T01:00:00.000Z" title="发表于 2026-07-29 09:00:00">2026-07-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-29T02:28:25.072Z" title="更新于 2026-07-29 10:28:25">2026-07-29</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>这节课的标题很诚实：<strong>Everything You Didn’t Want to Know About Architectures and Hyperparameters</strong>。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。</p>
+<p>课程给出的学习优先级也很值得记住：</p>
+<ol>
+<li>最好的方法是自己训练模型、亲手比较不同架构。</li>
+<li>第二好的方法是系统地学习其他人的训练经验。</li>
+</ol>
+<p>这里的“经验”不是简单抄一份 LLaMA 配置，而是理解每个选择同时受到三件事约束：表达能力、训练稳定性和真实硬件上的运行效率。</p>
+<h2 id="1-先建立一张现代-Transformer-的地图"><a href="#1-先建立一张现代-Transformer-的地图" class="headerlink" title="1. 先建立一张现代 Transformer 的地图"></a>1. 先建立一张现代 Transformer 的地图</h2><p>原始 Transformer 的经典配置是：正弦&#x2F;余弦位置编码、ReLU FFN，以及残差路径上的 post-LayerNorm。现代 decoder-only 语言模型的常见默认值则更接近下面这张表：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>原始 Transformer</th>
+<th>现代语言模型的常见选择</th>
+<th>主要原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>残差块中的归一化</td>
+<td>post-norm</td>
+<td>non-residual norm，通常是 pre-norm</td>
+<td>梯度传播更直接，深层训练更稳定</td>
+</tr>
+<tr>
+<td>归一化形式</td>
+<td>LayerNorm</td>
+<td>RMSNorm</td>
+<td>少一次均值计算，也通常去掉 bias，数据搬运更少</td>
+</tr>
+<tr>
+<td>FFN 激活</td>
+<td>ReLU</td>
+<td>SwiGLU 或 GeGLU</td>
+<td>gating 带来稳定的 loss 改善</td>
+</tr>
+<tr>
+<td>位置依赖</td>
+<td>sine&#x2F;cosine 或绝对 embedding</td>
+<td>RoPE；长上下文时再与局部 attention 混合</td>
+<td>attention 需要位置信息，且相对位置更适合迁移</td>
+</tr>
+<tr>
+<td>线性层 bias</td>
+<td>有</td>
+<td>通常没有</td>
+<td>参数和内存访问收益，通常不损失表现</td>
+</tr>
+<tr>
+<td>block 顺序</td>
+<td>attention 后接 MLP</td>
+<td>仍以串行为主</td>
+<td>并行层有系统收益，但可能牺牲有效深度</td>
+</tr>
+<tr>
+<td>attention 的 KV</td>
+<td>每个 head 独立</td>
+<td>GQA&#x2F;MQA 越来越常见</td>
+<td>缩小 KV cache，降低 decode 成本</td>
+</tr>
+</tbody></table>
+<p>课上将许多模型的这些选项放在一张总表中。最明显的趋势是：LLaMA-like 配置已经成为默认起点，但位置编码、attention 形态和长上下文方案仍然很活跃。这不应被理解为“所有模型都一样”。更准确的结论是：<strong>核心 block 已经高度收敛，差异主要集中在 position、attention 和稳定性技巧。</strong></p>
+<h2 id="2-为什么要把-LayerNorm-移出残差流？"><a href="#2-为什么要把-LayerNorm-移出残差流？" class="headerlink" title="2. 为什么要把 LayerNorm 移出残差流？"></a>2. 为什么要把 LayerNorm 移出残差流？</h2><p>设一个 Transformer 子层为 $F$，输入残差流为 $x_l$。原始 Transformer 的形式可以写成：</p>
+<p>$$
+x_{l+1}=\operatorname{LN}\bigl(x_l+F(x_l)\bigr).
+$$</p>
+<p>LayerNorm 位于残差相加之后，因而会直接改变贯穿整个网络的主路径。现代模型更常用 pre-norm：</p>
+<p>$$
+x_{l+1}=x_l+F\bigl(\operatorname{LN}(x_l)\bigr).
+$$</p>
+<p>这里的关键不是“LayerNorm 必须在计算之前”，而是<strong>不要让归一化操作阻断干净的 residual stream</strong>。在反向传播时，pre-norm 保留了一条近似恒等的梯度路径：</p>
+<p>$$
+\frac{\partial x_{l+1}}{\partial x_l}
+ = I + \frac{\partial F(\operatorname{LN}(x_l))}{\partial x_l}.
+$$</p>
+<p>这使得信号可以更平稳地跨越很多层。早期工作把它解释为可以减少或取消 warmup；在现代大模型里，更重要的收益是：</p>
+<ul>
+<li>梯度衰减更少，深层模型更容易优化；</li>
+<li>梯度 spike 更少，训练曲线不容易中途爆炸；</li>
+<li>通常可以使用更大的学习率。</li>
+</ul>
+<p>下面的实验图把这两点放在一起：左侧是不同层的梯度期望，post-LN 在初始化时随深度明显放大；右侧是训练过程中的 global gradient norm，post-norm 的 spike 更频繁、更高。</p>
+<p><img src="/img/posts/f2c7d9a4/norm-gradient-stability.png" alt="Pre-LN 与 Post-LN 的梯度衰减和梯度 spike 对比"></p>
+<p>因此，几乎所有现代语言模型都采用 non-residual norm。严格说，仍有把 norm 放在计算之后、但仍位于残差流之外的设计，例如 Grok、Gemma 2 和 OLMo 2；遇到稳定性问题时，有些模型还会在一个 block 内增加第二个 norm。</p>
+<h2 id="3-LayerNorm-为什么常被换成-RMSNorm？"><a href="#3-LayerNorm-为什么常被换成-RMSNorm？" class="headerlink" title="3. LayerNorm 为什么常被换成 RMSNorm？"></a>3. LayerNorm 为什么常被换成 RMSNorm？</h2><p>LayerNorm 会减去均值、除以标准差，再乘以可学习的 scale 并加 bias。RMSNorm 只根据均方根缩放：</p>
+<p>$$
+\operatorname{RMSNorm}(x)
+ = \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^{d}x_i^2+\epsilon}}\odot\gamma.
+$$</p>
+<p>LayerNorm 的表达能力更强，但语言模型实践中通常看不到相应的收益。RMSNorm 因而成为 LLaMA、PaLM、Chinchilla、T5 等模型的常见选择。</p>
+<p>更重要的是，FLOPs 不是 runtime。矩阵乘法占据绝大多数 FLOPs，但 normalization 往往是低算术强度、以读写 activation 为主的操作。在小模型或 memory-bound workload 中，一次均值计算和额外的参数读写都可能成为可见开销。RMSNorm 带来：</p>
+<ul>
+<li>更少的归约操作；</li>
+<li>更少的参数（没有 bias）；</li>
+<li>更少的数据搬运，常常还有实际吞吐收益。</li>
+</ul>
+<p>同一条系统原则也解释了为什么现代实现通常把线性层的 bias 一并删除：它增加了参数读写，却很少提供可测的表达能力收益。当然，这不是数学定理，而是大量语言模型实验形成的工程共识。</p>
+<h2 id="4-激活函数：真正重要的是-gating"><a href="#4-激活函数：真正重要的是-gating" class="headerlink" title="4. 激活函数：真正重要的是 gating"></a>4. 激活函数：真正重要的是 gating</h2><p>普通两层 FFN 可以写成：</p>
+<p>$$
+\operatorname{FFN}(x)=\sigma(xW_1)W_2,
+$$</p>
+<p>其中 $\sigma$ 可以是 ReLU 或 GeLU。GeLU 相比 ReLU 主要改变零点附近的梯度形状；GPT-1&#x2F;2&#x2F;3 等模型已经证明，普通 GeLU 也能训练出很好的语言模型。</p>
+<p>现代模型最常见的是 gated linear unit。以 ReGLU 为例：</p>
+<p>$$
+\operatorname{ReGLU}(x)=\bigl(\operatorname{ReLU}(xW_1)\odot xV\bigr)W_2.
+$$</p>
+<p>它在原来的非线性分支之外增加了一个逐元素 gate。把 ReLU 换成 GeLU 或 Swish，就分别得到 GeGLU 或 SwiGLU：</p>
+<p>$$
+\operatorname{SwiGLU}(x)=\bigl(\operatorname{Swish}(xW)\odot xV\bigr)W_2,
+\qquad
+\operatorname{Swish}(z)=z\,\operatorname{sigmoid}(z).
+$$</p>
+<p>命名很容易让人迷失，但真正值得记住的轴只有一个：<strong>有没有 gate</strong>。Shazeer 以及后续受控比较普遍发现，在匹配参数量后，GLU 变体的 loss 通常稳定更好。它不是训练成功的必要条件（GPT-3、Nemotron 340B 等非 GLU 模型也可以工作），但 2023 年之后的可信大模型几乎都使用 SwiGLU 或 GeGLU。</p>
+<p>增加 gate 会多出一个矩阵 $V$。为了让参数量和普通 FFN 大致相同，通常把 $d_{ff}$ 乘以 $2/3$。所以：</p>
+<p>$$
+d_{ff}=4d_{model}\quad\text{（非 GLU 的常见起点）},
+$$</p>
+<p>$$
+d_{ff}\approx\frac{8}{3}d_{model}\quad\text{（参数匹配后的 GLU 起点）}.
+$$</p>
+<h2 id="5-串行-block-还是并行-block？"><a href="#5-串行-block-还是并行-block？" class="headerlink" title="5. 串行 block 还是并行 block？"></a>5. 串行 block 还是并行 block？</h2><p>标准 block 是串行的：</p>
+<p>$$
+x' = x+\operatorname{Attention}(\operatorname{Norm}(x)),
+\qquad
+x_{next}=x'+\operatorname{FFN}(\operatorname{Norm}(x')).
+$$</p>
+<p>GPT-J、PaLM、GPT-NeoX 等模型尝试过并行形式：attention 和 MLP 都读取同一个 $x$，最后一起加回残差流：</p>
+<p>$$
+x_{next}=x+\operatorname{Attention}(\operatorname{Norm}(x))
+        +\operatorname{FFN}(\operatorname{Norm}(x)).
+$$</p>
+<p>并行形式允许共享 norm、融合矩阵乘法，并减少某些等待。但代价是有效深度近似减少一半：每一层不再使用上一子层的输出。随着串行实现和 kernel 优化越来越好，系统收益通常不足以抵消表达能力损失，因此近年的主流又回到了串行 block。</p>
+<h2 id="6-位置编码：从绝对位置到-RoPE"><a href="#6-位置编码：从绝对位置到-RoPE" class="headerlink" title="6. 位置编码：从绝对位置到 RoPE"></a>6. 位置编码：从绝对位置到 RoPE</h2><p>attention 本身只计算向量内积。如果同时打乱 token 和位置，内积并不会自动知道顺序，因此必须显式注入位置信息。</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>注入位置的方式</th>
+<th>代表模型</th>
+<th>局限&#x2F;特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正弦&#x2F;余弦</td>
+<td>加到 token embedding</td>
+<td>原始 Transformer</td>
+<td>能表达位置，但内积含有绝对位置交叉项</td>
+</tr>
+<tr>
+<td>绝对 embedding</td>
+<td>每个位置一个可学习向量</td>
+<td>GPT-1&#x2F;2&#x2F;3、OPT</td>
+<td>直接，但长度外推不自然</td>
+</tr>
+<tr>
+<td>相对 bias</td>
+<td>直接加到 attention score</td>
+<td>T5、Gopher、Chinchilla</td>
+<td>是相对的，但不再是纯 inner-product embedding</td>
+</tr>
+<tr>
+<td>RoPE</td>
+<td>对 Q&#x2F;K 的坐标做位置相关旋转</td>
+<td>GPT-J、PaLM、LLaMA 及多数 2024+ 模型</td>
+<td>内积只依赖相对位移，易于多频率建模</td>
+</tr>
+</tbody></table>
+<p>RoPE 想满足的目标是：存在一个位置编码 $f$，使得</p>
+<p>$$
+\left\langle f(x,i),f(y,j)\right\rangle
+ = g(x,y,i-j).
+$$</p>
+<p>也就是说，attention 分数应该依赖两个 token 的相对距离，而不是它们同时向后平移了多少位置。</p>
+<h3 id="6-1-RoPE-的几何直觉"><a href="#6-1-RoPE-的几何直觉" class="headerlink" title="6.1 RoPE 的几何直觉"></a>6.1 RoPE 的几何直觉</h3><p>先得到与位置无关的语义向量，再按位置把向量旋转一个角度。若两个 token 同时向后移动 $k$ 个位置，它们的旋转角度都增加相同的量，二者的夹角不变，因此内积只保留相对位置。</p>
+<p>在 $d$ 维向量中，RoPE 把坐标两两配对，每一对在二维平面中旋转。不同坐标对使用不同频率：低频分量适合长距离关系，高频分量适合邻近关系。</p>
+<p>图中两段文本虽然处于不同的绝对位置，但 <code>we</code> 和 <code>know</code> 同时旋转后仍保持相同夹角。这正是“整体平移不改变 attention 内积”的几何来源。</p>
+<p><img src="/img/posts/f2c7d9a4/rope-rotation.png" alt="RoPE 通过同步旋转保持相对夹角"></p>
+<p>实现时不要把 sine&#x2F;cosine 当作 embedding 加到输入上，而是用它们构造旋转并同时作用于 query 与 key：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">q, k, v = project(x)</span><br><span class="line">cos, sin = rotary_frequencies(position_ids)</span><br><span class="line">q = apply_rotary(q, cos, sin)</span><br><span class="line">k = apply_rotary(k, cos, sin)</span><br><span class="line">scores = q @ k.transpose(-<span class="number">2</span>, -<span class="number">1</span>) / math.sqrt(head_dim)</span><br></pre></td></tr></table></figure>
+
+<p>RoPE 通常在每一次 attention 内应用，而不是只在网络最底部加一次。Gemma 4 的 p-RoPE 只旋转前两个坐标，是这个设计空间里的一个轻量变体；它说明 RoPE 的具体细节仍可按模型规模调整。</p>
+<h2 id="7-超参数：先用共识缩小搜索空间"><a href="#7-超参数：先用共识缩小搜索空间" class="headerlink" title="7. 超参数：先用共识缩小搜索空间"></a>7. 超参数：先用共识缩小搜索空间</h2><p>架构研究容易让人误以为每个数字都需要大规模搜索。课上对几个常见超参数的结论是：大多数存在一个很宽的“够好区域”，先采用成熟默认值，再把算力留给真正重要的实验。</p>
+<h3 id="7-1-FFN-宽度"><a href="#7-1-FFN-宽度" class="headerlink" title="7.1 FFN 宽度"></a>7.1 FFN 宽度</h3><p>非 GLU 模型通常从 $d_{ff}=4d_{model}$ 开始；参数匹配后的 GLU 通常落在 $2.5\sim2.7$ 倍，LLaMA 2、Mistral 等也会取约 $3.5$ 倍。受控实验显示，$d_{ff}/d_{model}$ 在约 $1\sim10$ 的区间内往往都处于较平坦的低 loss basin；超过这个范围，收益会迅速变差。</p>
+<p>T5 v1 的 $64$ 倍是著名例外，它可能提高矩阵乘法的硬件利用率，但并不意味着更高表达能力。后续的 T5 v1.1 又回到了更保守的 $2.5$ 倍 GeGLU 配置，这反而是一个很好的工程信号：<strong>能工作不等于 compute-optimal。</strong></p>
+<p>Kaplan 等人的实验给出了这个“宽容区间”的形状：在 50M 参数模型上，FFN ratio 位于约 $1\sim10$ 时 loss 几乎不变；ratio 继续增大后，loss 才明显恶化。</p>
+<p><img src="/img/posts/f2c7d9a4/ffn-ratio-curve.png" alt="FFN 宽度比例与 loss increase 的关系"></p>
+<h3 id="7-2-head-dimension-与-head-数"><a href="#7-2-head-dimension-与-head-数" class="headerlink" title="7.2 head dimension 与 head 数"></a>7.2 head dimension 与 head 数</h3><p>最常见的规则是：</p>
+<p>$$
+n_{heads}\times d_{head}\approx d_{model}.
+$$</p>
+<p>这不是必须满足的约束。T5、LaMDA、PaLM 等 Google 模型曾使用明显更大的比例，但多数模型仍选择约等于 $1$ 的比值。已有实验表明这个超参数也相当宽容；只要矩阵尺寸对硬件友好，通常没有必要为它进行巨大的搜索。</p>
+<h3 id="7-3-深度与宽度"><a href="#7-3-深度与宽度" class="headerlink" title="7.3 深度与宽度"></a>7.3 深度与宽度</h3><p>用 $d_{model}/n_{layers}$ 表示宽深比，现代模型常落在约 $100$ 左右，合理范围大致为 $60\sim200$：</p>
+<table>
+<thead>
+<tr>
+<th>模型族</th>
+<th align="right">$d_{model}/n_{layers}$（约）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPT-3、OPT、Mistral、Qwen</td>
+<td align="right">128</td>
+</tr>
+<tr>
+<td>LLaMA &#x2F; LLaMA 2</td>
+<td align="right">102</td>
+</tr>
+<tr>
+<td>Gemma 3</td>
+<td align="right">87</td>
+</tr>
+<tr>
+<td>Gemma 4</td>
+<td align="right">61</td>
+</tr>
+<tr>
+<td>BLOOM</td>
+<td align="right">205</td>
+</tr>
+</tbody></table>
+<p>更深的网络表达能力可能更强，但 pipeline parallel 更难，推理延迟也更高；更宽的网络更容易做 tensor parallel。实际的 aspect ratio 往往由系统可并行性决定，而不是单纯由理论表达能力决定。</p>
+<h3 id="7-4-词表大小"><a href="#7-4-词表大小" class="headerlink" title="7.4 词表大小"></a>7.4 词表大小</h3><p>词表是 tokenizer、模型参数量和序列长度的共同接口：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th align="right">常见词表规模</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单语、主要面向英语</td>
+<td align="right">30k-50k</td>
+</tr>
+<tr>
+<td>多语或生产系统</td>
+<td align="right">100k-250k</td>
+</tr>
+</tbody></table>
+<p>LLaMA 早期使用 32k 左右，而 mT5、PaLM、GPT-4、Gemma 4 等多语&#x2F;生产模型通常使用 100k 以上。多语模型需要更大的词表覆盖不同语言和脚本，但词表过大也会增加 embedding 与输出层的参数和内存，因此它是明确的系统权衡。</p>
+<h3 id="7-5-预训练还要不要正则化？"><a href="#7-5-预训练还要不要正则化？" class="headerlink" title="7.5 预训练还要不要正则化？"></a>7.5 预训练还要不要正则化？</h3><p>预训练数据通常多到模型只遍历一次，经典的“防止过拟合”解释因此并不充分。实际模型仍然会使用 weight decay，有些还使用 dropout。课上强调：weight decay 在语言模型中可能主要影响优化动力学，而不是验证集上的过拟合。</p>
+<p>尤其在 cosine learning-rate schedule 下，weight decay 与 learning rate 会相互作用；较强的 weight decay 可能让模型后期收敛到更好的区域。不要把它简单等同于一个独立的正则化旋钮，最好把它和学习率一起做小规模 ablation。</p>
+<p>左图显示不同 weight decay 下 training loss 和 validation loss 基本沿 $y=x$ 分布，没有表现出传统意义上的过拟合差异；中、右图则表明 weight decay 的效果会随 learning-rate schedule 改变。</p>
+<p><img src="/img/posts/f2c7d9a4/weight-decay-curves.png" alt="Weight decay 对过拟合和优化轨迹的不同影响"></p>
+<h2 id="8-稳定性：不要让昂贵的训练在中途爆炸"><a href="#8-稳定性：不要让昂贵的训练在中途爆炸" class="headerlink" title="8. 稳定性：不要让昂贵的训练在中途爆炸"></a>8. 稳定性：不要让昂贵的训练在中途爆炸</h2><p>架构选择的目标不只是最终 loss，还包括训练过程中不能出现不可恢复的梯度 spike。随着模型和训练预算变大，稳定性本身就是一等公民。</p>
+<p>同一规模的两个 OLMo 训练中，蓝色曲线出现频繁的 loss 和梯度尖峰，而橙色曲线明显更平稳。这类曲线比单个最终 loss 更能说明稳定性设计的必要性。</p>
+<p><img src="/img/posts/f2c7d9a4/training-stability.png" alt="不稳定与稳定语言模型训练曲线对比"></p>
+<h3 id="8-1-输出-softmax-与-z-loss"><a href="#8-1-输出-softmax-与-z-loss" class="headerlink" title="8.1 输出 softmax 与 z-loss"></a>8.1 输出 softmax 与 z-loss</h3><p>输出 logits 为 $u(x)$ 时：</p>
+<p>$$
+\log p(x)=u(x)-\log Z(x),
+\qquad
+Z(x)=\sum_{r=1}^{|V|}e^{u_r(x)}.
+$$</p>
+<p>指数和归一化项 $Z$ 可能迅速变大，导致数值不稳定。由于给所有 logits 加一个常数不会改变 softmax 概率，PaLM 等模型会增加辅助项，把 $\log Z$ 拉回零附近：</p>
+<p>$$
+\mathcal{L}_{z}=\mathcal{L}_{LM}+\alpha\,[\log Z(x)]^2.
+$$</p>
+<p>这就是 z-loss。它利用了 softmax 的平移不变性，在不显著改变概率分布的情况下约束数值范围。</p>
+<h3 id="8-2-QK-norm"><a href="#8-2-QK-norm" class="headerlink" title="8.2 QK-norm"></a>8.2 QK-norm</h3><p>attention 里还有一个 softmax：</p>
+<p>$$
+\operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_{head}}}\right).
+$$</p>
+<p>如果 $Q$ 或 $K$ 的范数变大，score 会变得极端，attention 可能退化为几乎 one-hot。QK-norm 在点积之前对 query 和 key 做 RMSNorm&#x2F;LayerNorm：</p>
+<p>$$
+\operatorname{softmax}\left(
+\frac{\operatorname{Norm}(Q)\operatorname{Norm}(K)^T}{\sqrt{d_{head}}}
+\right).
+$$</p>
+<p>这会把进入 softmax 的量控制在更稳定的尺度，也常允许使用稍大的学习率。DCLM、OLMo 2、Gemma 2、Qwen 3、OLMo 3、Gemma 4 等模型都采用了类似思路。</p>
+<h3 id="8-3-logit-soft-capping"><a href="#8-3-logit-soft-capping" class="headerlink" title="8.3 logit soft-capping"></a>8.3 logit soft-capping</h3><p>如果希望直接限制 attention logits，可以使用带上限的 soft cap，例如：</p>
+<p>$$
+s' = c\tanh(s/c).
+$$</p>
+<p>这样 $s'$ 永远落在 $[-c,c]$ 内。它是很强的稳定性干预，Gemma 系列使用过，但也可能损失模型表达非常尖锐 attention 分布的能力。因此它更像是“训练快要爆炸时的保险丝”，而不是无条件的默认配置。</p>
+<h2 id="9-Attention-的两个系统问题"><a href="#9-Attention-的两个系统问题" class="headerlink" title="9. Attention 的两个系统问题"></a>9. Attention 的两个系统问题</h2><h3 id="9-1-Prefill-与-decode-的差异"><a href="#9-1-Prefill-与-decode-的差异" class="headerlink" title="9.1 Prefill 与 decode 的差异"></a>9.1 Prefill 与 decode 的差异</h3><p>训练和 prefill 可以并行处理一整段序列，矩阵乘法的算术强度较高。decode 则是自回归的：生成一个 token，才能生成下一个 token。KV cache 让模型复用过去的 key&#x2F;value，避免每一步重新计算完整历史，但也把瓶颈推向显存读写。</p>
+<p>因此，推理时不能只看 FLOPs，还要看每个 token 需要从 KV cache 和权重中搬运多少数据。</p>
+<h3 id="9-2-MQA-与-GQA：用更小的-KV-cache-换吞吐"><a href="#9-2-MQA-与-GQA：用更小的-KV-cache-换吞吐" class="headerlink" title="9.2 MQA 与 GQA：用更小的 KV cache 换吞吐"></a>9.2 MQA 与 GQA：用更小的 KV cache 换吞吐</h3><p>标准 multi-head attention 为每个 head 保存独立的 $K,V$。Multi-Query Attention（MQA）让所有 query heads 共享一组 $K,V$，显著缩小 KV cache，但表达能力会有可见损失。</p>
+<p>Grouped-Query Attention（GQA）处于两者之间：保留很多 query heads，只让若干 query heads 共享一组 key&#x2F;value heads。设 query head 数为 $h$，KV head 数为 $h_{kv}$，则 $h_{kv}/h$ 是一个直接控制表达能力与推理内存的旋钮：</p>
+<ul>
+<li>$h_{kv}=h$：标准 MHA，表达能力最强，KV cache 最大；</li>
+<li>$h_{kv}=1$：MQA，KV cache 最小，但可能损失质量；</li>
+<li>$1&lt;h_{kv}&lt;h$：GQA，通常能取得最好的折中。</li>
+</ul>
+<p>下图直接展示了三种结构的差别：MHA 为每个 query head 保留独立的 key&#x2F;value；GQA 让一组 query 共享一组 KV；MQA 则让所有 query 共享同一组 KV。</p>
+<p><img src="/img/posts/f2c7d9a4/gqa-structure.png" alt="MHA、GQA 与 MQA 的 Query-Key-Value 共享关系"></p>
+<p>这也是为什么今天多数大模型采用 GQA：相较 MQA，它保留了更多独立的 key&#x2F;value 子空间，却已经拿到大部分推理内存收益。</p>
+<h3 id="9-3-Sliding-Window-与混合-attention"><a href="#9-3-Sliding-Window-与混合-attention" class="headerlink" title="9.3 Sliding Window 与混合 attention"></a>9.3 Sliding Window 与混合 attention</h3><p>全局 attention 的序列长度复杂度是二次的。Sliding Window Attention（SWA）把每个 token 能看到的范围限制在局部窗口，从而降低长上下文成本，但单独使用会削弱远距离信息交换。</p>
+<p>attention matrix 的可视化能直观看出计算被省在哪里：标准 causal attention 填满下三角；strided 和 fixed sparse pattern 只保留局部带状区域与少量跨区连接。</p>
+<p><img src="/img/posts/f2c7d9a4/sparse-attention-patterns.png" alt="完整 causal attention 与两种 sparse attention pattern"></p>
+<p>近年的折中方案是交错使用 local attention 和 full attention。例如 Cohere Command A 每四层放一个 full attention，其余层使用 sliding window；LLaMA 4、Gemma 3&#x2F;4、OLMo 3 也探索了类似混合结构。局部层逐步聚合信息，周期性的全局层负责跨窗口传播。</p>
+<p>有些模型还对不同范围使用不同的位置处理：远距离层可以不加 RoPE，局部层保留 RoPE。Qwen 3.5 则把 cheap attention 换成 gated delta net，形成另一种 hybrid architecture。</p>
+<p><img src="/img/posts/f2c7d9a4/hybrid-attention.png" alt="交错 full attention 与 sliding-window attention"></p>
+<p>长上下文仍是当前架构变化最集中的区域。趋势并不是“找到一个新的 attention 并淘汰 Transformer”，而是把全局信息、局部信息和状态空间模块组合起来，按预算分配计算。</p>
+<h2 id="10-给-A1-的默认配置与实验建议"><a href="#10-给-A1-的默认配置与实验建议" class="headerlink" title="10. 给 A1 的默认配置与实验建议"></a>10. 给 A1 的默认配置与实验建议</h2><p>如果目标是先写出一个可靠的 decoder-only Transformer，再逐项做实验，可以从下面的配置开始：</p>
+<ul>
+<li>non-residual pre-norm；</li>
+<li>RMSNorm，线性层和 norm 不使用 bias；</li>
+<li>RoPE 应用于每层 attention 的 Q&#x2F;K；</li>
+<li>SwiGLU，取 $d_{ff}\approx 8d_{model}/3$；</li>
+<li>attention 和 MLP 使用串行 block；</li>
+<li>$n_{heads}d_{head}\approx d_{model}$；</li>
+<li>单语 tokenizer 从 30k-50k 词表开始，多语任务再考虑 100k 以上；</li>
+<li>先使用成熟的 weight decay 与 warmup，再根据训练曲线决定是否加入 QK-norm、z-loss 或 soft cap。</li>
+</ul>
+<p>这些默认值不是“真理”，而是把搜索空间压缩到值得研究的地方。一个有信息量的实验应该一次只改变一个轴，并同时记录：训练 loss、梯度范数、吞吐、显存、通信和最终评测。只看最终 loss，无法判断一个改动究竟带来了表达能力收益，还是只是让 GPU 更忙。</p>
+<h2 id="本讲总结"><a href="#本讲总结" class="headerlink" title="本讲总结"></a>本讲总结</h2><ol>
+<li>现代语言模型的核心 Transformer block 已经高度收敛：干净的 residual stream、RMSNorm、GLU 和无 bias 是强默认值。</li>
+<li>RoPE 通过旋转 Q&#x2F;K，让内积天然表达相对位置；它是目前最普遍的位置方案，但长上下文仍会继续演化。</li>
+<li>FFN 比例、head 比例和宽深比都有相当宽的可用区间。优先采用 $4d_{model}$（非 GLU）、$8d_{model}/3$（GLU）和约 $100$ 的宽深比。</li>
+<li>词表大小取决于语言覆盖和部署需求；多语&#x2F;生产模型通常需要远大于单语模型的词表。</li>
+<li>weight decay、z-loss、QK-norm 和 logit soft-capping 说明：稳定性技巧往往同时改变优化动力学，不能只用“防过拟合”来解释。</li>
+<li>GQA&#x2F;MQA 通过缩小 KV cache 降低 decode 成本；sliding window 与 full attention 的混合则是当前长上下文的重要路线。</li>
+</ol>
+<p>最后，架构选择的正确工作方式不是背诵一张表，而是形成一个闭环：<strong>先从共识配置开始，做资源核算，跑小规模对照实验，再决定哪些差异值得带到更大训练中。</strong></p>
+<h2 id="延伸阅读"><a href="#延伸阅读" class="headerlink" title="延伸阅读"></a>延伸阅读</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://cs336.stanford.edu/lectures/?trace=lecture_03">CS336 Lecture 3 Trace</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2002.04745">On Layer Normalization in the Transformer Architecture</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/1910.07467">Root Mean Square Layer Normalization</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2104.09864">RoFormer: Enhanced Transformer with Rotary Position Embedding</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/1911.02150">Fast Transformer Decoding: One Write-Head is All You Need</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2305.13245">GQA: Training Generalized Multi-Query Transformer Models</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/f2c7d9a4/">https://wick-7.github.io/posts/f2c7d9a4/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Training/">Training</a><a class="post-meta__tags" href="/tags/Transformer/">Transformer</a><a class="post-meta__tags" href="/tags/CS336/">CS336</a><a class="post-meta__tags" href="/tags/Architecture/">Architecture</a><a class="post-meta__tags" href="/tags/Hyperparameters/">Hyperparameters</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。 1.1 训练需要多久？对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是： $$ C \approx 6ND. $$ 因此，$70$B 参数、$15$T tokens 的训练约需要： $$ C = 6 \times 70\times 10^9 \times 15\times 10^{12}   = 6.3\times 10^{24}\ \text{FLOPs}. $$ H100 的 dense bf16 峰值约为 $1979/2...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-28</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。 1.1 训练需要多久？对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是： $$ C \approx 6ND. $$ 因此，$70$B 参数、$15$T tokens 的训练约需要： $$ C = 6 \times 70\times 10^9 \times 15\times 10^{12}   = 6.3\times 10^{24}\ \text{FLOPs}. $$ H100 的 dense bf16 峰值约为 $1979/2...</div></div></div></a><a class="pagination-related" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-27</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。  1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。 与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。  2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：    模块 核心问题 主要内容 作业目标    Basics 如何训练出第一个 LM？ BPE、Transformer、loss、optimizer、训练循环 从零训练小型语言模...</div></div></div></a><a class="pagination-related" href="/posts/41afbbd9/" title="《CS294-196 25fall Lecture2》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture2》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Evolution of System Designs from an AI Engineer Perspective从 AI Engineer 的视角观察：  模型算法为什么仍在持续进步； 什么样的 AI 应用能够真正创造价值； 为什么 AI Infra 正在成为企业 IT 的第三大支柱； 为什么新的系统设计正在重新走向过去 mainframe &#x2F; HPC 的某些思路。   1. Demystify “LLM” and “AGI”1.1 Chinese Typewriter Problem英文打字机可以直接将字母映射到键盘按键，而常用汉字有数千个，无法直接放入普通 QWERTY 键盘中。早期中文打字机需要操作者移动机械结构，从巨大的字盘中寻找对应汉字。为了优化布局，人们统计常见的 bigram、n-gram，将经常连续出现的汉字放在相近位置，从而减少机械移动距离。 早期 n-gram 只能使用很短的历史，因为随着上下文长度增加，组合数量会迅速爆炸；现代 Transformer 则能够利用长上下文和大规模参数，在更大范围内建模 token 之间的关系。 1.2 BERT...</div></div></div></a><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-15</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a><a class="pagination-related" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-06</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">语言模型内部运作 第一部分：从 Prompt 到下一个 Token2. Tokenization 与 Embedding 输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。 12今  天  天  气  真  好  ！540 123 123 729 938 432 0  Embedding Table 将 Token ID 转成向量： $$ E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i] $$ 其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。 初始 Token Embedding 的特点：  相同 Token 的向量完全相同； 语义相关的 Token 通常更接近； 多义词还没有结合上下文，因此会混合不同含义。  例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。  3. Layer by Layer To...</div></div></div></a><a class="pagination-related" href="/posts/bc5643ac/" title="《CS294-196 25fall Lecture5》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture5》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Challenges and Lessons from Training Agentic Models1. 本讲核心观点Agentic Model 的能力不能只依靠 inference-time prompt engineering 获得。若希望模型在真实产品中稳定完成复杂、长程、多轮任务，仍然需要围绕完整交互轨迹进行 end-to-end training。 本讲将 Agentic Training 的主要难点概括为三部分：  Data： 怎样构造可学习、可扩展、能推动探索的数据； Grader &#x2F; Evaluation： 怎样定义模型到底做得好不好，并将反馈转化为 RL reward； Efficiency &#x2F; Environment： 怎样让包含采样、工具调用、环境执行与评分的大规模 RL 系统高效且稳定地运行。  其中一个贯穿全讲的判断是：  在大规模 Agent 训练中，数据与 Grader 往往决定“学什么”，训练基础设施与效率决定“能不能学出来”。   2. Coding Agent：Agentic Training 的典型例子 Coding A...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">27</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">50</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%85%88%E5%BB%BA%E7%AB%8B%E4%B8%80%E5%BC%A0%E7%8E%B0%E4%BB%A3-Transformer-%E7%9A%84%E5%9C%B0%E5%9B%BE"><span class="toc-number">1.</span> <span class="toc-text">1. 先建立一张现代 Transformer 的地图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E6%8A%8A-LayerNorm-%E7%A7%BB%E5%87%BA%E6%AE%8B%E5%B7%AE%E6%B5%81%EF%BC%9F"><span class="toc-number">2.</span> <span class="toc-text">2. 为什么要把 LayerNorm 移出残差流？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-LayerNorm-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%B8%B8%E8%A2%AB%E6%8D%A2%E6%88%90-RMSNorm%EF%BC%9F"><span class="toc-number">3.</span> <span class="toc-text">3. LayerNorm 为什么常被换成 RMSNorm？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%EF%BC%9A%E7%9C%9F%E6%AD%A3%E9%87%8D%E8%A6%81%E7%9A%84%E6%98%AF-gating"><span class="toc-number">4.</span> <span class="toc-text">4. 激活函数：真正重要的是 gating</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%B2%E8%A1%8C-block-%E8%BF%98%E6%98%AF%E5%B9%B6%E8%A1%8C-block%EF%BC%9F"><span class="toc-number">5.</span> <span class="toc-text">5. 串行 block 还是并行 block？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%EF%BC%9A%E4%BB%8E%E7%BB%9D%E5%AF%B9%E4%BD%8D%E7%BD%AE%E5%88%B0-RoPE"><span class="toc-number">6.</span> <span class="toc-text">6. 位置编码：从绝对位置到 RoPE</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-RoPE-%E7%9A%84%E5%87%A0%E4%BD%95%E7%9B%B4%E8%A7%89"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 RoPE 的几何直觉</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E8%B6%85%E5%8F%82%E6%95%B0%EF%BC%9A%E5%85%88%E7%94%A8%E5%85%B1%E8%AF%86%E7%BC%A9%E5%B0%8F%E6%90%9C%E7%B4%A2%E7%A9%BA%E9%97%B4"><span class="toc-number">7.</span> <span class="toc-text">7. 超参数：先用共识缩小搜索空间</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-FFN-%E5%AE%BD%E5%BA%A6"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 FFN 宽度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-head-dimension-%E4%B8%8E-head-%E6%95%B0"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 head dimension 与 head 数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E6%B7%B1%E5%BA%A6%E4%B8%8E%E5%AE%BD%E5%BA%A6"><span class="toc-number">7.3.</span> <span class="toc-text">7.3 深度与宽度</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-%E8%AF%8D%E8%A1%A8%E5%A4%A7%E5%B0%8F"><span class="toc-number">7.4.</span> <span class="toc-text">7.4 词表大小</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-%E9%A2%84%E8%AE%AD%E7%BB%83%E8%BF%98%E8%A6%81%E4%B8%8D%E8%A6%81%E6%AD%A3%E5%88%99%E5%8C%96%EF%BC%9F"><span class="toc-number">7.5.</span> <span class="toc-text">7.5 预训练还要不要正则化？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E7%A8%B3%E5%AE%9A%E6%80%A7%EF%BC%9A%E4%B8%8D%E8%A6%81%E8%AE%A9%E6%98%82%E8%B4%B5%E7%9A%84%E8%AE%AD%E7%BB%83%E5%9C%A8%E4%B8%AD%E9%80%94%E7%88%86%E7%82%B8"><span class="toc-number">8.</span> <span class="toc-text">8. 稳定性：不要让昂贵的训练在中途爆炸</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E8%BE%93%E5%87%BA-softmax-%E4%B8%8E-z-loss"><span class="toc-number">8.1.</span> <span class="toc-text">8.1 输出 softmax 与 z-loss</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-QK-norm"><span class="toc-number">8.2.</span> <span class="toc-text">8.2 QK-norm</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-logit-soft-capping"><span class="toc-number">8.3.</span> <span class="toc-text">8.3 logit soft-capping</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-Attention-%E7%9A%84%E4%B8%A4%E4%B8%AA%E7%B3%BB%E7%BB%9F%E9%97%AE%E9%A2%98"><span class="toc-number">9.</span> <span class="toc-text">9. Attention 的两个系统问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-Prefill-%E4%B8%8E-decode-%E7%9A%84%E5%B7%AE%E5%BC%82"><span class="toc-number">9.1.</span> <span class="toc-text">9.1 Prefill 与 decode 的差异</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-MQA-%E4%B8%8E-GQA%EF%BC%9A%E7%94%A8%E6%9B%B4%E5%B0%8F%E7%9A%84-KV-cache-%E6%8D%A2%E5%90%9E%E5%90%90"><span class="toc-number">9.2.</span> <span class="toc-text">9.2 MQA 与 GQA：用更小的 KV cache 换吞吐</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-Sliding-Window-%E4%B8%8E%E6%B7%B7%E5%90%88-attention"><span class="toc-number">9.3.</span> <span class="toc-text">9.3 Sliding Window 与混合 attention</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E7%BB%99-A1-%E7%9A%84%E9%BB%98%E8%AE%A4%E9%85%8D%E7%BD%AE%E4%B8%8E%E5%AE%9E%E9%AA%8C%E5%BB%BA%E8%AE%AE"><span class="toc-number">10.</span> <span class="toc-text">10. 给 A1 的默认配置与实验建议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AC%E8%AE%B2%E6%80%BB%E7%BB%93"><span class="toc-number">11.</span> <span class="toc-text">本讲总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BB%B6%E4%BC%B8%E9%98%85%E8%AF%BB"><span class="toc-number">12.</span> <span class="toc-text">延伸阅读</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/f2c7d9a4/" title="《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记">《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</a><time datetime="2026-07-29T01:00:00.000Z" title="发表于 2026-07-29 09:00:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</a><time datetime="2026-07-28T01:00:00.000Z" title="发表于 2026-07-28 09:00:00">2026-07-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</a><time datetime="2026-07-27T01:18:27.000Z" title="发表于 2026-07-27 09:18:27">2026-07-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/4e475140/" title="《CS294-196 25fall Lecture10》课堂笔记">《CS294-196 25fall Lecture10》课堂笔记</a><time datetime="2026-07-19T06:31:15.000Z" title="发表于 2026-07-19 14:31:15">2026-07-19</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/1b749064/" title="《CS294-196 25fall Lecture9》课堂笔记">《CS294-196 25fall Lecture9》课堂笔记</a><time datetime="2026-07-19T06:07:57.000Z" title="发表于 2026-07-19 14:07:57">2026-07-19</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
