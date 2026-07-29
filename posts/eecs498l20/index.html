@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《EECS 498 Lecture 20》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Lecture 20：Generative Models，Part 2这一讲完成了 VAE 的直观图景，并介绍 GAN、VQ-VAE2、条件生成和 image-to-image translation。 1. VAE 的采样与编辑训练好的 VAE 可以从先验 $p(z)$ 采样 latent，再送入 decoder 生成图像；也可以编码真实图像后改变某个 latent 坐标，实现语义编辑。   对">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《EECS 498 Lecture 20》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/eecs498l20/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="Lecture 20：Generative Models，Part 2这一讲完成了 VAE 的直观图景，并介绍 GAN、VQ-VAE2、条件生成和 image-to-image translation。 1. VAE 的采样与编辑训练好的 VAE 可以从先验 $p(z)$ 采样 latent，再送入 decoder 生成图像；也可以编码真实图像后改变某个 latent 坐标，实现语义编辑。   对">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-29T04:50:00.000Z">
+<meta property="article:modified_time" content="2026-07-29T08:45:51.270Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="CV">
+<meta property="article:tag" content="GAN">
+<meta property="article:tag" content="Generative-Models">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《EECS 498 Lecture 20》课堂笔记",
+  "url": "https://wick-7.github.io/posts/eecs498l20/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-29T04:50:00.000Z",
+  "dateModified": "2026-07-29T08:45:51.270Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/eecs498l20/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《EECS 498 Lecture 20》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">47</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">68</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《EECS 498 Lecture 20》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《EECS 498 Lecture 20》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-29T04:50:00.000Z" title="发表于 2026-07-29 12:50:00">2026-07-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-29T08:45:51.270Z" title="更新于 2026-07-29 16:45:51">2026-07-29</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="Lecture-20：Generative-Models，Part-2"><a href="#Lecture-20：Generative-Models，Part-2" class="headerlink" title="Lecture 20：Generative Models，Part 2"></a>Lecture 20：Generative Models，Part 2</h2><p>这一讲完成了 VAE 的直观图景，并介绍 GAN、VQ-VAE2、条件生成和 image-to-image translation。</p>
+<h3 id="1-VAE-的采样与编辑"><a href="#1-VAE-的采样与编辑" class="headerlink" title="1. VAE 的采样与编辑"></a>1. VAE 的采样与编辑</h3><p>训练好的 VAE 可以从先验 $p(z)$ 采样 latent，再送入 decoder 生成图像；也可以编码真实图像后改变某个 latent 坐标，实现语义编辑。</p>
+<p><img src="/img/posts/eecs498-l20/sampling.png" alt="VAE 从先验采样 latent 并生成新数据"></p>
+<p><img src="/img/posts/eecs498-l20/latent-grid.png" alt="沿 latent 维度变化可以产生连续的图像变化"></p>
+<p>对输入图像的 latent 做局部修改，再解码，就能实现脸部属性或姿态等编辑。</p>
+<p><img src="/img/posts/eecs498-l20/image-editing.png" alt="VAE 在 latent 空间中编辑图像属性"></p>
+<h3 id="2-VQ-VAE2：离散多尺度-latent"><a href="#2-VQ-VAE2：离散多尺度-latent" class="headerlink" title="2. VQ-VAE2：离散多尺度 latent"></a>2. VQ-VAE2：离散多尺度 latent</h3><p>VQ-VAE2 用离散 codebook 替代连续高斯 latent，并在多个空间尺度上编码。随后可以用 autoregressive model 在离散 latent 空间中建模，避免直接生成每一个高分辨率像素。</p>
+<p><img src="/img/posts/eecs498-l20/vq-vae2.png" alt="VQ-VAE2 先编码多尺度离散 latent，再用 PixelCNN 建模"></p>
+<h3 id="3-GAN-的基本结构"><a href="#3-GAN-的基本结构" class="headerlink" title="3. GAN 的基本结构"></a>3. GAN 的基本结构</h3><p>GAN 包含 generator $G$ 和 discriminator $D$。$G$ 从噪声 $z$ 生成假样本，$D$ 区分真实数据与生成数据：</p>
+<p><img src="/img/posts/eecs498-l20/gan.png" alt="GAN 通过生成器和判别器的对抗循环生成样本"></p>
+<p>经典 minimax 目标为：</p>
+<p>$$
+\min_G\max_D\;\mathbb{E}_{x\sim p_{data}}[\log D(x)]
++\mathbb{E}_{z\sim p(z)}[\log(1-D(G(z)))].
+$$</p>
+<p>判别器学习分类真假，生成器则试图让假样本被判为真。理想最优点是 $p_g=p_{data}$，此时判别器无法区分两者。</p>
+<p>训练时并不是同时对两个网络做一次普通最小化，而是交替更新：先固定 $G$，让 $D$ 更会区分真假；再固定 $D$，让 $G$ 产生更容易被判真的样本。两个目标持续变化，所以 GAN 的 loss 不会像分类器那样稳定单调下降，单看曲线也很难判断样本质量。</p>
+<p>经典 minimax 形式让生成器最小化 $\log(1-D(G(z)))$。训练初期若判别器很强，$D(G(z))$ 接近 0，这个目标容易给生成器很小的梯度。实践中常改用 non-saturating loss：</p>
+<p>$$
+L_G=-\mathbb{E}_{z\sim p(z)}[\log D(G(z))],
+$$</p>
+<p>它的最优目标不变，但在生成器很差时提供更强的学习信号。</p>
+<h3 id="4-GAN-的结果与-latent-geometry"><a href="#4-GAN-的结果与-latent-geometry" class="headerlink" title="4. GAN 的结果与 latent geometry"></a>4. GAN 的结果与 latent geometry</h3><p>GAN 通常能生成比 VAE 更清晰的图像，但训练可能不稳定，存在 mode collapse 和梯度问题。</p>
+<p><img src="/img/posts/eecs498-l20/gan-results.png" alt="GAN 生成的数字和人脸样本"></p>
+<p>Mode collapse 指很多不同的 $z$ 被映射到少数几种输出。生成器只要找到当前判别器的某个弱点，就可能反复产生一小簇高分样本，而没有动力覆盖整个数据分布。它说明“单张样本很逼真”和“分布具有多样性”是两个不同指标，也解释了为什么只展示精选样本不够。</p>
+<p>latent 空间常呈现有意义的连续结构：在两个样本的 latent code 之间插值，生成结果会平滑变化；向量运算也可能对应属性变化。</p>
+<p><img src="/img/posts/eecs498-l20/interpolation.png" alt="在 GAN latent 空间中插值可以连续改变场景"></p>
+<p><img src="/img/posts/eecs498-l20/vector-math.png" alt="GAN latent vector arithmetic 可以表达属性方向"></p>
+<h3 id="5-条件生成与更高分辨率"><a href="#5-条件生成与更高分辨率" class="headerlink" title="5. 条件生成与更高分辨率"></a>5. 条件生成与更高分辨率</h3><p>Conditional GAN 把标签 $y$ 同时提供给 G 和 D，生成指定类别的样本。BigGAN 通过更大 batch、class conditioning、spectral normalization 和 self-attention 提升质量与稳定性。</p>
+<p><img src="/img/posts/eecs498-l20/biggan.png" alt="BigGAN 通过类别条件生成多种高质量图像"></p>
+<p>课件中的 conditional batch normalization 为每个类别学习不同的缩放 $\gamma_y$ 和偏移 $\beta_y$，把标签注入生成器的多层特征，而不是只在输入端拼接一次。Spectral normalization 约束层的放大能力，有助于稳定判别器；self-attention 则让远距离区域协调，例如物体左右部分保持一致。它们分别解决条件控制、优化稳定性和全局一致性。</p>
+<p>生成模型还可以接受文本、低分辨率图像、语义 label map 或另一种图像作为条件。</p>
+<p><img src="/img/posts/eecs498-l20/text-to-image.png" alt="文本条件生成图像的早期范式"></p>
+<h3 id="6-Image-to-Image-Translation"><a href="#6-Image-to-Image-Translation" class="headerlink" title="6. Image-to-Image Translation"></a>6. Image-to-Image Translation</h3><p>Pix2Pix 用配对数据学习从一种图像到另一种图像的映射；CycleGAN 在没有配对样本时加入 cycle consistency，使 $A\to B\to A$ 尽量恢复原图。</p>
+<p><img src="/img/posts/eecs498-l20/pix2pix.png" alt="Pix2Pix 学习配对的图像到图像映射"></p>
+<p><img src="/img/posts/eecs498-l20/cyclegan.png" alt="CycleGAN 用循环一致性处理无配对图像转换"></p>
+<p>Cycle consistency 只能约束映射大致可逆，并不能保证转换后的细节在语义上真实。模型可能保留隐藏信息来完成逆映射，也可能改变任务不希望改变的属性。因此无配对训练减少了数据要求，却引入了更弱的对应关系监督。</p>
+<h3 id="7-本讲总结"><a href="#7-本讲总结" class="headerlink" title="7. 本讲总结"></a>7. 本讲总结</h3><p>生成模型的路线可以概括为：autoregressive 具有显式 likelihood、覆盖分布较完整，但采样串行；VAE 具有可推断、连续的 latent 和稳定目标，但图像可能偏平滑；GAN 采样快、结果锐利，却没有显式 likelihood，训练和覆盖模式也更难。VQ-VAE2 和条件生成把离散 latent、autoregressive prior 与可控生成组合起来，逐渐走向现代图像生成系统。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/eecs498l20/">https://wick-7.github.io/posts/eecs498l20/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/CV/">CV</a><a class="post-meta__tags" href="/tags/Generative-Models/">Generative-Models</a><a class="post-meta__tags" href="/tags/GAN/">GAN</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/posts/eecs498l21/" title="《EECS 498 Lecture 21》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">《EECS 498 Lecture 21》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 21：Reinforcement Learning监督学习给定输入和标签，强化学习则让 agent 与环境交互，通过延迟 reward 学习如何行动。难点是动作会改变未来状态，数据分布也由当前策略决定。 其中有两个贯穿全讲的困难。Exploration 要决定是选择当前看来最好的动作，还是尝试不确定但可能更好的动作；credit assignment 要在很久以后收到奖励时，判断前面哪些动作真正造成了结果。再加上环境随机性和策略持续变化，RL 的训练数据既不独立同分布，也没有现成的正确标签。 1. Agent、Environment 与轨迹每一步 agent 观察状态 $s_t$，选择动作 $a_t$，环境返回 reward $r_t$ 和新状态 $s_{t+1}$。   目标是最大化折扣回报： $$ G_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}. $$ $\gamma$ 同时控制远期奖励的重要性和有效时间跨度。取值小会偏好立即收益，取值接近 1 会考虑更长未来，但回报估计方差也更大。奖励设计同样关键：agent 会严格优化给定数...</div></div></div></a><a class="pagination-related" href="/posts/eecs498l19/" title="《EECS 498 Lecture 19》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《EECS 498 Lecture 19》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 19：Generative Models，Part 1前面的分类、检测和分割都是 discriminative task：给定 $x$ 预测 $y$。生成模型则试图学习数据分布本身，从而检测异常、无标签学习或生成新的样本。 这和 supervised&#x2F;unsupervised 不是完全同一条划分轴。无条件生成模型只需要样本 $x$，常用于无监督表示学习；条件生成模型学习 $p(x\mid y)$，仍然可能需要类别、文本或配对图像等监督信号。关键区别是模型是否试图描述数据如何产生，而不只是输出一个决策边界。 1. Discriminative 与 GenerativeDiscriminative model 学习 $p(y\mid x)$ 或直接学习决策边界；generative model 学习 $p(x)$；conditional generative model 学习 $p(x\mid y)$。  生成模型可以采样新数据、评估样本 likelihood、发现离群点，或在没有标签的情况下学习表示。 不过并非每种生成模型都同时支持这些能力：autoreg...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/eecs498l19/" title="《EECS 498 Lecture 19》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《EECS 498 Lecture 19》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 19：Generative Models，Part 1前面的分类、检测和分割都是 discriminative task：给定 $x$ 预测 $y$。生成模型则试图学习数据分布本身，从而检测异常、无标签学习或生成新的样本。 这和 supervised&#x2F;unsupervised 不是完全同一条划分轴。无条件生成模型只需要样本 $x$，常用于无监督表示学习；条件生成模型学习 $p(x\mid y)$，仍然可能需要类别、文本或配对图像等监督信号。关键区别是模型是否试图描述数据如何产生，而不只是输出一个决策边界。 1. Discriminative 与 GenerativeDiscriminative model 学习 $p(y\mid x)$ 或直接学习决策边界；generative model 学习 $p(x)$；conditional generative model 学习 $p(x\mid y)$。  生成模型可以采样新数据、评估样本 likelihood、发现离群点，或在没有标签的情况下学习表示。 不过并非每种生成模型都同时支持这些能力：autoreg...</div></div></div></a><a class="pagination-related" href="/posts/eecs498l17/" title="《EECS 498 Lecture 17》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《EECS 498 Lecture 17》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 17：3D Vision二维图像只记录投影后的颜色，三维视觉要恢复形状、深度、相机坐标和物体表面。表示方式的选择会直接决定网络结构、内存开销和损失函数。 单张图像到 3D 本质上是不适定问题：同一幅二维投影可能来自多个尺度、深度和背面形状不同的三维场景。模型无法仅凭像素恢复唯一真值，只能结合透视线索、遮挡、纹理以及训练数据中的类别先验，预测一个最可能的解释。因此漂亮的重建结果也可能更多来自“见过相似椅子”，而非真正观察到了被遮挡表面。 1. 三维形状的表示课件把常见表示并列展示为 depth map、voxel grid、implicit surface、point cloud 和 triangle mesh。  Depth map 为每个像素附加一个深度值，适合从单张图像预测可见表面，但存在尺度和深度歧义。   Voxel 将空间离散成三维网格，可直接使用 3D convolution，但分辨率提升会带来立方级内存增长。Octree 只在有细节的区域递归细分，降低稀疏空间的存储浪费。  Implicit function 学习一个连续函数 $o:\mathbb{...</div></div></div></a><a class="pagination-related" href="/posts/31b98b9f/" title="《EECS 498 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-14</div><div class="info-item-2">《EECS 498 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Introduction1. 这门课研究什么？  2. 计算机视觉的发展历史计算机视觉早期主要依靠人工设计的表示，研究重点经历了从边缘、部件、分组到局部特征的变化：    时间 代表工作 核心思想    1959 Hubel &amp; Wiesel 生物视觉具有边缘响应和层次化处理机制   1963 Larry Roberts 从边缘和特征点恢复三维结构   1970s David Marr 视觉理解需要从低层特征逐步形成三维表示   1970s–1990s Parts、Canny、Normalized Cuts 通过部件、轮廓和区域组织理解物体   1999 SIFT 设计对尺度和旋转鲁棒的局部特征   2001 Viola–Jones 将机器学习用于实时人脸检测   2000s PASCAL VOC、ImageNet 用大规模数据集和统一指标推动可比较的研究   2012 AlexNet 深度卷积网络成为计算机视觉的主流方法   这条历史主线体现了一个重要变化：视觉系统逐渐从人工规定什么特征重要，转向让模型直接从数据中学习表示。 同时，MIT Summe...</div></div></div></a><a class="pagination-related" href="/posts/eecs498l06/" title="《EECS 498 Lecture 6》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《EECS 498 Lecture 6》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 6：Backpropagation神经网络的表达能力很强，但参数可能达到数百万甚至更多。逐个参数用有限差分估计梯度会极其缓慢；反向传播的核心贡献是把链式法则组织成一次沿计算图的高效遍历。 1. 用计算图拆开复杂函数把网络写成一串局部运算，每个节点只需要知道自己的输入、输出和局部导数。  例如： $$ f(x,y,z)=(x+y)z. $$ 先计算 $q=x+y$，再计算 $f=qz$。前向传播保存中间值，反向传播从损失开始，把上游梯度传给每个输入。 计算图的价值不仅是画图方便，而是把“推导整个网络的一个巨大公式”改写成“为每个局部算子实现一次 forward 和 backward”。矩阵乘法、ReLU、卷积等算子的局部规则只需实现一次，之后可以在任意网络结构中复用。这也是 PyTorch autograd 等系统的基本抽象。 2. 局部梯度乘以上游梯度如果一个节点 $z=f(x,y)$ 已知上游梯度 $\partial L/\partial z$，则： $$ \frac{\partial L}{\partial x} =\frac{\partial L}{\par...</div></div></div></a><a class="pagination-related" href="/posts/eecs498l21/" title="《EECS 498 Lecture 21》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《EECS 498 Lecture 21》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 21：Reinforcement Learning监督学习给定输入和标签，强化学习则让 agent 与环境交互，通过延迟 reward 学习如何行动。难点是动作会改变未来状态，数据分布也由当前策略决定。 其中有两个贯穿全讲的困难。Exploration 要决定是选择当前看来最好的动作，还是尝试不确定但可能更好的动作；credit assignment 要在很久以后收到奖励时，判断前面哪些动作真正造成了结果。再加上环境随机性和策略持续变化，RL 的训练数据既不独立同分布，也没有现成的正确标签。 1. Agent、Environment 与轨迹每一步 agent 观察状态 $s_t$，选择动作 $a_t$，环境返回 reward $r_t$ 和新状态 $s_{t+1}$。   目标是最大化折扣回报： $$ G_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}. $$ $\gamma$ 同时控制远期奖励的重要性和有效时间跨度。取值小会偏好立即收益，取值接近 1 会考虑更长未来，但回报估计方差也更大。奖励设计同样关键：agent 会严格优化给定数...</div></div></div></a><a class="pagination-related" href="/posts/eecs498l04/" title="《EECS 498 Lecture 4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《EECS 498 Lecture 4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 4：Optimization上一讲定义了“什么样的权重更好”，这一讲讨论如何实际找到它们。核心是把损失看成参数空间上的地形，并沿着局部下降最快的方向反复更新参数。 1. 从随机搜索到梯度随机尝试权重的做法几乎不可行：参数维度很高，随机点大多很差，也无法利用已经测得的损失。更有用的问题是：当前位置往哪个方向走，损失会立刻下降？  对标量参数，导数描述局部斜率；对参数矩阵 $W$，所有偏导数组成梯度： $$ \nabla_W L=\left[\frac{\partial L}{\partial W_{ij}}\right]. $$ 负梯度是局部最陡下降方向，因此最基本的梯度下降更新为： $$ W\leftarrow W-\alpha\nabla_W L, $$ 其中 $\alpha$ 是学习率。 课上同时区分了数值梯度和解析梯度。数值梯度用有限差分近似： $$ \frac{\partial L}{\partial W_i}\approx \frac{L(W_i+h)-L(W_i-h)}{2h}. $$ 它每检查一个参数都要额外做前向计算，不能用于真正训练，但非常适合 ...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">47</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">68</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Lecture-20%EF%BC%9AGenerative-Models%EF%BC%8CPart-2"><span class="toc-number">1.</span> <span class="toc-text">Lecture 20：Generative Models，Part 2</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-VAE-%E7%9A%84%E9%87%87%E6%A0%B7%E4%B8%8E%E7%BC%96%E8%BE%91"><span class="toc-number">1.1.</span> <span class="toc-text">1. VAE 的采样与编辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-VQ-VAE2%EF%BC%9A%E7%A6%BB%E6%95%A3%E5%A4%9A%E5%B0%BA%E5%BA%A6-latent"><span class="toc-number">1.2.</span> <span class="toc-text">2. VQ-VAE2：离散多尺度 latent</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-GAN-%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84"><span class="toc-number">1.3.</span> <span class="toc-text">3. GAN 的基本结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-GAN-%E7%9A%84%E7%BB%93%E6%9E%9C%E4%B8%8E-latent-geometry"><span class="toc-number">1.4.</span> <span class="toc-text">4. GAN 的结果与 latent geometry</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-%E6%9D%A1%E4%BB%B6%E7%94%9F%E6%88%90%E4%B8%8E%E6%9B%B4%E9%AB%98%E5%88%86%E8%BE%A8%E7%8E%87"><span class="toc-number">1.5.</span> <span class="toc-text">5. 条件生成与更高分辨率</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-Image-to-Image-Translation"><span class="toc-number">1.6.</span> <span class="toc-text">6. Image-to-Image Translation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-%E6%9C%AC%E8%AE%B2%E6%80%BB%E7%BB%93"><span class="toc-number">1.7.</span> <span class="toc-text">7. 本讲总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l22/" title="《EECS 498 Lecture 22》课堂笔记">《EECS 498 Lecture 22》课堂笔记</a><time datetime="2026-07-29T05:10:00.000Z" title="发表于 2026-07-29 13:10:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l21/" title="《EECS 498 Lecture 21》课堂笔记">《EECS 498 Lecture 21》课堂笔记</a><time datetime="2026-07-29T05:00:00.000Z" title="发表于 2026-07-29 13:00:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l20/" title="《EECS 498 Lecture 20》课堂笔记">《EECS 498 Lecture 20》课堂笔记</a><time datetime="2026-07-29T04:50:00.000Z" title="发表于 2026-07-29 12:50:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l19/" title="《EECS 498 Lecture 19》课堂笔记">《EECS 498 Lecture 19》课堂笔记</a><time datetime="2026-07-29T04:40:00.000Z" title="发表于 2026-07-29 12:40:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l18/" title="《EECS 498 Lecture 18》课堂笔记">《EECS 498 Lecture 18》课堂笔记</a><time datetime="2026-07-29T04:30:00.000Z" title="发表于 2026-07-29 12:30:00">2026-07-29</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>

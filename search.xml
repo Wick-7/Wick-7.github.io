@@ -13679,4 +13679,1076 @@ GQA: Training Generalized Multi-Query Transformer Models
         <tag>Hyperparameters</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《EECS 498 Lecture 13》课堂笔记</title>
+    <url>/posts/eecs498l13/</url>
+    <content><![CDATA[Lecture 13：AttentionRNN 的 encoder-decoder 将整条输入压缩成一个固定长度向量，输入很长时会形成信息瓶颈。Attention 的做法是：decoder 每一步都重新查看 encoder 的所有隐藏状态，并决定当前最该关注哪里。
+从信息来源上看，可以先区分三种常见形式：早期 seq2seq 中，query 来自 decoder、key&#x2F;value 来自 encoder，这类跨两个序列的读取后来通常称为 cross-attention；self-attention 的 Q&#x2F;K&#x2F;V 都来自同一组向量；causal self-attention 则在 self-attention 上再加“不能看未来”的约束。三者计算骨架相同，区别在于 Q、K、V 的来源与可见范围。
+1. 从固定向量到加权读取设 encoder 输出 ${h_i}$，decoder 在第 $t$ 步的状态为 $s_{t-1}$。先计算匹配分数：
+$$
+e_{t,i}=f_{att}(s_{t-1},h_i),
+$$
+再归一化成注意力权重：
+$$
+\alpha_{t,i}=\operatorname{softmax}_i(e_{t,i}),
+\qquad
+c_t=\sum_i\alpha_{t,i}h_i.
+$$
+这里可以把 query 理解为“当前想找什么”，key 是“每个位置提供的索引”，value 才是最终被读取的内容。权重不是独立预测出来的，而是 query 与所有 key 比较后共同归一化的结果，因此某个位置权重变大，其他位置的权重会相对变小。
+
+2. 注意力权重是可解释的对齐机器翻译中，注意力矩阵的行对应输出词、列对应输入词。对角线附近的高权重表示输入输出顺序相近；跨越位置的高权重则表示词序发生了变化。
+
+这种热力图提供了有用的诊断线索，但不能直接当成“模型推理过程”的完整解释：低权重位置仍可能通过残差连接或前面层间接影响输出，而且不同 head 可能学到完全不同的关系。
+3. 图像描述中的视觉注意力CNN 输出空间网格 ${h_{i,j}}$，RNN 生成每个词时为每个网格位置分配权重。生成“dog”时可能关注动物区域，生成“grass”时则关注背景。
+
+这和人眼的 fovea&#x2F;saccade 很相似：视觉系统不会同等精度处理整张图，而是将计算资源集中在当前任务相关的位置。
+
+4. Self-Attention普通 attention 的 query 来自 decoder，key&#x2F;value 来自 encoder；self-attention 则让同一序列中的每个向量都作为 query、key 和 value。矩阵形式为：
+$$
+Q=XW_Q,\quad K=XW_K,\quad V=XW_V,
+$$
+$$
+\operatorname{Attention}(Q,K,V)=\operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V.
+$$
+除以 $\sqrt{d_k}$ 不是装饰。维度越大，未经缩放的点积方差越大，softmax 更容易过早变成接近 one-hot 的尖峰分布，其他位置的梯度接近零。缩放把数值控制在较稳定的范围内，尤其有利于训练初期。
+
+每个输出位置都可以读取所有输入位置，因此能直接建立远距离依赖。用于语言模型时还需使用 causal mask，禁止当前位置看到未来 token。
+
+实现上通常在 softmax 前把未来位置的分数设成 $-\infty$，归一化后这些位置的权重就是 0。它和 padding mask 目的不同：causal mask 防止信息泄漏，padding mask 则忽略补齐出来的无效 token。
+5. TransformerSelf-attention 本身对输入排列是 permutation equivariant 的：只要以相同方式打乱输入，输出也只是被同样打乱，模型并不知道谁在前、谁在后。因此序列任务需要显式加入位置编码；它可以是固定的正弦编码，也可以是学习得到的位置向量。
+Multi-head attention 会用多组投影并行计算注意力，再拼接结果。不同 head 因而可以在不同子空间中关注局部邻接、长距离指代或其他关系；它的意义不是简单重复同一张注意力图，而是给模型多个彼此独立的“读取视角”。
+RNN 按时间顺序计算，self-attention 可以并行处理整个序列。Transformer block 通常包含 multi-head self-attention、残差连接、LayerNorm 和逐位置 MLP。只有 attention 负责不同位置之间的信息交换；MLP 和 LayerNorm 都对每个位置分别作用。
+
+课上给出的比较是：RNN 天然携带顺序，但并行性差，远距离信息要经过很多递归步；1D convolution 可并行，但要叠很多层才能扩大感受野；self-attention 一层就能连接任意两个位置，而且主要由矩阵乘法组成，很适合 GPU。
+代价是长度为 $N$ 时要显式形成 $N\times N$ 的注意力矩阵，时间和显存通常都随 $N^2$ 增长。短序列上这换来了很强的并行性，长序列上则会成为主要瓶颈。
+6. 本讲总结Attention 的本质是一个可学习的读取机制：
+$$
+\text{query}\rightarrow\text{匹配所有 key}\rightarrow\text{softmax 权重}\rightarrow\text{加权 value}.
+$$
+它先解决 RNN 的信息瓶颈，再演化为 Transformer 的核心计算单元。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Transformer</tag>
+        <tag>Attention</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 17》课堂笔记</title>
+    <url>/posts/eecs498l17/</url>
+    <content><![CDATA[Lecture 17：3D Vision二维图像只记录投影后的颜色，三维视觉要恢复形状、深度、相机坐标和物体表面。表示方式的选择会直接决定网络结构、内存开销和损失函数。
+单张图像到 3D 本质上是不适定问题：同一幅二维投影可能来自多个尺度、深度和背面形状不同的三维场景。模型无法仅凭像素恢复唯一真值，只能结合透视线索、遮挡、纹理以及训练数据中的类别先验，预测一个最可能的解释。因此漂亮的重建结果也可能更多来自“见过相似椅子”，而非真正观察到了被遮挡表面。
+1. 三维形状的表示课件把常见表示并列展示为 depth map、voxel grid、implicit surface、point cloud 和 triangle mesh。
+
+Depth map 为每个像素附加一个深度值，适合从单张图像预测可见表面，但存在尺度和深度歧义。
+
+
+Voxel 将空间离散成三维网格，可直接使用 3D convolution，但分辨率提升会带来立方级内存增长。Octree 只在有细节的区域递归细分，降低稀疏空间的存储浪费。
+
+Implicit function 学习一个连续函数 $o:\mathbb{R}^3\to\{0,1\}$ 或 signed distance function，通过查询任意坐标判断点在表面内外。
+可以把几种表示的取舍压缩成四个问题。Depth map 与图像网格对齐、预测简单，但只描述当前视角可见表面；voxel 拓扑自由、适合卷积，却被立方级内存限制分辨率；point cloud 存储高效且与 LiDAR 数据天然匹配，但没有表面连接关系；mesh 可直接渲染并表达光滑表面，却要同时处理几何和拓扑；implicit representation 连续、分辨率高，但渲染或导出 mesh 时需要大量坐标查询与后处理。
+2. Point Cloud 与 PointNetPoint cloud 是无序点集合。网络必须对点的排列保持不变，PointNet 对每个点独立做 MLP，再用对称的 max pooling 汇聚全局特征。
+
+点云生成需要集合级损失，不能简单按索引比较点。Chamfer distance 通过最近邻匹配预测点和真实点，允许两组点的顺序不同。
+Chamfer loss 可微且不依赖点的排列，但只关心最近邻距离，可能允许点聚集在局部区域，也不直接保证表面法向或连通性正确。实际系统常与 coverage、normal consistency 等约束组合，而不能把一个较小的 Chamfer 数值等同于“形状在视觉上完全正确”。
+3. Triangle Mesh 与 Pixel2MeshMesh 用顶点和三角形面表示表面，拓扑结构明确、渲染友好，但预测时需要同时决定顶点位置和连接关系。
+Pixel2Mesh 从一个椭球初始化 mesh，反复进行 graph convolution 和顶点更新，使网格逐步贴合图像中的物体。
+
+Graph convolution 对每个顶点聚合邻域顶点特征：
+$$
+f'_i=W_0f_i+\sum_{j\in\mathcal{N}(i)}W_1f_j.
+$$
+
+从固定初始 mesh 做变形有一个根本限制：连续移动顶点不能改变拓扑，球面无法通过这种方式变成带孔结构。Mesh R-CNN 采用“先预测粗 voxel，再转为 mesh 并细化”的混合路线，先让 voxel 决定孔洞和连通关系，再利用 mesh 提高表面分辨率。
+4. 形状评估与坐标系IoU 适合比较体素或占据网格，但会受到离散分辨率影响；Chamfer distance 对点集的平均最近邻误差敏感，少量离群点可能被平方距离放大；F1 score 在给定距离阈值后同时衡量 precision 和 recall，更强调“有多少表面点在容差范围内”。不同指标会偏好不同的几何性质，所以论文间必须在相同采样方式、阈值和坐标系下比较。
+
+还要区分 canonical coordinates 与 view coordinates。前者把物体对齐到统一坐标系，后者保留相机视角；模型训练和评估必须明确使用哪一种。
+
+5. Mesh R-CNNMesh R-CNN 在 2D 检测和实例分割的 RoI 特征上增加 mesh head，输出每个检测物体的 3D mesh。它把二维定位、像素 mask 和三维形状放在一个共享框架中。
+
+训练 mesh 时只用表面 Chamfer loss 容易得到细长、折叠或退化的三角形，因此还要加入边长、法向或平滑正则，让几何结构更规整。这里体现了一个常见原则：任务损失保证“位置接近”，结构正则负责“输出像一个可用的 mesh”。
+数据也限制了模型能学到什么。ShapeNet 规模较大但主要是孤立、干净的 CAD 模型和合成视角，与真实照片存在域差异；Pix3D 把真实家具照片与 mesh 对齐，场景更真实，却集中在有限物体类别。对单图 3D 来说，训练集的形状覆盖和相机标定往往与网络结构同样重要。
+6. 本讲总结三维视觉没有唯一的最佳表示：voxel 易处理但耗内存，point cloud 灵活但无拓扑，mesh 结构明确但预测复杂，implicit representation 连续但需要查询和重建。任务目标和计算预算决定表示选择。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>3D-Vision</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 11》课堂笔记</title>
+    <url>/posts/eecs498l11/</url>
+    <content><![CDATA[Lecture 11：Training Neural Networks（Part 2）这一讲继续讨论训练动态：学习率调度、超参数搜索、学习曲线、迁移学习和分布式训练。主线是先把单卡训练跑稳，再扩大数据、模型和设备规模。
+1. 学习率调度与早停固定学习率往往在训练初期太小、后期又太大。常见调度方式包括 step decay、cosine decay、linear decay 和 inverse-square-root decay。
+
+
+训练时间也需要控制。训练误差持续下降而验证误差开始上升，通常说明过拟合；可以早停，或保存验证集表现最好的 checkpoint。
+学习率调度只有与训练总步数一起看才有意义。Cosine schedule 的 $T$、step decay 的里程碑、warmup 的步数都依赖计划训练多久。若中途改变 batch size 或数据集大小，按 epoch 定义和按 optimizer step 定义的 schedule 也会产生不同结果。
+早停不是只看最后一个验证点立即终止，因为验证指标本身有噪声。更稳妥的做法是设置 patience、保存 best checkpoint，并同时观察 loss 与目标 metric。
+2. 超参数搜索Grid Search 在每个维度均匀枚举组合；Random Search 随机采样组合，在高维空间通常更有效，因为不是每个超参数都同等重要。
+
+学习曲线是最有价值的诊断工具之一：训练和验证 loss 都高，可能是欠拟合或优化不足；训练 loss 低而验证 loss 高，通常是过拟合；两者都不下降，优先检查学习率、初始化和数据管道。
+
+超参数搜索应优先在对数尺度上进行，因为学习率、weight decay 等参数跨越多个数量级。实用流程通常是：
+
+先用少量数据或少量 epoch 做 coarse search；
+排除会发散和明显欠拟合的区域；
+在较好的数量级附近缩小范围；
+用完整训练预算复验候选；
+最后只在测试集上评估一次。
+
+如果每次实验同时改变网络、数据增强和优化器，就无法判断提升来自哪里。训练日志、随机种子、配置和 checkpoint 的可追溯性，是超参数优化能否可信的前提。
+3. Transfer Learning视觉任务常用 ImageNet 预训练模型作为起点。数据少时，冻结卷积 backbone，只训练新的分类头；数据更多时，可以逐步解冻并 fine-tune；目标任务与预训练域差异很大时，则需要更多层参与训练。
+
+迁移学习的解释是：前层学习边缘、纹理等通用特征，后层才更依赖原始数据集的类别。
+Fine-tuning 时通常给预训练 backbone 更小学习率，给新初始化的 head 更大学习率。若目标数据很少，一开始就全量更新可能迅速破坏已有表示；可以先训练 head，再逐步解冻。还要保证输入归一化和图像尺寸与预训练模型兼容，否则即使权重加载成功，特征分布也会偏移。
+4. 数据并行与模型并行模型并行把不同层放在不同 GPU 上，适合单个模型太大而无法放入一张卡的情况；数据并行在每张 GPU 上复制完整模型，把 batch 切分后并行计算梯度，再进行 all-reduce。
+同步数据并行中，每张卡先独立计算局部梯度，all-reduce 后所有副本得到相同平均梯度，再一起更新。理想情况下吞吐量随 GPU 数线性增长，但通信量、输入管道和负载不均会降低 scaling efficiency。模型并行还可能产生 pipeline bubble：某些设备等待前一阶段输出，硬件没有被持续占满。
+
+
+5. Large-Batch Training增大 batch 可以提高设备利用率，但梯度噪声变小，通常需要按 batch size 调大学习率，并在训练开始加入 warmup，避免初始学习率过大导致发散。
+
+Linear scaling rule 的直觉是：batch 放大 $k$ 倍后，一次更新聚合了约 $k$ 倍样本，可以尝试把学习率也放大 $k$ 倍。但它只是经验规则，过大的 batch 会减少参数更新次数，还可能进入泛化较差的 sharp solution。Warmup 让模型先在较小步长下建立稳定激活，再逐渐升到目标学习率。
+6. 本讲总结训练系统可以按三个阶段组织：一次性设置、训练动态、训练后处理。学习率和曲线帮助诊断单次训练，迁移学习与分布式训练则决定如何把一个可行实验扩展到更大数据和模型。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Training</tag>
+        <tag>CV</tag>
+        <tag>Transfer-Learning</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 12》课堂笔记</title>
+    <url>/posts/eecs498l12/</url>
+    <content><![CDATA[Lecture 12：Recurrent Neural Networks前馈网络假设输入尺寸固定、各位置可以同时处理；语言、视频和图像描述却需要处理序列。RNN 的核心是维护一个随时间更新的隐藏状态。
+1. 用同一个单元处理序列基本 RNN 在每个时间步重复同一个函数：
+$$
+h_t=\tanh(W_{hh}h_{t-1}+W_{xh}x_t+b_h),
+\qquad y_t=W_{hy}h_t+b_y.
+$$
+
+参数在时间上共享，所以模型可以处理不同长度的序列，并把过去的信息压缩到 $h_t$ 中。
+共享参数意味着 RNN 不是为第 1 个词和第 20 个词分别训练两套网络，而是学习同一个状态更新规则。这样参数量不随序列长度增长，但也要求一个固定维度的 $h_t$ 承载任务所需的全部历史。序列越长，这个信息瓶颈越明显。
+2. 展开后的计算图将循环沿时间展开，就得到一条重复的链。每个 $h_t$ 同时依赖 $x_t$ 和 $h_{t-1}$，输出可以在每一步产生。
+
+many-to-one 适合情感分类，one-to-many 适合图像描述，many-to-many 适合逐帧标注或序列标注。Encoder-Decoder 则先把输入序列压缩为状态，再由另一个 RNN 逐步生成输出。
+
+训练 decoder 时常使用 teacher forcing：第 $t$ 步输入真实的前一个 token，而不是模型自己上一步的预测。这能并行准备训练序列并稳定优化，但带来 exposure bias：推理时模型只能看到自己的预测，一次错误会改变后续输入分布并逐步累积。Beam search、scheduled sampling 和后来的 attention 都从不同角度缓解生成问题。
+3. 语言模型与截断反向传播字符级语言模型在看到 h 时预测 e，看到 he 时预测 l。训练时可以把每个时间步的 next-token loss 相加。
+对很长序列完整展开并反向传播会占用大量内存，也会让梯度经过太多次矩阵乘法。Truncated BPTT 将序列切成短块，在块内反向传播，并把最后的隐藏状态传给下一块但截断梯度。
+
+截断后，模型的前向状态仍可携带较长期信息，但梯度无法跨越截断边界直接告诉更早时间步“后来发生了什么”。窗口太短会损害长期 credit assignment，太长则增加显存并加剧梯度问题。它是训练可行性与长期依赖之间的工程折中。
+4. 图像描述图像可以先经过 CNN 得到空间特征，再把这些特征或一个全局向量送入 RNN，逐词生成 caption，直到采样到 &lt;END&gt;。
+
+5. 梯度消失与 LSTMVanilla RNN 在时间上反复乘同一个变换，容易出现梯度消失或爆炸。LSTM 增加 cell state 和输入、遗忘、输出三个门：
+$$
+c_t=f_t\odot c_{t-1}+i_t\odot g_t,
+\qquad
+h_t=o_t\odot\tanh(c_t).
+$$
+
+门允许网络选择保留、写入和读取长期信息。GRU 用更少的门实现类似思想，参数和计算更轻量。
+LSTM 的关键不是门的名字，而是 cell state 的加法更新。Vanilla RNN 的历史反复经过矩阵乘法和 tanh；LSTM 中若 forget gate 接近 1、input gate 接近 0，$c_t$ 可以近似复制 $c_{t-1}$，梯度沿这条路径也能较完整地通过。forget gate 控制旧信息保留多少，input gate 控制新候选写入多少，output gate 决定当前向外暴露多少记忆。
+梯度爆炸仍可能发生，因此 RNN 训练常使用 gradient clipping：当梯度范数超过阈值时按比例缩小。它限制单次异常更新，却不能从根本上修复长期梯度消失。
+6. 深度 RNN 与架构搜索RNN 可以沿时间展开，也可以沿深度堆叠多个 recurrent layer。不同门结构、跳连和归一化方式会产生大量变体，因此后来出现了用进化搜索或其他方法自动发现 RNN 单元的工作。
+
+7. 本讲总结RNN 的核心不是“记住所有历史”，而是用固定维度状态近似压缩历史。LSTM&#x2F;GRU 改善了长期梯度流，但序列必须按时间顺序计算，难以充分并行，这为下一讲的 attention 和 Transformer 埋下了动机。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>RNN</tag>
+        <tag>Sequence-Modeling</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 14》课堂笔记</title>
+    <url>/posts/eecs498l14/</url>
+    <content><![CDATA[Lecture 14：Visualizing and Understanding CNNs训练完成的 CNN 通常只给出一个类别分数，但我们还想知道它学到了什么、依据哪些像素、内部表示是否有语义结构。今天的工具大致分成两类：读取网络已有的激活，以及通过梯度反过来生成或修改图像。
+更细一点，可以按问题来选工具：feature map、最大激活 patch 和近邻是在问“网络表示了什么”；occlusion 与 saliency 在问“当前预测对哪里敏感”；feature inversion 在问“这一层保留了什么信息”；activation maximization、DeepDream 和风格迁移则把网络当作一个可微目标，主动寻找满足特征约束的图像。不同工具回答的问题并不相同。
+1. 从滤波器和特征空间开始第一层滤波器常呈现边缘、颜色和简单纹理；高层滤波器的可视化更抽象。分类器前的 feature vector 可以在图像数据集上取 nearest neighbors，也可以用 PCA&#x2F;t-SNE 降到二维观察类别聚类。
+
+
+2. 哪些输入区域最重要给定一个中间神经元或类别分数，记录大量样本中使它激活最大的图像块，可以得到 maximally activating patches。它回答的是“这个单元通常响应什么视觉模式”。
+
+Saliency map 则对输入像素求梯度：
+$$
+S(x)=\left|\frac{\partial f_c}{\partial x}\right|.
+$$
+梯度绝对值大的位置对当前类别分数更敏感。把 saliency 与 GrabCut 等方法结合，甚至可以在没有像素级标签时得到粗略分割。
+
+Guided backprop 用修改后的 ReLU 反向规则抑制负梯度，得到更清晰的中间特征可视化。
+Occlusion 和梯度法各有取舍。遮挡法直接观察移除某块区域后分数如何变化，更接近干预，但每移动一次遮挡块都要做一次前向计算，而且结果受遮挡块大小和填充值影响；梯度法只需一次反向传播，速度快，却只是当前输入附近的一阶局部敏感度。梯度很小不一定表示区域不重要，也可能是模型已经进入饱和区。
+因此 saliency 图适合做线索和模型对比，不宜把一张漂亮热力图解释成因果证明。Guided backprop 的图通常更锐利，但它修改了真实反向传播规则，清晰度也不等于忠实度。
+3. 通过梯度生成图像Feature visualization 从随机图像开始，沿目标神经元激活的梯度上升，同时加入自然图像正则化：
+$$
+x^*=\arg\max_x\left[f_l(x)+R(x)\right].
+$$
+
+加入总变分、像素裁剪或多尺度抖动可以抑制噪声和棋盘格纹理。
+
+Adversarial example 也利用同一条梯度，只不过目标是让模型对人眼几乎不变的图像产生错误判断。
+这组方法揭示了同一个事实：网络优化的是特征和分数，并不自动带有人类对“自然图像”的先验。若没有正则化，最容易提高分数的往往是高频纹理或重复局部模式，而不是一张人眼看来完整自然的物体图像。
+4. Feature inversion 与 DeepDreamFeature inversion 给定一个真实图像的特征向量，寻找另一张图像，使它在特征空间中尽量接近原图，同时加自然图像正则化。这说明特征保留了哪些信息，也揭示了哪些信息在网络中被丢弃。
+DeepDream 不从随机图像最大化某个单元，而是在已有图像上反复放大当前网络已经检测到的特征，因此会出现云朵中的动物、建筑等幻觉纹理。
+
+5. Neural Style Transfer风格迁移把内容图像的高层 feature reconstruction 与风格图像的 Gram matrix reconstruction 结合：
+$$
+L=L_{content}+\lambda L_{style}.
+$$
+内容特征保留物体布局，Gram 矩阵保留各层通道之间的纹理统计。
+若某层特征为 $F\in\mathbb{R}^{C\times HW}$，Gram matrix 可写成 $G=FF^T$。它统计哪些通道经常一起激活，却把具体激活发生在哪个位置求和掉了。因此它很适合表达“笔触、颜色、纹理共同出现的方式”，同时不会强迫生成图复制风格图中的物体布局。
+
+优化一张图像可以实现风格迁移，但每张新内容图都要重新迭代，速度慢；Fast Style Transfer 则预先训练一个前馈网络，用同样的感知损失监督它，把迭代优化变成一次前向推理。前者换内容、换风格都灵活，后者推理快，但经典版本通常要为每一种风格单独训练一个网络。
+
+6. 本讲总结可视化工具不能直接证明网络“理解”了概念，但能帮助定位模型真正使用的证据、比较不同层的表示，并发现数据偏差和脆弱性。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Visualization</tag>
+        <tag>CNN</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 18》课堂笔记</title>
+    <url>/posts/eecs498l18/</url>
+    <content><![CDATA[Lecture 18：Videos视频可以看成带时间轴的图像序列。模型需要同时理解 appearance 和 motion，还要在可接受的显存与计算量内处理大量帧。
+与图像相比，视频的成本会同时随空间分辨率、帧率和时间长度增长。原始视频可能有数分钟、每秒 24–30 帧，而训练常只能看到几秒、低帧率、低分辨率的 clip。因此视频建模首先是一个采样问题：模型看到的时间窗口，决定了它最多能学到多长的动作关系。
+1. 视频输入与单帧 baseline长度为 $T$ 的 RGB 视频可以表示为 $T\times3\times H\times W$ 的张量。
+
+最简单的方法是对每帧独立运行 2D CNN，再平均或投票类别分数。它没有显式建模运动，却常常是第一个应该尝试的 baseline。
+
+这个 baseline 有时出乎意料地强，因为许多数据集可以仅凭场景或物体判断动作，例如泳池暗示“游泳”、乐器暗示“演奏”。这也提醒我们：高分类准确率不一定代表模型真正理解了运动。只有当类别必须依靠方向、速度或动作顺序区分时，时间建模的价值才会明显。
+常见训练方法是从长视频随机截取短 clip 并做时间下采样，测试时再从不同时间位置取多个 clip，平均它们的预测。这样能覆盖更多内容，但带来训练&#x2F;测试不完全一致：训练标签通常继承整段视频的标签，而随机 clip 未必真的包含该动作。
+2. Early Fusion、Late Fusion 与 3D CNNLate fusion 先分别提取每帧特征，最后拼接或池化；early fusion 把多帧堆到输入通道，在第一层卷积混合时间信息；3D CNN 则让卷积核沿时间和空间同时滑动。
+
+
+
+3D 卷积的参数量和显存通常更大，但可以在网络早期学习局部运动模式。实际选择取决于数据规模、帧数和算力。
+三种融合方式关注的时间尺度不同。Late fusion 复用成熟的 2D 图像特征，计算经济，但在融合前已丢掉精细像素运动；early fusion 能在底层比较相邻帧，却把固定数量的帧塞进通道，时间平移结构不自然；3D CNN 对时空局部模式共享卷积核，表达最直接，但中间 activation 多了时间维，显存和算力开销显著增加。
+3. 运动表示与 Two-Stream光流为每个像素估计从一帧到下一帧的位移向量：
+$$
+F(x,y)=(u(x,y),v(x,y)).
+$$
+
+Two-stream 网络让一个 CNN 看 RGB appearance，另一个 CNN 看堆叠光流，再在高层融合。
+
+RGB 分支擅长识别人、物体和场景，光流分支弱化颜色外观，突出移动方向与速度。代价是传统光流通常要预计算、占存储，并且相机运动也会产生大面积光流；它提供的是运动线索，不等于已经分离出物体真实运动。
+4. 长期时间结构3D CNN 和短 clip 模型的时间感受野有限。可以在 CNN 特征之上堆叠 RNN 或 recurrent convolution，让当前状态跨 clip 保存历史信息。
+
+Nonlocal block 则用时空 self-attention，让一个位置直接读取远处帧和空间位置的特征。
+
+I3D 把成熟的 2D CNN kernel “inflate”为 3D kernel，并用图像预训练权重初始化。
+
+SlowFast 网络用慢路径观察低帧率语义，用快路径观察高帧率运动，再通过 lateral connections 融合。
+
+这些方法分别从不同角度扩大时间范围：RNN 把过去压入状态，nonlocal block 允许远距离位置直接交互，I3D 用图像预训练减轻 3D 模型的数据需求，SlowFast 则把低频语义与高频运动分配给不同计算预算。实际瓶颈不只是网络深度，还包括能否在一个 batch 中装下足够长的视频。
+5. 从分类到定位除了短 clip 分类，还可以做 temporal action localization，在长视频中标出动作开始和结束；spatio-temporal detection 则同时预测人物框、时间区间和动作类别。
+
+6. 本讲总结视频模型的设计空间可以按融合位置和时间范围组织：
+$$
+\text{单帧}\rightarrow\text{early/late fusion}\rightarrow\text{3D CNN}\rightarrow\text{RNN/attention}\rightarrow\text{时空定位}.
+$$
+工程上先用单帧 baseline，再根据动作是否依赖运动、时间跨度和计算预算逐步增加复杂度。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>CNN</tag>
+        <tag>Video</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 19》课堂笔记</title>
+    <url>/posts/eecs498l19/</url>
+    <content><![CDATA[Lecture 19：Generative Models，Part 1前面的分类、检测和分割都是 discriminative task：给定 $x$ 预测 $y$。生成模型则试图学习数据分布本身，从而检测异常、无标签学习或生成新的样本。
+这和 supervised&#x2F;unsupervised 不是完全同一条划分轴。无条件生成模型只需要样本 $x$，常用于无监督表示学习；条件生成模型学习 $p(x\mid y)$，仍然可能需要类别、文本或配对图像等监督信号。关键区别是模型是否试图描述数据如何产生，而不只是输出一个决策边界。
+1. Discriminative 与 GenerativeDiscriminative model 学习 $p(y\mid x)$ 或直接学习决策边界；generative model 学习 $p(x)$；conditional generative model 学习 $p(x\mid y)$。
+
+生成模型可以采样新数据、评估样本 likelihood、发现离群点，或在没有标签的情况下学习表示。
+不过并非每种生成模型都同时支持这些能力：autoregressive model 能显式计算 likelihood，GAN 通常只能采样，VAE 优化的是 likelihood 的下界。比较方法时必须分开看样本质量、密度估计、采样速度和 latent 可编辑性。
+2. Autoregressive Models把图像像素或 token 排成序列，按链式法则分解联合分布：
+$$
+p(x)=\prod_{i=1}^T p(x_i\mid x_1,\ldots,x_{i-1}).
+$$
+PixelRNN 让每个像素依赖左侧和上方的历史，PixelCNN 用 masked convolution 限制感受野，保证当前位置看不到未来像素。
+
+
+autoregressive model 可以显式计算 likelihood，样本质量通常好，但生成必须逐像素进行，速度慢。
+
+3. 普通 AutoencoderAutoencoder 用 encoder 将 $x$ 压缩为 feature $z$，再由 decoder 重建 $\hat x$：
+$$
+L=\|x-\hat x\|_2^2.
+$$
+
+它可以学习有用的低维表示，但普通 autoencoder 的 latent space 可能是离散、断裂的，随机采样一个 $z$ 不一定能生成合理图像。
+瓶颈迫使 encoder 保留对重建最有用的信息，但重建训练本身并没有规定 latent 应服从什么分布。若网络容量过大，它还可能近似复制输入而学不到可迁移结构。因此普通 autoencoder 是表示学习与压缩模型，不应仅因为有 decoder 就自动称为可采样的概率生成模型。
+4. Variational AutoencoderVAE 让 encoder 输出一个分布 $q_\phi(z\mid x)$ 的均值和方差，从中采样 latent，再由 decoder 建模 $p_\theta(x\mid z)$。
+
+训练目标是 evidence lower bound：
+$$
+\mathcal{L}(x)=
+\mathbb{E}_{q_\phi(z\mid x)}[\log p_\theta(x\mid z)]
+-D_{KL}(q_\phi(z\mid x)\|p(z)).
+$$
+第一项要求重建好，第二项把 posterior 拉向简单先验，令 latent 空间连续、可采样。
+
+ELBO 出现的原因是边缘似然 $p_\theta(x)=\int p_\theta(x\mid z)p(z)\,dz$ 通常难以直接计算。引入近似 posterior $q_\phi(z\mid x)$ 后，我们优化一个不会超过真实 log-likelihood 的可计算下界。最大化这个下界，就同时训练了负责推断的 encoder 和负责生成的 decoder。
+两项损失存在真实拉扯：重建项希望每个输入拥有足够独特、信息丰富的 $z$；KL 项希望所有 posterior 接近共同先验，方便从先验采样。KL 太弱会退化成不规则的 autoencoder，太强则可能让不同输入的 latent 过于相似，甚至出现 posterior collapse。像素级高斯重建损失又倾向平均多种合理结果，因此 VAE 图像常比 GAN 模糊。
+5. Reparameterization Trick直接从依赖参数的分布采样无法反向传播。VAE 写成：
+$$
+z=\mu_\phi(x)+\sigma_\phi(x)\odot\epsilon,
+\qquad \epsilon\sim\mathcal{N}(0,I),
+$$
+把随机性移到独立的 $\epsilon$，使梯度可以穿过 $\mu$ 和 $\sigma$。
+这里不是“对随机采样本身求导”，而是把采样写成确定函数与外部噪声的组合。每次前向仍然随机，但在固定一份 $\epsilon$ 后，$z$ 对 encoder 参数是普通可微函数，所以可以用标准反向传播估计梯度。
+6. 本讲总结autoregressive model 直接最大化 likelihood，但生成慢；VAE 通过连续 latent 换取快速采样和可编辑表示，但重建可能更模糊。下一讲会继续讨论 VAE 的应用与 GAN。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Generative-Models</tag>
+        <tag>VAE</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 20》课堂笔记</title>
+    <url>/posts/eecs498l20/</url>
+    <content><![CDATA[Lecture 20：Generative Models，Part 2这一讲完成了 VAE 的直观图景，并介绍 GAN、VQ-VAE2、条件生成和 image-to-image translation。
+1. VAE 的采样与编辑训练好的 VAE 可以从先验 $p(z)$ 采样 latent，再送入 decoder 生成图像；也可以编码真实图像后改变某个 latent 坐标，实现语义编辑。
+
+
+对输入图像的 latent 做局部修改，再解码，就能实现脸部属性或姿态等编辑。
+
+2. VQ-VAE2：离散多尺度 latentVQ-VAE2 用离散 codebook 替代连续高斯 latent，并在多个空间尺度上编码。随后可以用 autoregressive model 在离散 latent 空间中建模，避免直接生成每一个高分辨率像素。
+
+3. GAN 的基本结构GAN 包含 generator $G$ 和 discriminator $D$。$G$ 从噪声 $z$ 生成假样本，$D$ 区分真实数据与生成数据：
+
+经典 minimax 目标为：
+$$
+\min_G\max_D\;\mathbb{E}_{x\sim p_{data}}[\log D(x)]
++\mathbb{E}_{z\sim p(z)}[\log(1-D(G(z)))].
+$$
+判别器学习分类真假，生成器则试图让假样本被判为真。理想最优点是 $p_g=p_{data}$，此时判别器无法区分两者。
+训练时并不是同时对两个网络做一次普通最小化，而是交替更新：先固定 $G$，让 $D$ 更会区分真假；再固定 $D$，让 $G$ 产生更容易被判真的样本。两个目标持续变化，所以 GAN 的 loss 不会像分类器那样稳定单调下降，单看曲线也很难判断样本质量。
+经典 minimax 形式让生成器最小化 $\log(1-D(G(z)))$。训练初期若判别器很强，$D(G(z))$ 接近 0，这个目标容易给生成器很小的梯度。实践中常改用 non-saturating loss：
+$$
+L_G=-\mathbb{E}_{z\sim p(z)}[\log D(G(z))],
+$$
+它的最优目标不变，但在生成器很差时提供更强的学习信号。
+4. GAN 的结果与 latent geometryGAN 通常能生成比 VAE 更清晰的图像，但训练可能不稳定，存在 mode collapse 和梯度问题。
+
+Mode collapse 指很多不同的 $z$ 被映射到少数几种输出。生成器只要找到当前判别器的某个弱点，就可能反复产生一小簇高分样本，而没有动力覆盖整个数据分布。它说明“单张样本很逼真”和“分布具有多样性”是两个不同指标，也解释了为什么只展示精选样本不够。
+latent 空间常呈现有意义的连续结构：在两个样本的 latent code 之间插值，生成结果会平滑变化；向量运算也可能对应属性变化。
+
+
+5. 条件生成与更高分辨率Conditional GAN 把标签 $y$ 同时提供给 G 和 D，生成指定类别的样本。BigGAN 通过更大 batch、class conditioning、spectral normalization 和 self-attention 提升质量与稳定性。
+
+课件中的 conditional batch normalization 为每个类别学习不同的缩放 $\gamma_y$ 和偏移 $\beta_y$，把标签注入生成器的多层特征，而不是只在输入端拼接一次。Spectral normalization 约束层的放大能力，有助于稳定判别器；self-attention 则让远距离区域协调，例如物体左右部分保持一致。它们分别解决条件控制、优化稳定性和全局一致性。
+生成模型还可以接受文本、低分辨率图像、语义 label map 或另一种图像作为条件。
+
+6. Image-to-Image TranslationPix2Pix 用配对数据学习从一种图像到另一种图像的映射；CycleGAN 在没有配对样本时加入 cycle consistency，使 $A\to B\to A$ 尽量恢复原图。
+
+
+Cycle consistency 只能约束映射大致可逆，并不能保证转换后的细节在语义上真实。模型可能保留隐藏信息来完成逆映射，也可能改变任务不希望改变的属性。因此无配对训练减少了数据要求，却引入了更弱的对应关系监督。
+7. 本讲总结生成模型的路线可以概括为：autoregressive 具有显式 likelihood、覆盖分布较完整，但采样串行；VAE 具有可推断、连续的 latent 和稳定目标，但图像可能偏平滑；GAN 采样快、结果锐利，却没有显式 likelihood，训练和覆盖模式也更难。VQ-VAE2 和条件生成把离散 latent、autoregressive prior 与可控生成组合起来，逐渐走向现代图像生成系统。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Generative-Models</tag>
+        <tag>GAN</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 4》课堂笔记</title>
+    <url>/posts/eecs498l04/</url>
+    <content><![CDATA[Lecture 4：Optimization上一讲定义了“什么样的权重更好”，这一讲讨论如何实际找到它们。核心是把损失看成参数空间上的地形，并沿着局部下降最快的方向反复更新参数。
+1. 从随机搜索到梯度随机尝试权重的做法几乎不可行：参数维度很高，随机点大多很差，也无法利用已经测得的损失。更有用的问题是：当前位置往哪个方向走，损失会立刻下降？
+
+对标量参数，导数描述局部斜率；对参数矩阵 $W$，所有偏导数组成梯度：
+$$
+\nabla_W L=\left[\frac{\partial L}{\partial W_{ij}}\right].
+$$
+负梯度是局部最陡下降方向，因此最基本的梯度下降更新为：
+$$
+W\leftarrow W-\alpha\nabla_W L,
+$$
+其中 $\alpha$ 是学习率。
+课上同时区分了数值梯度和解析梯度。数值梯度用有限差分近似：
+$$
+\frac{\partial L}{\partial W_i}\approx
+\frac{L(W_i+h)-L(W_i-h)}{2h}.
+$$
+它每检查一个参数都要额外做前向计算，不能用于真正训练，但非常适合 gradient check：将反向传播得到的解析梯度与数值结果比较，可以发现符号、维度或梯度累加错误。实际检查时通常使用 double precision、较小网络和少量参数，并避开 ReLU、hinge loss 的不可导点。
+2. Batch GD 与 SGDBatch Gradient Descent 每一步都用完整训练集计算梯度，方向稳定但单步昂贵。SGD 则用一个样本或一个 mini-batch 近似全数据梯度：
+$$
+W\leftarrow W-\alpha\nabla_W L_{\text{batch}}.
+$$
+SGD 的噪声并非只有缺点：它让优化有机会离开狭窄的局部极小值或鞍点。但在长而窄的山谷里，直接沿梯度走会左右摆动，收敛缓慢。
+
+学习率决定了更新的时间尺度。过小会让 loss 缓慢下降，看似稳定却浪费大量迭代；过大会在谷底两侧来回跨越，甚至让 loss 爆炸为 NaN。因此训练刚开始时，loss 是否在前几十个 iteration 明显下降，是比最终 accuracy 更早、更直接的健康检查。
+mini-batch 还承担硬件层面的折中：batch 太小，梯度噪声大且 GPU 利用率低；batch 太大，单步计算昂贵、显存占用高，而且更新次数变少。实践中的 batch size 往往首先受显存和吞吐量约束，再配合学习率调整。
+3. 动量与自适应学习率3.1 Momentum动量维护一个累积速度：
+$$
+v_{t+1}=\rho v_t+\nabla_W L(W_t),
+\qquad W_{t+1}=W_t-\alpha v_{t+1}.
+$$
+它会沿着长期一致的方向加速，在梯度来回改变符号的方向抑制震荡。
+
+3.2 AdaGrad、RMSProp 与 AdamAdaGrad 为每个参数累计历史梯度平方，让频繁出现大梯度的维度自动使用更小步长。RMSProp 用指数滑动平均避免 AdaGrad 的累计量无限增大；Adam 再把 RMSProp 的二阶统计与 Momentum 的一阶统计结合起来，并对初始偏差进行修正。
+Adam 的每一步大致包含：计算梯度、更新一阶和二阶移动平均、做 bias correction、按坐标缩放更新。它通常是实践中的可靠起点，但并不意味着任何任务都应盲目使用 Adam。
+
+Nesterov Momentum 与普通 Momentum 的区别是先沿当前速度“向前看”，再在预估位置计算梯度。直觉上，它能在接近谷底时更早发现需要减速或转向。AdaGrad 对稀疏特征尤其有用，因为很少出现梯度的坐标不会被过度缩小步长；RMSProp 和 Adam 则更适合持续训练深度网络。
+优化器的选择也会改变最终泛化。Adam 常能更快得到可用结果，SGD + Momentum 在视觉分类中有时能得到更好的最终验证性能。合理做法是先固定评估协议，再比较收敛速度、最终指标和对超参数的敏感性，而不是只看训练 loss。
+4. 一阶方法与二阶方法梯度下降只使用一阶信息；Newton 法还使用 Hessian 的曲率信息：
+$$
+W\leftarrow W-H^{-1}\nabla_W L.
+$$
+二阶方法在小规模问题上可以更快，但 Hessian 的存储和求逆成本随参数量迅速增长。L-BFGS 用有限历史近似曲率，减少了内存需求，但大规模深度网络训练仍普遍使用 SGD 及其变体。
+这里还可以看出 first-order 方法流行的原因：单次梯度的成本大致与一次前向传播同阶，且容易在 GPU 上批量并行；完整 Hessian 对 $P$ 个参数需要 $P\times P$ 的规模，在现代网络里根本无法显式存储。
+5. 本讲总结优化器解决的是“沿哪条路径找参数”，而不是“目标函数是否合理”。学习率、初始化、batch 大小和正则化会共同决定这条路径；因此优化器本身只是训练系统的一部分。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>Optimization</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 16》课堂笔记</title>
+    <url>/posts/eecs498l16/</url>
+    <content><![CDATA[Lecture 16：Detection + Segmentation这一讲先补充检测器中的 RoI Align，再把问题从 bounding box 推进到每个像素、每个实例、关键点和 3D mesh。
+这些任务最容易混淆的地方在输出单位：semantic segmentation 给每个像素一个类别；object detection 给每个实例一个框；instance segmentation 给每个实例一个独立 mask；panoptic segmentation 则要求整张图每个像素都有语义标签，同时可数物体还有实例 ID。输出越结构化，对空间对齐的要求越高。
+1. RoI Align 的连续采样RoI Pool 将候选框边界和网格边界取整，导致特征位置与原图不完全对齐。RoI Align 在每个 bin 内的固定采样点使用双线性插值，再做池化。
+
+这一步看似只是小改动，但对 mask 和 keypoint 预测特别重要，因为像素级任务对几何错位更敏感。
+2. Semantic Segmentation语义分割为每个像素预测类别，但不区分同一类别的不同实例。例如两头牛都被标为 cow，但不会得到两个独立 ID。
+
+Fully Convolutional Network 去掉分类网络末端的全连接层，使网络可以接受任意空间大小的输入并输出低分辨率的 dense score map，再通过上采样恢复空间尺寸。
+
+只把最深层特征直接放大通常会得到粗糙边界，因为多次 stride 和 pooling 已经丢掉了精细位置。FCN 的 skip connection 把深层“是什么”的语义特征与浅层“具体在哪里”的高分辨率特征融合，再逐级恢复尺寸。这类 encoder-decoder 思路后来成为密集预测网络的常见骨架。
+3. 上采样与转置卷积简单上采样可以使用 nearest neighbor、bilinear 或 bicubic interpolation；max unpooling 则利用池化时保存的最大值位置把特征放回稀疏网格。
+可学习的 transposed convolution 通过输入值与滤波器的乘积写入输出网格，重叠位置相加，因此能学习上采样方式。
+
+需要注意，转置卷积不是普通卷积的“逆运算”，只是一个参数化的上采样算子；stride、kernel 和 padding 选择不当时会产生棋盘格伪影。
+伪影常来自输出像素被卷积核覆盖次数不均。一个稳妥替代是先用 bilinear&#x2F;nearest interpolation 明确放大，再接普通卷积学习特征；这样把“改变尺寸”和“学习局部滤波”拆开，输出几何更可控。
+4. Instance 与 Panoptic Segmentation实例分割同时检测每个物体并预测其 mask。Mask R-CNN 在 Faster R-CNN 的 RoI 特征上增加 mask head，每个候选框输出一个类别相关的二值 mask。
+
+Mask head 不把一个 RoI 内所有类别放进逐像素 softmax 竞争，而是为每个类别输出独立的二值 mask，训练时只监督 ground-truth 类别对应的那一张。这把“它是什么”交给 classification head，把“属于该实例的哪些像素为前景”交给 mask head，减少两个任务之间的冲突。RoI Align 则保证 mask 预测看到的特征与原图边界保持连续对齐。
+Panoptic segmentation 将 things（可数物体）与 stuff（天空、草地等不可数区域）统一到一张图中，并为每个 thing 分配实例 ID。
+
+它的难点不仅是把语义分割和实例分割结果叠在一起，还要解决重叠实例的归属，并保证每个像素只得到一个最终标签。也就是说，panoptic 输出是一张无重叠、全覆盖的场景解释。
+5. 关键点、密集描述与 3D 头人体姿态估计把人表示成固定语义的关键点集合，例如肩、肘、膝和踝。
+
+同一个检测框还可以增加 caption head 生成局部描述，或增加 mesh head 预测物体的 3D 三角网格。
+
+6. 本讲总结从分类到密集视觉任务，输出逐步变得更结构化：
+$$
+\text{类别}\rightarrow\text{框}\rightarrow\text{像素}\rightarrow\text{实例}\rightarrow\text{关键点/三维形状}.
+$$
+共享 backbone 和按任务增加的 head，使这些任务可以组合成一个统一的视觉系统。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Segmentation</tag>
+        <tag>Object-Detection</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 22》课堂笔记</title>
+    <url>/posts/eecs498l22/</url>
+    <content><![CDATA[Lecture 22：Course Recap and Open Problems最后一讲先把整门课串成一条技术路线，再讨论深度学习在偏差、数据、可解释性和常识理解方面的开放问题。
+需要注意，这是一份 2019 年课程总结。Transformer、self-supervised learning 和大规模生成模型当时已经显出方向，但课件中的“当前方法”和“未来预测”应放回当年的时间背景理解。今天回看，许多趋势已经实现，偏差、泛化、数据效率与常识推理这些根本问题却仍没有因为模型变大而自动消失。
+1. 一条贯穿全课的主线计算机视觉的目标是让人工系统处理、感知并推理视觉数据。输入从像素开始，模型通过数据驱动的方法学习表示，再输出分类、检测、分割、三维形状、视频动作、生成结果或决策策略。
+
+
+数据驱动范式的基本循环是收集带标签数据、训练模型、在新图像上评估，而深度卷积网络负责学习从像素到语义的层次化映射。
+
+2. 从简单模型到统一视觉系统线性分类器和 KNN 建立了分数、损失和泛化的基本概念；梯度下降和反向传播让参数可以高效更新；CNN 通过局部连接、共享权重和下采样利用图像结构；RNN、attention 和 Transformer 处理序列；检测、分割和 3D head 将输出变成更丰富的空间结构。
+
+
+
+3. 预测一：新的模型与更多计算深度学习仍会出现新的模型结构，计算规模也会继续增长。Neural ODE 将网络层看作连续动力系统；科学应用会把神经网络用于物理模拟、医学图像和材料建模。
+
+4. 问题一：模型会放大偏差模型从数据中学习，而数据本身可能包含性别、经济和种族偏差。向量算术和分类器输出并不天然中立；如果训练数据在某些群体上稀少，系统在部署时可能产生系统性错误。
+
+因此评估不能只报告平均准确率，还需要按群体、场景和失败类型检查，建立数据治理与人工复核机制。
+偏差往往沿一条完整链路产生：采样决定哪些人和场景被看见，标注规则决定什么被当成真值，目标函数决定哪些错误被惩罚，部署环境又决定错误由谁承担。只在模型输出端做一次“去偏”很难修复上游问题；更可靠的做法是记录数据来源、分组报告性能、检查置信度校准，并为高风险决策保留申诉和人工复核。
+5. 问题二：为什么模型能泛化经典统计学习理论预期模型复杂度增加会带来过拟合，但现代网络即使参数远多于样本也能在测试集上表现良好。Lottery Ticket 等工作显示，大网络中可能包含训练一个好模型所需的稀疏子网络。
+
+泛化、隐式正则化和优化轨迹之间的关系仍未被完全解释。
+更反直觉的是，同一类大网络既能把随机标签完全记住，又能在真实数据上很好泛化；测试误差还可能随着模型规模先升后降，出现 double descent。这说明参数数量本身不足以解释有效复杂度。数据结构、初始化、SGD 的隐式偏好和网络架构共同决定最终学到哪一个解。
+Lottery Ticket 假说强调的也不只是“模型可以剪枝”，而是某些稀疏子网络连同它们的初始权重，可能已经具备特别适合训练的结构。它把问题从“网络容量有多大”推进到“优化为什么会找到可泛化的子空间”。
+6. 问题三：标注数据有限高性能监督学习依赖大量人工标签，而许多领域很难获得足够标注。Few-shot 数据集研究如何从极少样本学习新类别；self-supervised learning 则从无标签数据构造预训练任务。
+
+典型预训练任务包括拼图重排、图像着色和图像修复：
+
+
+
+这些任务的标签都能从原始数据自动构造，因此“self-supervised”仍然使用监督损失，只是不需要人工逐项标注。核心假设是：要解好 pretext task，网络必须学到对下游任务有用的结构，再用少量人工标签 fine-tune。
+但 pretext task 也可能留下捷径。例如拼图模型可能利用 patch 边缘的色差而不理解物体，着色模型可能只学习局部纹理。因此需要用跨任务迁移结果检验表示，而不能只看预训练任务本身的准确率。课件中的这些手工任务后来逐步被对比学习和大规模掩码建模等更通用目标扩展。
+7. 问题四：模型缺少常识语言模型和视觉模型可以在 benchmark 上取得高分，却未必理解物体、因果关系和社会语境。检测器可能只看到“物体”，却不能理解它们之间发生了什么。
+
+模型擅长从相关性预测常见答案，却容易在组合关系、反事实和分布外场景中失败。“识别出大象、椅子和房间”不等于理解“大象为什么不该出现在这里”。要补上这层能力，系统不仅要扩大数据，还要把视觉与语言、物理交互、时间和因果反馈连接起来，并用能暴露捷径的测试而非单一 benchmark 分数评估。
+8. 课程总览这门课的知识地图可以压缩为：表示决定模型能看到什么，损失决定模型偏好什么，优化决定模型能否学出来，数据和硬件决定系统能否扩展，评估决定我们是否真的知道它做得好不好。
+
+回到整门课，真正可迁移的不是某个具体架构名称，而是一套分析顺序：先明确输入输出与不变性，再选择表示和损失；检查梯度、数据与计算瓶颈；最后用与真实目标一致的指标分析失败案例。新模型会不断替换旧模型，但这套问题框架仍然有效。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>History</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 15》课堂笔记</title>
+    <url>/posts/eecs498l15/</url>
+    <content><![CDATA[Lecture 15：Object Detection图像分类只输出整张图的一个标签；目标检测要同时回答“是什么”和“在哪里”，输出数量不固定的类别与 bounding box 集合。
+1. 任务定义与朴素方案每个检测结果包含类别分数和四个框参数 $(x,y,w,h)$。真实图像可能有多个物体、尺度差异、遮挡和背景干扰。
+
+Sliding window 可以在不同位置和尺度裁剪图像，再把每个 crop 送入 CNN，但窗口数量巨大，重复计算严重。
+
+检测比分类多出的核心困难不只是四个连续坐标，而是输出集合长度不固定：模型既要判断哪里可能有物体，又要给候选分配类别，还要把多个指向同一物体的预测去重。后面的 proposal、anchor、box regression 和 NMS，分别对应这几个子问题。
+2. R-CNN：先找候选区域，再分类R-CNN 用 selective search 等方法生成约两千个 region proposals，对每个区域独立运行 CNN，再用分类器和 bounding-box regressor 细化预测。
+
+训练和测试都慢，因为同一张图像的不同区域会重复经过 backbone。
+Bounding-box regression 通常不是从零“画”一个框，而是预测相对于 proposal 或 anchor 的偏移：中心点移动量按参考框宽高归一化，宽高变化用对数比例表示。这样目标值的尺度更稳定，也把问题变成“把一个大致正确的框修好”。训练时还要按 IoU 把 proposal 划成正样本、负样本或忽略样本；阈值选择会直接改变训练数据分布。
+3. IoU 与 NMSIntersection over Union 衡量预测框与 ground truth 的重叠：
+$$
+\operatorname{IoU}(A,B)=\frac{|A\cap B|}{|A\cup B|}.
+$$
+
+同一个物体常会产生许多相互重叠的框。Non-Max Suppression 先保留分数最高的框，再删除与它 IoU 过高的候选，重复直到没有候选。
+
+NMS 是启发式后处理，不是学习出来的规则。阈值太低会把相邻的两个真实物体误删，太高则会留下重复框；类别分开做 NMS 还能避免不同类别的框互相抑制。拥挤场景中，这一步经常是误差来源。
+4. Fast R-CNN 与 RoI Pool&#x2F;AlignFast R-CNN 先让整张图只经过一次 CNN，再把候选框投影到共享 feature map 上。RoI Pool 把任意大小的区域量化成固定大小的网格，再对每个子区域做 max pooling。
+
+量化会造成边界错位。RoI Align 不做 snapping，而是在连续坐标采样并双线性插值，因此对小目标和精确分割更友好。
+
+5. Faster R-CNN 与单阶段检测Faster R-CNN 用 Region Proposal Network 从共享 feature map 上预测 anchor 的 objectness 和位置偏移，省掉外部 proposal 算法：
+
+Anchor 是预先放在每个特征图位置上的参考框，通常覆盖多种尺度和长宽比。RPN 对每个 anchor 预测“有没有物体”和框偏移。它把连续的任意框搜索转成一组密集分类与回归问题，但也会制造大量容易的背景 anchor，因此训练时必须采样正负样本，或用 focal loss 一类方法降低容易负样本的主导作用。
+单阶段检测器直接在密集网格和 anchor 上预测类别与框，不再分 proposal 和 classification 两个阶段，速度更快，但需要处理极度不平衡的前景&#x2F;背景样本。
+
+两阶段方法先用 RPN 缩小搜索范围，再对少量 RoI 做更精细判断，通常精度高、对小目标更友好；单阶段方法省掉第二次逐 RoI 处理，吞吐量更高、部署链路更简单。它们的差别主要是候选筛选发生在何处，并不是“是否使用 CNN”。
+6. 评估检测器通常对每个类别单独评估：先按置信度从高到低排列预测，在给定 IoU 阈值下把每个 ground truth 最多匹配一次。重复检测同一物体、类别错误、定位不足、背景误检都会计为 false positive；漏掉真实物体则降低 recall。
+随着置信度阈值降低，通常召回率上升、精确率下降，由此得到 Precision-Recall 曲线。AP 是一类的曲线面积，mAP 再对类别取平均。只报一个 mAP 仍可能掩盖问题，因此还应分开观察不同 IoU、目标尺寸和错误类型：低 IoU 指标好而高 IoU 指标差，往往说明“找到了物体，但框得不准”。
+7. 本讲总结目标检测的工程主线是：
+$$
+\text{候选区域}\rightarrow\text{共享特征}\rightarrow\text{分类+框回归}\rightarrow\text{去重与评估}.
+$$
+下一讲会在此基础上扩展到语义分割、实例分割和姿态估计。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>CNN</tag>
+        <tag>Object-Detection</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 21》课堂笔记</title>
+    <url>/posts/eecs498l21/</url>
+    <content><![CDATA[Lecture 21：Reinforcement Learning监督学习给定输入和标签，强化学习则让 agent 与环境交互，通过延迟 reward 学习如何行动。难点是动作会改变未来状态，数据分布也由当前策略决定。
+其中有两个贯穿全讲的困难。Exploration 要决定是选择当前看来最好的动作，还是尝试不确定但可能更好的动作；credit assignment 要在很久以后收到奖励时，判断前面哪些动作真正造成了结果。再加上环境随机性和策略持续变化，RL 的训练数据既不独立同分布，也没有现成的正确标签。
+1. Agent、Environment 与轨迹每一步 agent 观察状态 $s_t$，选择动作 $a_t$，环境返回 reward $r_t$ 和新状态 $s_{t+1}$。
+
+
+目标是最大化折扣回报：
+$$
+G_t=\sum_{k=0}^{\infty}\gamma^k r_{t+k}.
+$$
+$\gamma$ 同时控制远期奖励的重要性和有效时间跨度。取值小会偏好立即收益，取值接近 1 会考虑更长未来，但回报估计方差也更大。奖励设计同样关键：agent 会严格优化给定数值，代理指标写得不完整时，可能学会“刷奖励”而不是完成真正目标。
+2. MDP 与 Grid WorldMarkov Decision Process 用 $(S,A,R,P,\gamma)$ 描述：状态集合、动作集合、奖励函数、转移概率和折扣因子。Markov 性质表示给定当前状态后，过去历史不再提供额外信息。
+
+Grid World 是直观例子：agent 选择上下左右移动，目标是尽快到达终止格，同时尽量减少每一步的负奖励。
+
+3. Value、Q 与 Bellman Equation状态价值函数和动作价值函数分别表示：
+$$
+V^\pi(s)=\mathbb{E}_\pi[G_t\mid s_t=s],
+$$
+$$
+Q^\pi(s,a)=\mathbb{E}_\pi[G_t\mid s_t=s,a_t=a].
+$$
+最优 Q 函数满足 Bellman 最优方程：
+$$
+Q^*(s,a)=\mathbb{E}[r+\gamma\max_{a'}Q^*(s',a')].
+$$
+
+Value Iteration 反复应用 Bellman backup，直到价值和策略收敛。
+
+4. Deep Q-Learning状态空间很大时无法存储 Q-table，可以用神经网络近似 $Q(s,a;\theta)$，目标值为：
+$$
+y=r+\gamma\max_{a'}Q(s',a';\theta^-).
+$$
+
+Atari 的工作展示了从原始像素学习控制策略的可能性，但需要 experience replay、target network 和探索策略来稳定训练。
+Experience replay 把过去的 transition 存入缓冲区并随机采样 mini-batch，打散连续轨迹的强相关性，也让同一份昂贵交互数据被多次利用。Target network 用一份延迟更新的参数 $\theta^-$ 计算目标 $y$，避免“网络一边追目标，目标又随同一个网络立刻移动”的正反馈。常见的 $\epsilon$-greedy 则以大概率选最大 Q 动作、以小概率随机探索。
+Q-learning 的 Bellman 目标使用下一状态的最大动作价值，即使该 transition 由旧策略或探索策略收集也能更新，因此属于 off-policy 方法；它可以利用 replay 中混合了不同历史策略的数据。代价是函数逼近、bootstrap target 和 off-policy 数据叠加时容易不稳定。
+5. Policy Gradient 与 REINFORCEPolicy gradient 不学习 Q 表，而是直接训练策略 $\pi_\theta(a\mid s)$。目标是：
+$$
+J(\theta)=\mathbb{E}_{\tau\sim\pi_\theta}[R(\tau)].
+$$
+REINFORCE 使用 log-derivative trick：
+$$
+\nabla_\theta J
+=\mathbb{E}\left[\sum_t G_t\nabla_\theta\log\pi_\theta(a_t\mid s_t)\right].
+$$
+
+Actor-Critic 让 actor 更新策略，critic 估计 value，从而降低纯 Monte Carlo 回报的方差。
+REINFORCE 用整条采样轨迹的回报给每一步加权，概念直接、也能处理连续或随机动作，但同一策略的不同轨迹回报可能差异很大，因此梯度方差高。减去只依赖状态的 baseline 不改变期望梯度，却能把更新信号改成“这个动作比当前状态下通常表现好多少”：
+$$
+A(s_t,a_t)=Q(s_t,a_t)-V(s_t).
+$$
+Actor-Critic 中 critic 学习这个价值基准，actor 根据 advantage 更新动作概率。它比纯 Monte Carlo 更低方差，但 critic 的估计误差会引入偏差。标准 policy gradient 通常是 on-policy：更新后旧轨迹很快过期，样本利用率往往低于带 replay 的 DQN。
+6. 与世界交互的随机计算图强化学习中的动作会影响未来状态，环境本身通常不可微，因此需要 stochastic computation graph 和采样估计梯度。
+
+7. 本讲总结Q-Learning 学习“每个动作有多好”，Policy Gradient 学习“应该以多大概率选择动作”，Model-based RL 则进一步学习环境模型。三者都围绕同一个闭环：行动、观察结果、用延迟奖励更新策略。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>Reinforcement-Learning</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 8》课堂笔记</title>
+    <url>/posts/eecs498l08/</url>
+    <content><![CDATA[Lecture 8：CNN Architectures卷积、池化和归一化只是零件，真正的性能来自如何安排深度、宽度、下采样和残差路径。这一讲按时间线比较了几种影响最大的 CNN 架构。
+1. 从 AlexNet 到 VGGAlexNet 证明了大规模数据、GPU 和 ReLU 卷积网络可以在 ImageNet 上取得突破。它由卷积层、池化层和全连接层组成，但各层的尺寸和连接方式还比较不规则。
+VGG 的贡献是把设计规则化：大量使用 $3\times3$ 卷积、$2\times2$ max pooling，并通过堆叠小卷积增加深度。
+
+代价是参数量、显存和 FLOPs 很大。VGG 的经验是“更深通常更强”，但也暴露出单纯加深网络的训练和效率问题。
+比较架构时不能只数层数。至少要同时看：
+
+Parameters：决定模型权重占用和一定程度的过拟合风险；
+FLOPs：近似描述一次前向计算量，但不等同于真实延迟；
+Activation memory：训练时还要保存中间特征，常比权重更占显存；
+规则性与并行度：同样 FLOPs 的网络，硬件利用率可能差很多。
+
+例如 VGG 的大部分参数集中在末端全连接层，而前面的高分辨率卷积贡献了大量计算。GoogLeNet 和 ResNet 的改进不仅是提高准确率，也是在重新分配参数和计算。
+2. GoogLeNet：把效率放进结构GoogLeNet 通过 aggressive stem、$1\times1$ bottleneck 和 global average pooling 减少计算。Inception 模块并行使用 $1\times1$、$3\times3$、$5\times5$ 卷积以及 pooling，再把结果拼接起来。
+
+它还在中间层加入 auxiliary classifier，帮助梯度传到网络前部。这个技巧在 BatchNorm 出现前尤其有用。
+$1\times1$ 卷积在 Inception 中不是“观察一个像素”那么简单：它在每个空间位置对全部通道做线性组合，因此能改变通道数并学习跨通道交互。先用它压缩通道，再做昂贵的 $3\times3$ 或 $5\times5$ 卷积，可以显著降低 FLOPs。
+Global average pooling 则把每个通道的整张特征图平均成一个数，替代巨大的全连接层。这样参数更少，空间位置与通道语义之间的对应也更直接。
+3. ResNet：让网络学残差当网络很深时，直接学习映射 $H(x)$ 很难；ResNet 改为学习残差 $F(x)$，再通过 shortcut 输出：
+$$
+y=F(x)+x.
+$$
+
+恒等路径让梯度可以跨层传播，也让网络更容易学习“保持输入不变”这样的简单变换。Bottleneck block 用 $1\times1$ 卷积先降维、再做 $3\times3$ 卷积、最后升维，以较低 FLOPs 支撑更深网络。
+Residual learning 解决的是 degradation problem：更深的普通网络即使理论上能复制浅网络并额外添加恒等层，训练误差也可能反而更高。残差参数化把“新增层先学成恒等映射”变得容易，因为只需令 $F(x)\approx0$。因此 ResNet 的突破主要是优化条件改善，而不是简单增加了一条信息通道。
+当输入输出通道数或空间尺寸不同，shortcut 不能直接相加，需要用 stride 或 $1\times1$ projection 对齐维度。相加要求形状完全一致，这一点是实现 residual block 时最容易出错的地方。
+预激活 ResNet 把 BatchNorm 和 ReLU 放在卷积之前，使 shortcut 更接近真正的恒等映射。
+
+4. ResNeXt、MobileNet 与自动设计ResNeXt 在 bottleneck 中使用 grouped convolution，让多个分组路径并行提取特征，在保持计算量相近的情况下增加 cardinality。
+
+MobileNet 面向移动设备，使用 depthwise separable convolution：先对每个通道分别做空间卷积，再用 $1\times1$ pointwise convolution 混合通道，显著降低计算量。
+
+Neural Architecture Search 则把架构设计也交给控制器和验证反馈自动搜索。
+这些后续结构分别探索了不同的“扩展轴”：ResNeXt 增加分组路径数量，Squeeze-and-Excitation 显式重标定通道，DenseNet 让每层读取之前所有层以复用特征，MobileNet 分解空间和通道计算。它们共同说明：网络容量不只有 depth 和 width 两个旋钮，连接方式和算子分解同样重要。
+5. 本讲总结架构演化的主线不是简单堆层数，而是不断回答三个问题：怎样让梯度稳定地穿过深度、怎样用更少计算获得更强表示、怎样让设计更容易扩展。实践中应根据显存、延迟和数据规模选择架构，而不是只追求最大模型。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Architecture</tag>
+        <tag>CNN</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 7》课堂笔记</title>
+    <url>/posts/eecs498l07/</url>
+    <content><![CDATA[Lecture 7：Convolutional Networks全连接网络把图像拉平成长向量，会丢失邻近像素之间的空间关系。卷积网络的设计围绕三个先验展开：局部连接、参数共享和逐层扩大感受野。
+1. 卷积层保留空间结构输入图像可表示为 $C_{in}\times H\times W$ 的体积。每个卷积核沿空间滑动，但始终覆盖全部输入通道；一个卷积核产生一张 activation map，多个卷积核产生多个输出通道。
+
+若卷积核大小为 $K_H\times K_W$，padding 为 $P$，stride 为 $S$，则输出空间尺寸为：
+$$
+H'=\frac{H-K_H+2P}{S}+1,
+\qquad
+W'=\frac{W-K_W+2P}{S}+1.
+$$
+卷积比全连接层高效的关键是局部连接和参数共享。一个输出通道只需要 $C_{in}K_HK_W$ 个核参数，无论输入图像有多宽多高，同一组参数会在所有空间位置复用。于是网络能在图像任意位置检测同一种边缘或纹理，并大幅减少参数量。
+严格说来，卷积层对平移具有 equivariance：输入平移后，特征图也相应平移；它并不自动保证最终分类完全不受平移影响。Pooling、stride、global average pooling 和训练数据中的平移增强，才会逐步形成更强的 invariance。
+2. 堆叠卷积与感受野多个小卷积层堆叠后，后层的一个神经元会依赖输入中更大的区域。这个区域称为 receptive field。
+
+小卷积核堆叠通常比一个很大的卷积核参数更少，还能在中间插入 ReLU，使表示具有更多非线性。靠近输入的滤波器往往响应边缘和简单纹理，深层滤波器组合它们识别更大的部件。
+以 stride 1 的 $3\times3$ 卷积为例，一层的感受野是 $3\times3$，两层堆叠后是 $5\times5$，三层是 $7\times7$。三层 $3\times3$ 卷积与一层 $7\times7$ 卷积覆盖范围相近，但前者能插入三次非线性，并且参数更少。这是 VGG 等架构偏好小卷积核的原因。
+3. Stride、Pooling 与下采样stride 大于 1 会让卷积核跳过位置，从而降低空间分辨率：
+
+Pooling 是另一种下采样方式。Max pooling 在局部窗口中取最大值，保留最强响应并降低特征图尺寸；代价是丢失精确位置信息。
+Padding 决定边界信息如何处理。valid convolution 不补零，空间尺寸会缩小；same convolution 选择 padding 使 stride 1 时输出尺寸不变。若网络频繁下采样，空间尺寸下降、通道数通常上升：前者降低计算量，后者增加可表示的特征类型。
+4. 经典结构与归一化LeNet-5 展示了卷积、池化和全连接层的基本组合：前面提取局部空间特征，后面将高层特征用于分类。
+
+深层网络还常加入 BatchNorm、LayerNorm、InstanceNorm 或 GroupNorm。它们的区别不在公式本身，而在于沿哪些维度统计均值和方差。BatchNorm 依赖 batch 统计；LayerNorm 对单个样本的特征维做归一化；GroupNorm 将通道分组，在小 batch 场景更稳定。
+
+BatchNorm 在训练和测试时行为不同：训练时使用当前 mini-batch 的均值与方差，并更新 running statistics；测试时使用累计的统计量，否则同一个样本会因为 batch 中其他样本不同而得到不同输出。$\gamma$ 和 $\beta$ 是可学习参数，保证归一化不会永久限制网络必须输出零均值和单位方差。
+归一化方法的选择与张量语义有关：InstanceNorm 常用于风格转换，因为它对每个样本、每个通道独立归一化；LayerNorm 不依赖 batch，适合序列模型；GroupNorm 在检测、分割这类小 batch 视觉任务中常比 BatchNorm 稳定。
+5. 本讲总结卷积网络的基本积木是：
+$$
+\text{Convolution}\rightarrow\text{Activation}\rightarrow\text{Pooling/Stride}\rightarrow\text{Normalization}.
+$$
+卷积负责局部模式与参数共享，池化或 stride 控制尺度，激活函数提供非线性，归一化帮助训练稳定。下一讲将讨论如何把这些积木组合成 AlexNet、VGG、GoogLeNet 和 ResNet。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>CNN</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 5》课堂笔记</title>
+    <url>/posts/eecs498l05/</url>
+    <content><![CDATA[Lecture 5：Neural Networks线性分类器的问题不是优化得不够好，而是函数类本身不够强。今天的关键转变是：让网络学习特征变换，而不是由人先固定特征再交给线性分类器。
+1. 从手工特征到可学习特征早期视觉系统常先计算颜色直方图、HOG 或 Bag of Visual Words，再用线性分类器预测类别。
+
+HOG 将局部像素差异转换为边缘方向统计，Bag of Words 则从随机图像块聚类出“视觉词典”，再统计一张图里出现了哪些词。
+
+
+这些方法比原始像素更有结构，但特征提取过程仍由研究者设计。神经网络把特征变换也纳入训练：
+$$
+f(x)=W_2\,\sigma(W_1x),
+$$
+其中 $\sigma$ 是逐元素激活函数。
+两种范式的根本区别在于优化目标是否能反向影响特征。手工流水线里，分类错误只能调整最后的分类器，HOG 的方向分桶、BoW 的词典并不知道下游任务做错了什么；神经网络中，分类损失会通过反向传播同时更新每一层，让特征逐渐变成“对当前任务有区分力”的表示。这就是 end-to-end learning 的含义。
+2. 神经网络为什么能产生非线性边界如果没有激活函数，多层矩阵乘法仍然等价于一个线性变换：$W_2W_1x$。ReLU 把空间分成正负区域：
+$$
+\operatorname{ReLU}(z)=\max(0,z).
+$$
+不同神经元会在不同半空间内激活，再由下一层重新组合这些区域，于是原本交错的类别可以在隐藏空间中被拉开。
+
+这就是 space warping：网络不是直接在原始像素空间画一条复杂曲线，而是先把坐标系变形，再在变形后的空间中使用简单的线性分类器。
+ReLU 还带来分段线性的结构：当某个输入区域内各个 ReLU 的开关状态固定时，整个网络在该区域仍是线性函数；输入跨过某个激活边界后，会进入另一段线性函数。深层网络通过组合大量这样的区域，形成复杂但仍可高效计算的决策边界。
+激活函数必须放在连续线性层之间。若删除 $\sigma$：
+$$
+W_3W_2W_1x=\widetilde W x,
+$$
+无论堆多少层都只等价于一个线性分类器。深度真正增加表达能力的前提，是每层之间存在非线性。
+3. 深度、宽度与通用逼近深度是层数，宽度是每层神经元数量。增加宽度可以表示更多局部模式，增加深度则可以重复组合简单变换，形成更复杂的层次化表示。
+通用逼近定理说明，只要隐藏层足够宽，带非线性激活的前馈网络可以以任意精度逼近连续函数。但这不是“任意深度网络都容易训练”的保证，也不说明所需参数量一定可接受。实际设计仍要在表达能力、计算量和优化稳定性之间平衡。
+课上特别强调，不应通过故意把网络做得很小来代替正则化。小网络一旦容量不足，会同时限制训练集和测试集性能；更常见的策略是先给模型足够容量，再用 L2、数据增强、Dropout 等手段控制泛化。换言之，容量决定能否表示目标函数，正则化决定在可表示的函数中偏好哪一个。
+4. 神经网络与凸优化的区别线性模型配合某些损失时可以得到凸目标，局部最优也是全局最优。加入隐藏层后，目标函数通常变成非凸函数：存在鞍点、平坦区域和多个局部极小值。
+因此，神经网络的强大来自更大的函数表达空间，同时也带来了更难的优化问题。下一讲的反向传播就是为了高效计算这个复杂模型的梯度。
+非凸并不等于无法训练。现代网络通常有大量参数，很多不同参数配置都能实现相似函数；优化的目标往往不是找到数学上唯一的全局最优，而是找到训练损失低、验证性能好且计算代价可接受的解。鞍点、平坦区域和参数尺度对称性，往往比“坏的局部极小值”更常成为实际困难。
+5. 本讲总结神经网络可以看成“可学习的特征提取器 + 线性分类器”：
+$$
+\text{像素}\xrightarrow{W_1,\,\sigma}\text{特征}\xrightarrow{W_2}\text{类别分数}.
+$$
+
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>Neural-Networks</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 9》课堂笔记</title>
+    <url>/posts/eecs498l09/</url>
+    <content><![CDATA[Lecture 9：Hardware and Software这一讲很实用：神经网络最终要在真实硬件和软件栈上运行，模型结构、张量布局、自动微分和设备并行会共同决定训练速度。
+1. CPU、GPU 与 TPUCPU 核心较少，但单核强、缓存大、适合控制流和串行任务；GPU 拥有大量较简单的核心，擅长把独立的矩阵元素并行计算；TPU 则为矩阵乘法和混合精度设计了专用阵列。
+
+矩阵乘法是 GPU 友好的典型例子。$C=AB$ 中每个 $C_{ij}$ 都是独立的点积，可以同时计算：
+
+当单卡放不下模型或数据时，可以把多个 GPU 放到同一台服务器上；更大的训练还需要跨服务器通信。
+
+GPU 快并不代表任何程序放上去都会快。只有当计算量足够大、并行工作足够规则时，才能摊薄 kernel launch 和 CPU-GPU 数据传输开销。小张量、频繁 Python 循环、不断在 CPU 与 GPU 之间复制数据，都可能让加速器处于等待状态。
+训练瓶颈也不总是算力。若算子需要读取大量内存、只做少量计算，它可能受 memory bandwidth 限制；矩阵乘法计算密度高，更容易接近峰值 FLOPs。判断性能问题时，应区分 compute-bound、memory-bound、input pipeline 和 communication-bound。
+2. 深度学习框架的职责框架至少需要提供三件事：张量运算、自动微分和神经网络模块。PyTorch 的 Tensor 类似 NumPy 数组，但可以放在 GPU 上；requires_grad 让操作记录到计算图；nn.Module 管理层和可学习参数；optim 实现 SGD、Adam 等更新。
+DataLoader 则负责数据集的索引、打乱、多进程加载和 batch 组装。
+一个典型训练 step 实际包含多层工作：
+
+CPU 从磁盘读取并预处理样本；
+DataLoader 组装 batch，并尽量提前准备下一批；
+batch 传到 GPU；
+前向传播构建激活和损失；
+autograd 反向计算梯度；
+optimizer 更新参数并清空旧梯度。
+
+只优化第 4 步而忽略数据加载或传输，端到端吞吐量未必会提升。PyTorch 梯度默认会累加，因此通常还要在每个 step 显式调用 zero_grad；需要 gradient accumulation 时，才有意跨多个 mini-batch 保留梯度。
+3. 动态图与静态图PyTorch 默认采用动态计算图：执行 Python 代码时即时构建图，图结构可以依赖输入，因此调试和处理可变长度序列很自然。
+
+静态图先描述网络，再编译或优化后执行。它便于做算子融合、跨设备调度和序列化部署，但代码和执行图之间的距离更大。
+
+两者的取舍可以概括为：动态图库于灵活、易调试；静态图利于编译优化、部署和跨语言运行。现代框架通常同时提供两种模式。
+
+算子融合的意义是减少中间张量写回显存和再次读取。例如 Conv、BatchNorm、ReLU 分开执行会产生多个 kernel 和中间结果，融合后可在一次更大的 kernel 中完成。静态图更容易提前看到整段计算并做这类全局变换；动态图则需要 tracing、JIT 或编译器捕获执行图。
+序列化也体现了区别：静态图通常可以把结构和权重一起保存，在没有原始 Python 程序的环境中部署；纯动态图保存的往往主要是 state dict，加载时仍需由代码重新构造模型。生产部署因此比课堂里的 model(x) 多出模型导出、版本兼容和运行时约束。
+4. 本讲总结硬件决定哪些计算便宜，框架决定如何表达这些计算。训练效率瓶颈可能来自 FLOPs、显存、内存带宽、数据加载或设备间通信，不能只看模型参数量。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>PyTorch</tag>
+        <tag>Hardware</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 10》课堂笔记</title>
+    <url>/posts/eecs498l10/</url>
+    <content><![CDATA[Lecture 10：Training Neural Networks（Part 1）网络搭起来之后，真正训练时会遇到激活饱和、初始化不当、过拟合和数据分布变化等问题。这一讲集中讲一次性设置：激活函数、预处理、初始化、正则化和数据增强。
+1. 激活函数Sigmoid 把输出压到 $(0,1)$，但在绝对值较大时梯度接近零，深层网络容易出现梯度消失。Tanh 零中心但仍然会饱和。
+ReLU 为：
+$$
+\operatorname{ReLU}(x)=\max(0,x).
+$$
+它在正半轴不饱和、计算便宜，是 CNN 的默认选择；缺点是负半轴梯度为零，可能产生 dead neuron。Leaky ReLU、ELU 和 SELU 用非零负半轴缓解这一问题。
+
+Sigmoid 还有一个问题是输出不以零为中心：若上一层激活始终为正，权重梯度在一次样本更新中容易具有同一符号，使优化出现锯齿路径。Tanh 修复了零中心问题，但没有解决饱和区梯度接近零。ReLU 的成功部分来自它让正区间的局部梯度恒为 1，深层信号更容易传播。
+dead ReLU 常由过大的学习率或不合适的初始化触发：某个神经元对所有样本都落入负区间后，梯度长期为零，难以恢复。实践中先检查学习率和激活分布，再考虑 Leaky ReLU，而不是看到少数零激活就立即更换函数。
+2. 数据预处理预处理的目标是把输入各维度调整到适合优化的尺度。图像中常见做法包括减去整张数据集的均值图、按通道减均值、或按通道标准化。训练集统计量必须固定下来并用于验证集和测试集，不能让测试数据泄漏到预处理步骤。
+中心化的优化直觉是：如果输入云远离原点或不同维度尺度差异很大，loss landscape 会变得狭长，同一个学习率难以同时适配所有方向。标准化让各维度大致处于相近尺度，梯度下降的条件数通常更好。对图像而言，完整 whitening 计算昂贵且会破坏局部结构，因此深度学习里更常用简单的 per-channel normalization。
+3. 权重初始化全零初始化会让同一层的神经元永远保持相同，必须使用随机初始化打破对称性。但随机幅度太小会使信号逐层消失，太大则会爆炸。
+Xavier 初始化让线性或 tanh 层的激活方差大致保持稳定；ReLU 只保留一半正值，因此常用 Kaiming&#x2F;MSRA 初始化，使不同深度的激活统计更平衡。
+初始化推导关注的是方差传播。若输入和权重独立、均值接近零，线性层输出方差大致与 fan-in 和权重方差成正比。Xavier 选择 $\operatorname{Var}(W)\approx1/\text{fan-in}$；ReLU 会截断一半激活，Kaiming 因而使用约 $2/\text{fan-in}$。这些系数的目标不是让每个神经元数值完全相同，而是避免尺度随深度指数变化。
+
+残差网络还可以把初始化设计成让残差分支初始接近零，从而让整个 block 近似恒等映射。
+
+4. Dropout 与随机深度Dropout 在训练时随机把一部分神经元置零：
+$$
+\tilde h=m\odot h,
+\qquad m_j\sim\operatorname{Bernoulli}(p).
+$$
+它迫使网络不能依赖某一个固定路径。测试时要对随机性取平均；实际使用 inverted dropout，在训练时除以保留率，使测试阶段可以直接使用完整网络。
+
+可以把 Dropout 理解为在共享参数下训练大量子网络。每次 forward 只激活其中一部分路径，测试时完整网络近似平均这些子网络的预测。它降低神经元之间的 co-adaptation，但也会增加优化噪声，因此使用 Dropout 的模型有时需要更长训练。
+训练与测试的尺度必须一致。若保留概率为 $p$，inverted dropout 在训练时使用 $m\odot h/p$，使期望激活仍为 $h$；测试时直接关闭随机 mask。忘记切换 train &#x2F; eval 模式会同时影响 Dropout 和 BatchNorm，是验证结果异常的常见原因。
+Stochastic depth 更进一步，训练时随机跳过整个残差块，测试时使用完整深度。
+5. 数据增强数据增强通过生成标签保持不变的输入，扩大有效训练分布。常见操作包括随机水平翻转、随机裁剪与缩放、颜色抖动，以及针对任务设计的旋转、透视和遮挡。
+
+Mixup 则在样本和标签层面做线性插值：
+$$
+\tilde x=\lambda x_i+(1-\lambda)x_j,
+\qquad
+\tilde y=\lambda y_i+(1-\lambda)y_j.
+$$
+
+数据增强有效的前提是变换应保留任务标签。水平翻转通常不改变“猫”的类别，却可能改变文字识别、交通标志或左右器官的语义；随机裁剪若切掉目标，也可能制造错误标签。因此增强不是越强越好，而是把领域中合理的不变性编码进训练分布。
+Mixup 的 soft label 迫使模型在样本之间表现得更线性，通常能降低过度置信；Cutout、DropConnect、stochastic depth 则分别在输入、连接和网络深度上引入随机缺失。它们表面不同，本质上都在训练时扩大模型必须适应的扰动范围。
+6. 本讲总结训练稳定性的关键是让信号在网络中保持合适尺度，同时通过随机性和增强防止模型死记训练集。一个可靠的起点通常是 ReLU、合理初始化、标准化、适度增强和 weight decay，再根据学习曲线定位问题。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>Training</tag>
+        <tag>CV</tag>
+        <tag>Regularization</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 3》课堂笔记</title>
+    <url>/posts/eecs498l03/</url>
+    <content><![CDATA[Lecture 3：Linear Classifiers这一讲把图像分类从“最近邻检索”推进到第一个真正的参数化模型：线性分类器。它很简单，但把后续深度学习的三件事都提前演示了：用模型计算分数、用损失函数表达偏好、用正则化限制模型。
+1. 线性分类器的三种视角给定展开后的图像 $x\in\mathbb{R}^D$，线性分类器用一组权重和偏置输出每个类别的分数：
+$$
+f(x,W)=Wx+b,
+$$
+其中 $W\in\mathbb{R}^{C\times D}$，$b\in\mathbb{R}^C$。把 $b$ 拼到输入末尾，可以写成一次矩阵乘法。
+
+同一个公式可以从三种角度理解：
+
+代数视角：矩阵乘法将像素映射成类别分数；
+视觉视角：$W$ 的每一行可以看作一个类别模板，与输入做内积；
+几何视角：不同类别的分数相等的位置构成超平面，把输入空间切成不同区域。
+
+
+视觉视角很直观，但模板通常会混合颜色、背景和姿态，说明单个线性层无法学习复杂的层次化表示。
+还有一个容易忽略的点：分数 $s_j$ 不是概率，也没有固定的绝对尺度。把所有分数同时加上同一个常数不会改变 Softmax 概率，把 $W$ 和 $b$ 同时放大却会改变分布的尖锐程度。因此，真正具有分类意义的是类别之间的相对分数；损失函数负责把这种相对关系转换成可优化的标量。
+2. 线性决策边界的局限二分类时，两个类别的分数差为零的位置是决策边界；多分类时，每一对类别都会产生一组线性边界。线性分类器只能把空间切成由直线或超平面组成的区域。
+
+这解释了 XOR 等问题为什么无法由单层感知机解决：当同一类别分布在相互分离的区域时，没有一条直线能同时完成分隔。
+
+线性模型对多模态类别也很吃力。例如“猫”可能同时包含正面、侧面和蜷缩三种外观，但一个类别只有一行权重，相当于只能维护一个全局模板。把多个模式平均进同一个模板后，模板往往变得模糊。这不是数据再多一点就能完全解决的问题，而是模型容量的结构性限制。
+3. 损失函数：什么叫“好的权重”模型只负责产生分数，还需要损失函数告诉我们哪些分数更好。对训练集 ${(x_i,y_i)}_{i=1}^N$，经验损失为：
+$$
+L(W)=\frac{1}{N}\sum_{i=1}^N L_i(f(x_i,W),y_i).
+$$
+课上重点比较了两种多分类损失。
+3.1 Multiclass SVM loss希望正确类别分数至少比错误类别高一个 margin：
+$$
+L_i=\sum_{j\ne y_i}\max(0,s_j-s_{y_i}+1).
+$$
+当所有错误类别都已经落在 margin 外时，样本损失为零；因此它只关心“是否违反约束”，不关心正确类别已经领先多少。
+3.2 Softmax &#x2F; Cross-Entropy loss先把分数转为概率：
+$$
+p_j=\frac{e^{s_j}}{\sum_k e^{s_k}},
+\qquad L_i=-\log p_{y_i}.
+$$
+它鼓励正确类别获得更高的概率，因而会持续惩罚“虽然分类正确但置信度不够”的预测。
+计算 Softmax 时通常先减去最大分数：
+$$
+p_j=\frac{e^{s_j-\max_k s_k}}{\sum_l e^{s_l-\max_k s_k}}.
+$$
+这不会改变结果，却能避免指数溢出，是实现时非常重要的数值稳定技巧。
+3.3 SVM 与 Cross-Entropy 的行为差异两者都希望正确类别分数高于错误类别，但优化偏好不同：
+
+SVM 达到 margin 后，该样本不再贡献损失；
+Cross-Entropy 永远希望正确类别概率继续接近 1；
+SVM 的 hinge 在边界处不可导，但可以使用 subgradient；
+Cross-Entropy 的梯度更平滑，并天然产生概率化输出。
+
+因此，不能只问“哪个公式更先进”，而要看需要怎样的分数解释、优化性质和概率校准。
+4. 正则化表达额外偏好只最小化训练误差可能得到许多同样有效、但泛化能力不同的权重。于是目标函数通常写成：
+$$
+L(W)=\frac{1}{N}\sum_i L_i+\lambda R(W).
+$$
+最常见的 L2 正则化是：
+$$
+R(W)=\sum_{k,l}W_{k,l}^2.
+$$
+它偏好更小、更平滑的权重，而不是让模型只依赖少数特别大的像素权重。一个重要的判断是：正则化不是“修补训练集误差”的技巧，而是在多个可行模型之间表达“我更偏好简单模型”的先验。
+$\lambda$ 控制数据拟合与模型复杂度之间的权衡。$\lambda$ 太小，训练损失可能很低但模型容易追随噪声；$\lambda$ 太大，权重被压得过小，训练集本身也无法拟合。它属于超参数，应通过验证集选择，而不能根据测试集反复调整。
+从优化角度看，L2 正则还会给梯度增加 $2\lambda W$，使每次更新都包含把权重拉向零的趋势，这就是 weight decay 名称背后的直觉。
+5. 本讲总结线性分类器的完整链条是：
+$$
+\text{图像}\xrightarrow{Wx+b}\text{类别分数}\xrightarrow{\text{loss}}\text{偏好}\xrightarrow{\text{regularization}}\text{泛化约束}.
+$$
+它的优点是简单、可解释、容易优化；局限是决策边界始终是线性的。下一讲的优化方法会回答：给定损失函数，怎样找到一组真正好的 $W$。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>Linear-Classifier</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>《EECS 498 Lecture 6》课堂笔记</title>
+    <url>/posts/eecs498l06/</url>
+    <content><![CDATA[Lecture 6：Backpropagation神经网络的表达能力很强，但参数可能达到数百万甚至更多。逐个参数用有限差分估计梯度会极其缓慢；反向传播的核心贡献是把链式法则组织成一次沿计算图的高效遍历。
+1. 用计算图拆开复杂函数把网络写成一串局部运算，每个节点只需要知道自己的输入、输出和局部导数。
+
+例如：
+$$
+f(x,y,z)=(x+y)z.
+$$
+先计算 $q=x+y$，再计算 $f=qz$。前向传播保存中间值，反向传播从损失开始，把上游梯度传给每个输入。
+计算图的价值不仅是画图方便，而是把“推导整个网络的一个巨大公式”改写成“为每个局部算子实现一次 forward 和 backward”。矩阵乘法、ReLU、卷积等算子的局部规则只需实现一次，之后可以在任意网络结构中复用。这也是 PyTorch autograd 等系统的基本抽象。
+2. 局部梯度乘以上游梯度如果一个节点 $z=f(x,y)$ 已知上游梯度 $\partial L/\partial z$，则：
+$$
+\frac{\partial L}{\partial x}
+=\frac{\partial L}{\partial z}\frac{\partial z}{\partial x},
+\qquad
+\frac{\partial L}{\partial y}
+=\frac{\partial L}{\partial z}\frac{\partial z}{\partial y}.
+$$
+
+加法节点把梯度复制给每条输入边；乘法节点则把梯度乘以另一条输入。节点不需要知道全局损失长什么样，这种局部 API 使计算图可以组合任意复杂的网络。
+如果一个变量被后续多个节点共同使用，反向传播到该变量的梯度必须求和：
+$$
+\frac{\partial L}{\partial x}
+=\sum_k\frac{\partial L}{\partial z_k}\frac{\partial z_k}{\partial x}.
+$$
+这是实现自定义计算图时最常见的错误之一：覆盖已有梯度，而不是把多条下游路径的贡献累加起来。
+3. 梯度流的几个模式分支汇合处的梯度必须相加，因为同一个变量通过多条路径影响损失。课上称加法节点为 gradient distributor：
+
+这也解释了深层网络中的梯度消失和爆炸：连续乘上小于 1 或大于 1 的 Jacobian 会让信号指数衰减或增长。激活函数、初始化、归一化和残差连接都会改变这条梯度路径。
+几种局部算子的梯度流可以快速记忆：
+
+add gate 把上游梯度原样分发给输入；
+multiply gate 用另一个输入缩放梯度，可能放大或翻转符号；
+max gate 只把梯度路由到前向时的最大输入；
+copy&#x2F;fan-out 会在回传时把各分支梯度相加。
+
+这套“门”的直觉比死记长公式更有用，因为复杂网络最终仍是这些模式的组合。
+4. 向量、矩阵与张量标量的局部导数推广到向量时会形成 Jacobian。以 ReLU 为例，Jacobian 在激活位置为 1，在关闭位置为 0，而且是稀疏的；实践中通常只做 Jacobian-vector product，而不显式构造整个矩阵。
+
+对于矩阵乘法 $Y=XW$，反向传播仍然遵循同一条规则，只是每个梯度都要满足维度匹配。框架的自动微分系统正是把这些局部规则封装成可组合的算子。
+若 $Y=XW$ 且上游梯度为 $G=\partial L/\partial Y$，则：
+$$
+\frac{\partial L}{\partial X}=GW^T,
+\qquad
+\frac{\partial L}{\partial W}=X^TG.
+$$
+检查维度是推导矩阵梯度的可靠方法，但仅靠维度不能判断转置位置是否正确，还应结合标量展开或数值梯度检查。
+5. Reverse-mode 与 Forward-mode反向模式从标量损失出发，适合“输入参数很多、输出损失是一个标量”的神经网络训练；前向模式从输入方向传播导数，适合输出维度较小或需要 Jacobian 的场景。
+
+设网络有 $P$ 个参数、一个标量损失。Forward-mode 若想得到完整梯度，原则上要为许多输入方向分别传播；Reverse-mode 只需一次反向遍历就能同时得到全部 $P$ 个偏导。这正是 backprop 特别适合训练神经网络的根本原因。代价是前向中间值通常要保存在内存中，直到对应 backward 完成，因此 activation memory 会成为深网络训练的重要瓶颈。
+6. 本讲总结反向传播不是一个只适用于某种网络的公式，而是 reverse-mode automatic differentiation：
+$$
+\text{前向保存中间值}\rightarrow
+\text{反向传播上游梯度}\rightarrow
+\text{局部梯度相乘并累加}.
+$$
+掌握这个视角后，卷积、池化、注意力和自定义算子都可以用同一套机制训练。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>CV</tag>
+        <tag>Deep-Learning</tag>
+        <tag>Backpropagation</tag>
+      </tags>
+  </entry>
 </search>
