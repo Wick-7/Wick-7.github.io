@@ -14751,4 +14751,501 @@ $$
         <tag>Backpropagation</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</title>
+    <url>/posts/c1b8e7f4/</url>
+    <content><![CDATA[这节课讨论两个“在 Transformer 之上改结构”的方向：
+
+Attention alternatives：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。
+Mixture of Experts（MoE）：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。
+
+可以把全课压缩成一句话：
+
+attention 的关键瓶颈是 token 两两交互，MoE 的关键瓶颈是所有参数都被每个 token 使用；前者利用结合律或稀疏性，后者利用条件计算。
+
+1. 为什么要替代标准 attention？标准 self-attention 为每个 token 和所有 token 建立连接。令序列长度为 $n$，query、key、value 的维度分别为 $d_k,d_k,d_v$：
+$$
+Q\in\mathbb{R}^{n\times d_k},\qquad
+K\in\mathbb{R}^{n\times d_k},\qquad
+V\in\mathbb{R}^{n\times d_v}.
+$$
+课件把这个维度账本直接写成：$QK^\top$ 先产生一个 $n\times n$ 矩阵，代价约为 $n^2d_k$；再乘以 $V$，代价约为 $n^2d_v$。这里最麻烦的不是 $d_k,d_v$，而是可能达到百万级的 $n$。
+attention 可以写成：
+$$
+\operatorname{Attn}(Q,K,V)=\rho\left(QK^\top\right)V,
+$$
+其中 $\rho$ 通常是缩放和 row-wise softmax。$QK^\top$ 的形状是 $n\times n$，因此计算和中间激活都随序列长度呈二次增长：
+$$
+\mathcal{O}(n^2d_k+n^2d_v).
+$$
+现代模型的上下文窗口不断变长；当 $n$ 很大时，原本占主导的 FFN 成本只线性增长，而 attention 的 all-to-all 连接会迅速超过它。
+
+1.1 先用已有工具控制成本课上先回顾了两个实际可用的工具：
+
+局部 + 全局 attention：大多数层只看一个滑动窗口，少数层保留全局连接。例如每 8 层保留 1 层 full attention。
+系统优化：FlashAttention 不改变二次复杂度，但通过 tiling、融合和避免显式 materialize $n\times n$ attention 矩阵，大幅减少 HBM 与 SRAM 之间的数据搬运。
+
+这说明一个工程事实：复杂度的渐近阶很重要，但 constant factor 同样可能决定模型能不能跑起来。 对百万级 token 的上下文，仍需要更激进的结构改动。
+
+2. Linear attention：利用矩阵乘法结合律先暂时把 softmax $\rho$ 去掉，考察最核心的矩阵乘法：
+$$
+(QK^\top)V=Q(K^\top V).
+$$
+两种写法数学上完全相同，但计算顺序不同：
+
+左边先计算 $QK^\top$，产生 $n\times n$ 矩阵，成本约为 $\mathcal{O}(n^2d_k+n^2d_v)$；
+右边先计算 $K^\top V\in\mathbb{R}^{d_k\times d_v}$，再与 $Q$ 相乘，成本约为 $\mathcal{O}(nd_kd_v)$。
+
+按课件的简化 FLOPs 账本，复杂度从
+$$
+n^2d_k+n^2d_v
+$$
+变成
+$$
+2nd_kd_v.
+$$
+这也是 Shen et al. (2018)、Katharopoulos et al. (2020) kernelized linear attention，以及 fast-weight programming 一类方法的共同出发点。kernel 版本会先把 query&#x2F;key 映射为特征 $\phi(q),\phi(k)$，再使用同样的结合律；本课重点是计算重排本身，而不是某一个特定 kernel。
+因此序列长度从二次变成线性，代价是状态矩阵 $K^\top V$ 的维度变成 $d_k\times d_v$，并且不能直接保留标准 softmax attention 的全部表达能力。
+
+这里真正有损的步骤是“去掉 row-wise softmax”。一旦进入 linear attention，下面的 dense 形式和 recurrent 形式之间则可以做到严格等价。
+
+2.1 Dense 形式与 recurrent 形式的二象性定义状态：
+$$
+S_t=S_{t-1}+k_tv_t^\top,
+\qquad
+y_t=q_t^\top S_t.
+$$
+把 $S_t$ 展开：
+$$
+S_t=\sum_{i\le t}k_iv_i^\top,
+\qquad
+y_t=\sum_{i\le t}(q_t^\top k_i)v_i.
+$$
+它和左到右扫描的 RNN 很像：训练时使用并行的 dense 形式，推理时只需维护固定大小的 $S_t$。这解决了传统 RNN “推理便宜、训练难并行”的矛盾：
+
+
+
+场景
+采用的形式
+优点
+
+
+
+训练
+并行矩阵乘法
+可以一次处理整段序列
+
+
+自回归推理
+串行状态更新
+cache 是固定大小，不随上下文长度增长
+
+
+如果把旧状态乘上一个衰减因子：
+$$
+S_t=\gamma S_{t-1}+k_tv_t^\top,
+$$
+就得到 RetNet 一类衰减状态更新。它说明后续模型通常是在同一个状态矩阵框架上继续增加 gate，而不是重新发明完全不同的计算原语。
+2.2 线性 attention 还不够强纯 linear attention 在大规模任务上的证据仍然有限。实际模型大多保留一部分 full softmax attention，形成 hybrid：
+
+MiniMax M1：约 7 层 linear attention + 1 层 full attention；
+一些 Mamba&#x2F;Qwen 方案：约 3 层线性时间模块 + 1 层 full attention；
+受控实验显示，少量非 full-attention 层通常几乎不掉点；当线性&#x2F;递归层比例过高，长上下文 retrieval 和 QA 才明显退化。
+
+因此这里的目标不是“彻底消灭 attention”，而是在表达能力和长上下文吞吐之间找到合适比例。
+3. 从 linear attention 到 Mamba-2linear attention 的状态会无条件地传给下一步。Mamba-2 用一个只依赖当前位置输入的 gate $\gamma_t$ 控制遗忘：
+$$
+S_t=\gamma_tS_{t-1}+k_tv_t^\top,
+\qquad
+y_t=q_t^\top S_t+v_t^\top D,
+\qquad
+\gamma_t=f(x_t).
+$$
+其中 $D$ 对应一个额外的 value residual&#x2F;readout 项，不是理解状态更新所必需的核心。$\gamma_t$ 不依赖旧状态，因此仍然保留 parallel&#x2F;recurrent duality：
+
+训练时可以把各位置的 $\gamma_t$ 并行算出来，再使用等价的并行形式；
+推理时按时间步更新 $S_t$，状态大小固定。
+
+
+3.1 Gated Delta Net：不仅写入，还要擦除Mamba-2 只有“保留多少旧状态”的 gate。Gated Delta Net 又引入输入 gate $\beta_t$，让模型可以选择不写入当前输入，并擦除旧状态中与当前 key 同方向的内容：
+$$
+S_t=\gamma_t\left(I-\beta_tk_tk_t^\top\right)S_{t-1}
+      +\beta_tk_tv_t^\top,
+$$
+$$
+y_t=q_t^\top S_t,
+\qquad
+\gamma_t=f_\gamma(x_t),\quad \beta_t=f_\beta(x_t).
+$$
+直觉上：
+
+$\gamma_t$ 控制“旧记忆保留多少”；
+$\beta_t=0$ 表示“这一步不写入新信息”；
+$I-\beta_tk_tk_t^\top$ 近似投影掉当前 key 方向上的旧内容，避免新信息与旧信息简单叠加。
+
+这和 LSTM 的 forget&#x2F;input gate 很相似，也与 fast-weight programming、test-time training 中的一些最小二乘更新有联系。Qwen 3.5 &#x2F; Qwen Next 使用了约 3:1 的 Gated Delta Net &#x2F; full attention 混合，在长上下文 decode 上有明显吞吐优势。
+
+3.2 线性时间 attention 的根本 trade-off固定大小状态不可能无损保存任意长上下文中的全部细节。状态越小，压缩越强，表达能力越有限；状态做得和上下文一样大，又会失去计算和内存优势。
+所以应当记住：
+
+linear attention &#x2F; state space model 的优势是固定状态和低推理成本；full attention 的优势是显式保留所有 token，并拥有更强的任意检索能力。
+
+4. 另一条路线：DeepSeek Sparse AttentionDSA 不追求把 attention 变成线性时间，而是把“昂贵的 full attention”限制在少量候选 token 上：
+
+用一个轻量 indexer 对所有 token 做粗略打分；
+对 indexer 分数做 Top-$k$，选择候选位置；
+只在候选子集上运行正常的 full attention。
+
+
+DSA 的 indexer 仍然需要查看完整上下文，因此严格说它不是线性时间算法；它的收益来自两个方面：
+
+indexer 可以使用更低维、更低精度、更小的投影，常数因子很小；
+真正昂贵的 attention 只在受控大小的 Top-$k$ 子集上运行。
+
+课上给出的 indexer 机制可以写成一个示意式（不同论文的投影维度和权重略有差异）：
+$$
+s_{t,i}^{\text{idx}}
+  =w_i\,\operatorname{ReLU}\left((q_t^{\text{idx}})^\top k_i^{\text{idx}}\right),
+\qquad
+\mathcal{I}_t=\operatorname{TopK}_i\left(s_{t,i}^{\text{idx}},k\right).
+$$
+indexer 的 $q^{\text{idx}},k^{\text{idx}}$ 可以比真正 attention 的 Q&#x2F;K 更低维、更低精度，$w_i$ 则由当前位置之前的信息产生；随后只对 $\mathcal{I}_t$ 中的 key&#x2F;value 做正常 attention。这里的 TopK 是选择步骤，不应误读成它把前面的全量 indexer 变成了严格线性算法。
+这也是一个很重要的系统观点：一个操作即使仍是二次的，只要二次项发生在更小维度或更小子集上，整体也可能非常实用。 DSA 还可以在 dense short-context 预训练之后，作为 long-context extension 阶段的 post-hoc adaptation 加入，不必从第一天就用稀疏 indexer 训练全部模型。
+5. Mixture of Experts 是什么？MoE 通常替换 Transformer block 中的 MLP，而不是 attention。给定 $E$ 个专家 FFN：
+$$
+f_1(x),f_2(x),\ldots,f_E(x),
+$$
+router 为每个 token 产生专家分数：
+$$
+r(x)=xW_r,\qquad r(x)\in\mathbb{R}^{E}.
+$$
+取分数最高的 $k$ 个专家，令 $\mathcal{I}(x)=\operatorname{TopK}(r(x),k)$，并对被选中的分数做 softmax：
+$$
+g_e(x)=
+\begin{cases}
+\operatorname{softmax}(r(x))_e,&amp; e\in\mathcal{I}(x),\\
+0,&amp; e\notin\mathcal{I}(x).
+\end{cases}
+$$
+MoE 输出为：
+$$
+y=\sum_{e\in\mathcal{I}(x)}g_e(x)f_e(x).
+$$
+如果每个专家和原来的 dense FFN 一样大，那么总参数量约增加到 $E$ 倍，但每个 token 只支付 $k$ 个专家的计算：
+$$
+\text{总参数量}\uparrow,\qquad
+\text{每 token active FLOPs}\approx k\times\text{单个 FFN FLOPs}.
+$$
+
+5.1 为什么 MoE 现在变得普遍？
+在相同 active FLOPs 下，更多稀疏参数通常带来更低 loss；
+训练时可以比同 active size 的 dense 模型更快达到相同性能；
+每个 expert 是一个天然的分片，适合放到不同设备上做 expert parallelism；
+近年的 DeepSeek、Qwen、Mixtral、DBRX、Grok、Llama 4、GPT-OSS 等模型都验证了这一方向。
+
+课件还强调了一个单独的收益：专家本身是天然的模型分片，因此可以额外提供 expert parallelism；但这会把计算节省换成跨设备 all-to-all 通信。
+
+代价也很现实：expert routing 需要 all-to-all 通信，基础设施复杂，跨节点拓扑会决定它到底是不是净收益；同时 router 的 softmax、TopK 和负载不均衡会带来稳定性问题。
+这也是 MoE 长期没有立刻普及的原因：总参数很难塞进单卡，跨节点通信和容量管理复杂，训练目标中还混有不少 heuristic；而且如果只看理论上的 FLOPs，容易漏掉 dispatch、padding、queue overflow 和小矩阵乘法等运行时成本。
+6. MoE 的结构与路由设计课件把 MoE 的设计空间概括成三个轴：
+
+Routing function：token 如何选择 experts；
+Expert sizes：少量大 expert，还是大量 fine-grained 小 expert；
+Training objectives：如何处理 TopK 的稀疏性、不可微性和负载均衡。
+
+这三个轴不能独立看待。例如，把专家切得更细通常会增加路由和通信次数，而 shared experts 又会改变“所有 token 都要经过哪些计算”的系统结构。
+6.1 典型位置：MLP，不是 attention标准做法是把一个 dense FFN 换成 MoE layer；把 attention heads 也做成 experts 的工作少得多，因为更难稳定训练，也更难证明收益。
+
+6.2 三种路由视角对 token-expert 分数矩阵，可以有三种基本做法：
+
+
+
+
+路由方式
+做法
+现实中的情况
+
+
+
+Token choice
+每个 token 选择自己的 Top-$k$ experts
+几乎所有主流 MoE 的默认方案
+
+
+Expert choice
+每个 expert 选择最想处理的 token
+可以工作，但通常不如 token choice 稳定&#x2F;常见
+
+
+Global assignment
+解一个全局匹配&#x2F;线性分配问题
+目标合理，但代价太高，尚未成为规模化默认方案
+
+
+最常见的 router 极其简单：一个线性层加 Top-$k$。有趣的是，hash routing 也能比 dense baseline 更好；RL 路由在概念上更自然，但梯度方差和额外复杂度使它不常用。
+常见的 token-choice TopK 可以更具体地写成：
+$$
+h(x)=W_gx,\qquad
+p(x)=\operatorname{softmax}(h(x)),
+$$
+$$
+\mathcal{I}(x)=\operatorname{TopK}(h(x),k),
+\qquad
+g_e(x)=p_e(x)\,\mathbf{1}[e\in\mathcal{I}(x)].
+$$
+有些实现先对 logits 做 TopK，再只在选中的 $k$ 个位置上重新归一化 softmax；另一些实现先得到完整 softmax 再 mask。课件列出的典型 $k$ 包括 Switch Transformer 的 $1$、GShard&#x2F;Mixtral&#x2F;Grok 的 $2$、Qwen 的 $4$、DeepSeek 的 $7$。常见路由器本质上只是一个 logistic&#x2F;linear regressor，并不需要一个复杂的“语义分类器”。
+除 TopK 外，课件还列了三种对照：
+
+Hash routing：把输入 hash 到 experts，是常见 baseline，虽然通常不如 learned TopK；
+RL routing：把选 expert 看成 bandit policy，用 REINFORCE 学习，早期工作做过，但梯度方差大；
+Global matching：对所有 token-expert 对求分数，再解 linear assignment，目标清晰，但代价太高，尚未成为规模化默认方案。
+
+课件中的规模对照如下（active 是每个 token 实际激活的 routed experts 数）：
+
+
+
+模型
+Routed experts
+Active
+Shared
+Fine-grained ratio
+
+
+
+GShard
+2048
+2
+0
+-
+
+
+Switch Transformer
+64
+1
+0
+-
+
+
+Mixtral
+8
+2
+0
+-
+
+
+DBRX
+16
+4
+0
+-
+
+
+DeepSeek v1
+64
+6
+2
+$1/4$
+
+
+Qwen 1.5 MoE
+60
+4
+4
+$1/8$
+
+
+DeepSeek v3
+256
+8
+1
+$1/14$
+
+
+OlMoE
+64
+8
+0
+$1/8$
+
+
+Llama 4 Maverick
+128
+1
+1
+$1/2$
+
+
+6.3 Fine-grained experts 与 shared expertsDeepSeekMoE 的重要改动是：把原本较大的专家进一步切成更多、更小的 fine-grained experts，同时保留少数 shared experts：
+$$
+y=f_{\text{shared}}(x)+
+\sum_{e\in\mathcal{I}(x)}g_e(x)f_e(x).
+$$
+shared expert 绕过 router、对所有 token 都启用，负责通用变换；被路由的 fine-grained experts 则有更多空间去 specialization。
+
+两组消融的结论并不完全相同。DeepSeek 的结果支持 fine-grained segmentation 和 shared expert isolation 都有收益：
+
+OlMoE 则观察到更多、更细的 experts 有稳定收益，但 shared expert 本身没有明显收益：
+
+因此，fine-grained experts 是较稳定的经验结论；shared expert 是很强的工程 recipe，但不是无条件成立的理论结论。
+7. MoE 为什么难训练？7.1 稀疏路由带来的两个问题训练时不能把所有专家都激活，否则计算量会退化成所有 FFN 之和；但只激活 Top-$k$ 又带来：
+
+路由决策包含 TopK，整体不可微；
+未被选中的专家没有得到当前 token 的反事实梯度。
+
+如果完全不处理，容易出现 rich-get-richer：某个专家早期偶然被选中，得到更多梯度，分数变高，于是被选得更多，最后发生 expert collapse&#x2F;starvation。
+7.2 三类解决思路
+RL &#x2F; bandit：把专家选择当作策略学习。理论上直接，但梯度方差和系统复杂度都很高。
+随机扰动：在 router logits 中加入与输入尺度相关的噪声，让接近的专家有机会探索，并让专家更鲁棒。
+负载均衡辅助损失：实践中的主流方案，用一个简单的启发式损失把热门专家的概率质量压低。
+
+随机 jitter 在早期工作中有用，后续实验显示去掉它有时反而更稳定；RL 路由也能工作，但没有稳定地超过简单 TopK + balancing 的组合。
+早期 Shazeer et al. 的 noisy routing 可以抽象为：
+$$
+h_e(x)=x^\top w_e+\epsilon_e\,\operatorname{softplus}(x^\top w_e^{\text{noise}}),
+\qquad
+p(x)=\operatorname{softmax}(h(x)),
+$$
+其中 $\epsilon_e$ 是随机扰动。Fedus et al. 还尝试过 uniform multiplicative jitter，例如
+$$
+h_e'(x)=u_eh_e(x),\qquad u_e\sim\operatorname{Uniform}(1-\varepsilon,1+\varepsilon).
+$$
+这些扰动的作用是让相近的 experts 有机会被探索，并通过 softmax 学习如何给 Top-$k$ experts 排序；它们后来在一些更稳定的训练 recipe 中被移除。
+7.3 Switch-style load balancing loss设 batch 中有 $T$ 个 token、$N$ 个专家：
+
+$f_i$：实际被 dispatch 到专家 $i$ 的 token 比例；
+$P_i$：router 对专家 $i$ 分配的平均 soft probability mass。
+
+常见的辅助损失是：
+$$
+\mathcal{L}_{\text{balance}}
+ =\alpha N\sum_{i=1}^{N}f_iP_i.
+$$
+若采用 $f_i=T^{-1}\sum_t\mathbf{1}[a_t=i]$、$P_i=T^{-1}\sum_t p_i(x_t)$ 的定义，则对单个 token 的 router probability 有：
+$$
+\frac{\partial\mathcal{L}_{\text{balance}}}{\partial p_i(x_t)}
+ =\frac{\alpha N}{T}f_i
+ =\frac{\alpha N}{T^2}\sum_{u=1}^{T}\mathbf{1}[a_u=i].
+$$
+因此，实际被选择得越频繁的 expert，受到的下压梯度越强，这就是课上所说的“popular experts get downweighted”。
+它不是从一个唯一的生成模型推导出的“真目标”，更适合从梯度作用来理解：$P_i$ 对应的梯度与 $f_i$ 成正比，因此已经收到很多 token 的专家会被更强地下压。
+DeepSeek 还会额外做 device-level balancing，因为专家即使在全局上均匀，若某些设备上的专家更热门，all-to-all 仍然会堵塞。DeepSeek v3 进一步使用 per-expert bias 和 online update，减少对 auxiliary loss 的依赖，但“完全不需要任何平衡机制”目前仍不是现实。
+如果设备 $d$ 上包含专家集合 $E_d$，可以把同一个目标聚合到设备级：
+$$
+f_d=\sum_{i\in E_d}f_i,\qquad
+P_d=\sum_{i\in E_d}P_i,\qquad
+\mathcal{L}_{\text{device}}=\alpha_dD\sum_d f_dP_d.
+$$
+DeepSeek v3 的 bias-based balancing 则先改写 router 分数：
+$$
+h'_e(x)=h_e(x)+b_e,
+$$
+再根据近期 load 在线更新 $b_e$，让过载专家更难被选中、低载专家更容易被选中。它常被称为 auxiliary-loss-free balancing，但课上特别提醒：实际系统仍可能保留很小的序列级或极端失衡保护项，因此不能理解成完全没有任何辅助约束。
+移除 load balancing loss 的后果很直接：绝大多数 token 会集中到少数专家，其余参数几乎闲置，训练 loss 和下游表现都会明显恶化。
+
+7.4 Router 稳定性router 又引入了一个 softmax，而指数、除法和 softmax 都是数值稳定性的敏感点。常见措施是：
+
+router logits &#x2F; softmax 使用 FP32；
+对 router 加 z-loss，抑制 logits 整体变大；
+监控各 expert 的 token fraction 和 device load。
+
+一个常见的 router z-loss 写法是：
+$$
+\mathcal{L}_{z}
+ =\lambda_z\left(\log\sum_{e=1}^{E}\exp h_e(x)\right)^2.
+$$
+它不负责选择专家，只是抑制 router logits 的整体尺度，避免低精度 softmax 出现尖峰或溢出。
+
+7.5 系统侧：expert parallelism 与稀疏矩阵乘法MoE 的专家天然可分片到不同 GPU，但 token 必须通过 all-to-all 发往对应设备。现代实现会把不同 expert 的输入打包成结构化稀疏矩阵乘法，而不是启动大量小 GEMM：
+
+
+MegaBlocks 等库利用这类稀疏 MM 提升 GPU 利用率。一个较新的系统技巧是：先把 residual activation down-project 到较小维度，再做跨设备 dispatch，减少通信量；shared expert 可以保留更大的维度，避免所有计算都被通信瓶颈限制。
+
+早期实现还可能因为 expert queue 超载而静默丢 token，导致一个请求的输出受到其他请求路由的影响。现代稀疏矩阵和 routing infrastructure 已经大幅缓解这类问题，但容量因子和负载监控仍然重要。
+这也是 MoE 的一个反直觉随机性来源：如果某个 batch 内 expert 超载，早期实现会按 capacity factor 丢弃超出队列的 token；在线服务中，其他用户的 token 可能改变这个 batch 的拥塞，从而影响当前请求。现在的 MegaBlocks 等实现已经尽量避免这种 silent token dropping，但训练和服务仍需显式处理容量与负载。
+8. MoE 的其他工程问题8.1 Fine-tuning 容易过拟合MoE 总参数量很大，而下游微调数据通常很少。直接更新所有 experts 时，train&#x2F;validation gap 可能非常大。课件把问题和两种解决方向放在同一页：Zoph et al. 倾向于只更新 attention 或 non-MoE MLP，DeepSeek 则使用约 $1.4$M 条 SFT 数据抵消过拟合。
+
+8.2 Upcyclingupcycling 的做法是从一个已经训练好的 dense LM 出发：复制它的 MLP 权重作为多个初始 experts，随机初始化 router，然后继续训练，让不同 token 的路由逐渐使这些副本 specialization。
+下面这张原课件图直接展示了 dense block 如何复制 MLP、从零加入 router，并继续训练成 MoE；右图则显示同等继续预训练时间下的收益。
+
+MiniCPM 的例子使用 Top-$2$、8 个 experts、约 $4$B active parameters，并继续训练约 $520$B tokens：
+
+Qwen MoE 从 Qwen $1.8$B 初始化，使用 Top-$4$、60 个 routed experts 和 4 个 shared experts：
+
+这些结果说明 upcycling 可以把已有 dense checkpoint 变成更强的稀疏模型；不过现在如果一开始就能直接训练 MoE，实际采用 upcycling 的模型已经减少。
+9. DeepSeek MoE v1 -&gt; v3：一条清晰的演化路线DeepSeek v1 用 2 个 shared experts、64&#x2F;4 的 fine-grained design、标准 TopK 和 expert&#x2F;device auxiliary balancing，构成了后续模型的基本模板：
+
+v2 扩展到 $236$B 总参数、$21$B active parameters，并加入 Top-M device routing 和同时约束发送&#x2F;接收通信的 balancing loss：
+
+v3 扩展到 $671$B 总参数、$37$B active parameters，使用 1 个 shared expert、258 个 routed experts、每 token 激活 8 个，并改为 sigmoid + softmax TopK&#x2F;TopM 与 bias-based、seq-wise balancing：
+
+这三张图比参数表更能说明演化方向：结构主体没有推倒重来，变化主要集中在 expert 数量、设备约束、通信平衡和 router 稳定性。架构设计和 systems design 是一起演化的。
+9.1 MLA：把 KV cache 压到 latent spaceDeepSeek v3 还使用 Multi-head Latent Attention（MLA）。先把 hidden state 压缩成低维 latent activation：
+$$
+c_t^{KV}=W^{DKV}h_t,
+$$
+再由 $c_t^{KV}$ 生成 key&#x2F;value：
+$$
+k_t^C=W^{UK}c_t^{KV},
+\qquad
+v_t^C=W^{UV}c_t^{KV}.
+$$
+KV cache 只需要保存 $c_t^{KV}$，而不是每个 head 的完整 $K_t,V_t$，因此可以显著降低 decode memory。由于 $W^{UK}$ 可以并入 query projection，计算 query-key 内积时可以直接使用 latent cache；课件还提到，query 也会被压缩，以节省训练时的 activation memory。
+RoPE 会让这种合并更复杂。没有 RoPE 时：
+$$
+\langle Q,K\rangle
+=\left\langle hW^Q,\,W^{UK}c_t^{KV}\right\rangle
+=\left\langle hW^QW^{UK},\,c_t^{KV}\right\rangle.
+$$
+加入 query&#x2F;key 的位置旋转矩阵 $R_q,R_k$ 后：
+$$
+\langle QR_q,R_kK\rangle
+=\left\langle hW^QR_q,\,R_kW^{UK}c_t^{KV}\right\rangle
+=\left\langle hW^QR_qR_kW^{UK},\,c_t^{KV}\right\rangle.
+$$
+一般情况下 $R_k$ 不能被合并进一个与位置无关的 $W^{UK}$，因此 DeepSeek MLA 保留少量 non-latent key dimensions，让这些维度单独承担可旋转的位置部分。
+
+9.2 MTP：一次预测多个未来 tokenMulti-token Prediction（MTP）在主模型之外加入轻量预测模块，让模型同时学习多个未来位置。它既可能提供额外训练信号，也可以把未来 token 当作 speculative decoding 的草稿。
+用 $K$ 个预测头表示，一个简化的多步目标是：
+$$
+\mathcal{L}_{\text{MTP}}
+=\sum_{k=1}^{K}\lambda_k\,
+\operatorname{CE}\left(p_{t+k}^{(k)},y_{t+k}\right),
+\qquad
+p_{t+k}^{(k)}=\operatorname{softmax}\left(W_kh_t^{(k)}\right).
+$$
+每个轻量模块可以复用 embedding、RMSNorm 或部分 Transformer 结构，然后预测一个偏移后的目标位置。它的系统意义和 EAGLE 一类方法相似：额外模块产生草稿 token，主模型再验证，从而减少自回归 decode 的串行步数。
+课上提醒：DeepSeek v3 的实际配置主要使用 one-token-ahead 的 MTP，不要把论文图中的多个模块误读成线上每一步都预测无限多个 token。
+
+10. 最后记住什么？Attention alternatives
+标准 attention 的二次项来自 $QK^\top$ 的 token-to-token 全连接。
+去掉 softmax 后，结合律给出 $Q(K^\top V)$，并自然产生固定状态的 recurrent form。
+Mamba-2 和 Gated Delta Net 是在线性状态更新上加 gate 与擦除机制，训练用并行形式、推理用递归形式。
+DSA 走的是另一条路：轻量 indexer + Top-$k$ 候选 + 小子集上的 full attention；它不是严格线性，但常数因子很小。
+当前更可信的 recipe 是 hybrid，而不是纯线性 attention；少量 full attention 对表达能力和长上下文 retrieval 仍然很重要。
+
+Mixture of Experts
+MoE 是一个稀疏、条件计算的 MLP：参数可以很多，但每个 token 只激活 Top-$k$ experts。
+主流 router 非常简单：线性打分、TopK、softmax；shared + fine-grained experts 是近年的重要结构。
+真正难的是训练和系统：expert collapse、load balancing、router 数值稳定性、跨设备通信和稀疏 MM。
+load balancing loss + FP32 router + z-loss + expert parallelism 是一套很实用的默认组合。
+MoE 的收益不是“免费”：它把 dense FLOPs 换成更多参数、更多通信和更复杂的基础设施，但在大模型规模上，这个交换通常是值得的。
+
+本节课最值得迁移的思维方式，是不要只问“这是线性还是二次”“这是可微还是不可微”，还要问：昂贵的部分到底发生在哪个维度、哪些 token、哪些设备，以及能否把它变成更适合硬件的计算模式。
+
+配图均来自本节课提供的原始 lecture PDF；公式和文字解释按课堂讲授内容重新整理。
+
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>Attention</tag>
+        <tag>CS336</tag>
+        <tag>Mamba</tag>
+        <tag>MoE</tag>
+        <tag>DeepSeek</tag>
+      </tags>
+  </entry>
 </search>

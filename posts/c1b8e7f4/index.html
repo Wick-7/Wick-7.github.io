@@ -1,0 +1,741 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="这节课讨论两个“在 Transformer 之上改结构”的方向：  Attention alternatives：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。 Mixture of Experts（MoE）：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。  可以把全课压缩成一句话：  attention 的关键瓶颈是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/c1b8e7f4/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="这节课讨论两个“在 Transformer 之上改结构”的方向：  Attention alternatives：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。 Mixture of Experts（MoE）：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。  可以把全课压缩成一句话：  attention 的关键瓶颈是">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-30T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-30T03:37:23.270Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Attention">
+<meta property="article:tag" content="CS336">
+<meta property="article:tag" content="DeepSeek">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Mamba">
+<meta property="article:tag" content="MoE">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记",
+  "url": "https://wick-7.github.io/posts/c1b8e7f4/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-30T01:00:00.000Z",
+  "dateModified": "2026-07-30T03:37:23.270Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/c1b8e7f4/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">48</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">71</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-30T01:00:00.000Z" title="发表于 2026-07-30 09:00:00">2026-07-30</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-30T03:37:23.270Z" title="更新于 2026-07-30 11:37:23">2026-07-30</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>这节课讨论两个“在 Transformer 之上改结构”的方向：</p>
+<ol>
+<li><strong>Attention alternatives</strong>：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。</li>
+<li><strong>Mixture of Experts（MoE）</strong>：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。</li>
+</ol>
+<p>可以把全课压缩成一句话：</p>
+<blockquote>
+<p>attention 的关键瓶颈是 token 两两交互，MoE 的关键瓶颈是所有参数都被每个 token 使用；前者利用结合律或稀疏性，后者利用条件计算。</p>
+</blockquote>
+<h2 id="1-为什么要替代标准-attention？"><a href="#1-为什么要替代标准-attention？" class="headerlink" title="1. 为什么要替代标准 attention？"></a>1. 为什么要替代标准 attention？</h2><p>标准 self-attention 为每个 token 和所有 token 建立连接。令序列长度为 $n$，query、key、value 的维度分别为 $d_k,d_k,d_v$：</p>
+<p>$$
+Q\in\mathbb{R}^{n\times d_k},\qquad
+K\in\mathbb{R}^{n\times d_k},\qquad
+V\in\mathbb{R}^{n\times d_v}.
+$$</p>
+<p>课件把这个维度账本直接写成：$QK^\top$ 先产生一个 $n\times n$ 矩阵，代价约为 $n^2d_k$；再乘以 $V$，代价约为 $n^2d_v$。这里最麻烦的不是 $d_k,d_v$，而是可能达到百万级的 $n$。</p>
+<p>attention 可以写成：</p>
+<p>$$
+\operatorname{Attn}(Q,K,V)=\rho\left(QK^\top\right)V,
+$$</p>
+<p>其中 $\rho$ 通常是缩放和 row-wise softmax。$QK^\top$ 的形状是 $n\times n$，因此计算和中间激活都随序列长度呈二次增长：</p>
+<p>$$
+\mathcal{O}(n^2d_k+n^2d_v).
+$$</p>
+<p>现代模型的上下文窗口不断变长；当 $n$ 很大时，原本占主导的 FFN 成本只线性增长，而 attention 的 all-to-all 连接会迅速超过它。</p>
+<p><img src="/img/posts/c1b8e7f4/context-cost.png" alt="上下文窗口变长，以及 attention 成本逐渐超过 feed-forward 成本"></p>
+<h3 id="1-1-先用已有工具控制成本"><a href="#1-1-先用已有工具控制成本" class="headerlink" title="1.1 先用已有工具控制成本"></a>1.1 先用已有工具控制成本</h3><p>课上先回顾了两个实际可用的工具：</p>
+<ul>
+<li><strong>局部 + 全局 attention</strong>：大多数层只看一个滑动窗口，少数层保留全局连接。例如每 8 层保留 1 层 full attention。</li>
+<li><strong>系统优化</strong>：FlashAttention 不改变二次复杂度，但通过 tiling、融合和避免显式 materialize $n\times n$ attention 矩阵，大幅减少 HBM 与 SRAM 之间的数据搬运。</li>
+</ul>
+<p>这说明一个工程事实：<strong>复杂度的渐近阶很重要，但 constant factor 同样可能决定模型能不能跑起来。</strong> 对百万级 token 的上下文，仍需要更激进的结构改动。</p>
+<p><img src="/img/posts/c1b8e7f4/basic-toolkit.png" alt="局部&#x2F;全局 attention 混合和 FlashAttention 的系统收益"></p>
+<h2 id="2-Linear-attention：利用矩阵乘法结合律"><a href="#2-Linear-attention：利用矩阵乘法结合律" class="headerlink" title="2. Linear attention：利用矩阵乘法结合律"></a>2. Linear attention：利用矩阵乘法结合律</h2><p>先暂时把 softmax $\rho$ 去掉，考察最核心的矩阵乘法：</p>
+<p>$$
+(QK^\top)V=Q(K^\top V).
+$$</p>
+<p>两种写法数学上完全相同，但计算顺序不同：</p>
+<ul>
+<li>左边先计算 $QK^\top$，产生 $n\times n$ 矩阵，成本约为 $\mathcal{O}(n^2d_k+n^2d_v)$；</li>
+<li>右边先计算 $K^\top V\in\mathbb{R}^{d_k\times d_v}$，再与 $Q$ 相乘，成本约为 $\mathcal{O}(nd_kd_v)$。</li>
+</ul>
+<p>按课件的简化 FLOPs 账本，复杂度从</p>
+<p>$$
+n^2d_k+n^2d_v
+$$</p>
+<p>变成</p>
+<p>$$
+2nd_kd_v.
+$$</p>
+<p>这也是 Shen et al. (2018)、Katharopoulos et al. (2020) kernelized linear attention，以及 fast-weight programming 一类方法的共同出发点。kernel 版本会先把 query&#x2F;key 映射为特征 $\phi(q),\phi(k)$，再使用同样的结合律；本课重点是计算重排本身，而不是某一个特定 kernel。</p>
+<p>因此序列长度从二次变成线性，代价是状态矩阵 $K^\top V$ 的维度变成 $d_k\times d_v$，并且不能直接保留标准 softmax attention 的全部表达能力。</p>
+<blockquote>
+<p>这里真正有损的步骤是“去掉 row-wise softmax”。一旦进入 linear attention，下面的 dense 形式和 recurrent 形式之间则可以做到严格等价。</p>
+</blockquote>
+<h3 id="2-1-Dense-形式与-recurrent-形式的二象性"><a href="#2-1-Dense-形式与-recurrent-形式的二象性" class="headerlink" title="2.1 Dense 形式与 recurrent 形式的二象性"></a>2.1 Dense 形式与 recurrent 形式的二象性</h3><p>定义状态：</p>
+<p>$$
+S_t=S_{t-1}+k_tv_t^\top,
+\qquad
+y_t=q_t^\top S_t.
+$$</p>
+<p>把 $S_t$ 展开：</p>
+<p>$$
+S_t=\sum_{i\le t}k_iv_i^\top,
+\qquad
+y_t=\sum_{i\le t}(q_t^\top k_i)v_i.
+$$</p>
+<p>它和左到右扫描的 RNN 很像：训练时使用并行的 dense 形式，推理时只需维护固定大小的 $S_t$。这解决了传统 RNN “推理便宜、训练难并行”的矛盾：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>采用的形式</th>
+<th>优点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>训练</td>
+<td>并行矩阵乘法</td>
+<td>可以一次处理整段序列</td>
+</tr>
+<tr>
+<td>自回归推理</td>
+<td>串行状态更新</td>
+<td>cache 是固定大小，不随上下文长度增长</td>
+</tr>
+</tbody></table>
+<p>如果把旧状态乘上一个衰减因子：</p>
+<p>$$
+S_t=\gamma S_{t-1}+k_tv_t^\top,
+$$</p>
+<p>就得到 RetNet 一类衰减状态更新。它说明后续模型通常是在同一个状态矩阵框架上继续增加 gate，而不是重新发明完全不同的计算原语。</p>
+<h3 id="2-2-线性-attention-还不够强"><a href="#2-2-线性-attention-还不够强" class="headerlink" title="2.2 线性 attention 还不够强"></a>2.2 线性 attention 还不够强</h3><p>纯 linear attention 在大规模任务上的证据仍然有限。实际模型大多保留一部分 full softmax attention，形成 hybrid：</p>
+<ul>
+<li>MiniMax M1：约 <strong>7 层 linear attention + 1 层 full attention</strong>；</li>
+<li>一些 Mamba&#x2F;Qwen 方案：约 <strong>3 层线性时间模块 + 1 层 full attention</strong>；</li>
+<li>受控实验显示，少量非 full-attention 层通常几乎不掉点；当线性&#x2F;递归层比例过高，长上下文 retrieval 和 QA 才明显退化。</li>
+</ul>
+<p>因此这里的目标不是“彻底消灭 attention”，而是在表达能力和长上下文吞吐之间找到合适比例。</p>
+<h2 id="3-从-linear-attention-到-Mamba-2"><a href="#3-从-linear-attention-到-Mamba-2" class="headerlink" title="3. 从 linear attention 到 Mamba-2"></a>3. 从 linear attention 到 Mamba-2</h2><p>linear attention 的状态会无条件地传给下一步。Mamba-2 用一个只依赖当前位置输入的 gate $\gamma_t$ 控制遗忘：</p>
+<p>$$
+S_t=\gamma_tS_{t-1}+k_tv_t^\top,
+\qquad
+y_t=q_t^\top S_t+v_t^\top D,
+\qquad
+\gamma_t=f(x_t).
+$$</p>
+<p>其中 $D$ 对应一个额外的 value residual&#x2F;readout 项，不是理解状态更新所必需的核心。$\gamma_t$ 不依赖旧状态，因此仍然保留 parallel&#x2F;recurrent duality：</p>
+<ul>
+<li>训练时可以把各位置的 $\gamma_t$ 并行算出来，再使用等价的并行形式；</li>
+<li>推理时按时间步更新 $S_t$，状态大小固定。</li>
+</ul>
+<p><img src="/img/posts/c1b8e7f4/nemotron-hybrid.png" alt="Nemotron 3 中 Mamba-2、MoE 与少量 full attention 的混合结构"></p>
+<h3 id="3-1-Gated-Delta-Net：不仅写入，还要擦除"><a href="#3-1-Gated-Delta-Net：不仅写入，还要擦除" class="headerlink" title="3.1 Gated Delta Net：不仅写入，还要擦除"></a>3.1 Gated Delta Net：不仅写入，还要擦除</h3><p>Mamba-2 只有“保留多少旧状态”的 gate。Gated Delta Net 又引入输入 gate $\beta_t$，让模型可以选择不写入当前输入，并擦除旧状态中与当前 key 同方向的内容：</p>
+<p>$$
+S_t=\gamma_t\left(I-\beta_tk_tk_t^\top\right)S_{t-1}
+      +\beta_tk_tv_t^\top,
+$$</p>
+<p>$$
+y_t=q_t^\top S_t,
+\qquad
+\gamma_t=f_\gamma(x_t),\quad \beta_t=f_\beta(x_t).
+$$</p>
+<p>直觉上：</p>
+<ul>
+<li>$\gamma_t$ 控制“旧记忆保留多少”；</li>
+<li>$\beta_t=0$ 表示“这一步不写入新信息”；</li>
+<li>$I-\beta_tk_tk_t^\top$ 近似投影掉当前 key 方向上的旧内容，避免新信息与旧信息简单叠加。</li>
+</ul>
+<p>这和 LSTM 的 forget&#x2F;input gate 很相似，也与 fast-weight programming、test-time training 中的一些最小二乘更新有联系。Qwen 3.5 &#x2F; Qwen Next 使用了约 <strong>3:1 的 Gated Delta Net &#x2F; full attention 混合</strong>，在长上下文 decode 上有明显吞吐优势。</p>
+<p><img src="/img/posts/c1b8e7f4/hybrid-performance.png" alt="不同混合比例下的长上下文表现：少量递归层代价很小，纯递归会明显退化"></p>
+<h3 id="3-2-线性时间-attention-的根本-trade-off"><a href="#3-2-线性时间-attention-的根本-trade-off" class="headerlink" title="3.2 线性时间 attention 的根本 trade-off"></a>3.2 线性时间 attention 的根本 trade-off</h3><p>固定大小状态不可能无损保存任意长上下文中的全部细节。状态越小，压缩越强，表达能力越有限；状态做得和上下文一样大，又会失去计算和内存优势。</p>
+<p>所以应当记住：</p>
+<blockquote>
+<p>linear attention &#x2F; state space model 的优势是固定状态和低推理成本；full attention 的优势是显式保留所有 token，并拥有更强的任意检索能力。</p>
+</blockquote>
+<h2 id="4-另一条路线：DeepSeek-Sparse-Attention"><a href="#4-另一条路线：DeepSeek-Sparse-Attention" class="headerlink" title="4. 另一条路线：DeepSeek Sparse Attention"></a>4. 另一条路线：DeepSeek Sparse Attention</h2><p>DSA 不追求把 attention 变成线性时间，而是把“昂贵的 full attention”限制在少量候选 token 上：</p>
+<ol>
+<li>用一个轻量 indexer 对所有 token 做粗略打分；</li>
+<li>对 indexer 分数做 Top-$k$，选择候选位置；</li>
+<li>只在候选子集上运行正常的 full attention。</li>
+</ol>
+<p><img src="/img/posts/c1b8e7f4/dsa.png" alt="DSA 的性能与 prefill&#x2F;decode 成本对比"></p>
+<p>DSA 的 indexer 仍然需要查看完整上下文，因此严格说它不是线性时间算法；它的收益来自两个方面：</p>
+<ul>
+<li>indexer 可以使用更低维、更低精度、更小的投影，常数因子很小；</li>
+<li>真正昂贵的 attention 只在受控大小的 Top-$k$ 子集上运行。</li>
+</ul>
+<p>课上给出的 indexer 机制可以写成一个示意式（不同论文的投影维度和权重略有差异）：</p>
+<p>$$
+s_{t,i}^{\text{idx}}
+  =w_i\,\operatorname{ReLU}\left((q_t^{\text{idx}})^\top k_i^{\text{idx}}\right),
+\qquad
+\mathcal{I}_t=\operatorname{TopK}_i\left(s_{t,i}^{\text{idx}},k\right).
+$$</p>
+<p>indexer 的 $q^{\text{idx}},k^{\text{idx}}$ 可以比真正 attention 的 Q&#x2F;K 更低维、更低精度，$w_i$ 则由当前位置之前的信息产生；随后只对 $\mathcal{I}_t$ 中的 key&#x2F;value 做正常 attention。这里的 TopK 是选择步骤，不应误读成它把前面的全量 indexer 变成了严格线性算法。</p>
+<p>这也是一个很重要的系统观点：<strong>一个操作即使仍是二次的，只要二次项发生在更小维度或更小子集上，整体也可能非常实用。</strong> DSA 还可以在 dense short-context 预训练之后，作为 long-context extension 阶段的 post-hoc adaptation 加入，不必从第一天就用稀疏 indexer 训练全部模型。</p>
+<h2 id="5-Mixture-of-Experts-是什么？"><a href="#5-Mixture-of-Experts-是什么？" class="headerlink" title="5. Mixture of Experts 是什么？"></a>5. Mixture of Experts 是什么？</h2><p>MoE 通常替换 Transformer block 中的 MLP，而不是 attention。给定 $E$ 个专家 FFN：</p>
+<p>$$
+f_1(x),f_2(x),\ldots,f_E(x),
+$$</p>
+<p>router 为每个 token 产生专家分数：</p>
+<p>$$
+r(x)=xW_r,\qquad r(x)\in\mathbb{R}^{E}.
+$$</p>
+<p>取分数最高的 $k$ 个专家，令 $\mathcal{I}(x)=\operatorname{TopK}(r(x),k)$，并对被选中的分数做 softmax：</p>
+<p>$$
+g_e(x)=
+\begin{cases}
+\operatorname{softmax}(r(x))_e,&amp; e\in\mathcal{I}(x),\\
+0,&amp; e\notin\mathcal{I}(x).
+\end{cases}
+$$</p>
+<p>MoE 输出为：</p>
+<p>$$
+y=\sum_{e\in\mathcal{I}(x)}g_e(x)f_e(x).
+$$</p>
+<p>如果每个专家和原来的 dense FFN 一样大，那么总参数量约增加到 $E$ 倍，但每个 token 只支付 $k$ 个专家的计算：</p>
+<p>$$
+\text{总参数量}\uparrow,\qquad
+\text{每 token active FLOPs}\approx k\times\text{单个 FFN FLOPs}.
+$$</p>
+<p><img src="/img/posts/c1b8e7f4/moe-same-flops.png" alt="MoE 在相近 FLOPs 下增加稀疏参数后，loss 通常继续下降"></p>
+<h3 id="5-1-为什么-MoE-现在变得普遍？"><a href="#5-1-为什么-MoE-现在变得普遍？" class="headerlink" title="5.1 为什么 MoE 现在变得普遍？"></a>5.1 为什么 MoE 现在变得普遍？</h3><ul>
+<li>在相同 active FLOPs 下，更多稀疏参数通常带来更低 loss；</li>
+<li>训练时可以比同 active size 的 dense 模型更快达到相同性能；</li>
+<li>每个 expert 是一个天然的分片，适合放到不同设备上做 expert parallelism；</li>
+<li>近年的 DeepSeek、Qwen、Mixtral、DBRX、Grok、Llama 4、GPT-OSS 等模型都验证了这一方向。</li>
+</ul>
+<p>课件还强调了一个单独的收益：专家本身是天然的模型分片，因此可以额外提供 expert parallelism；但这会把计算节省换成跨设备 all-to-all 通信。</p>
+<p><img src="/img/posts/c1b8e7f4/moe-performance.png" alt="MoE 相比 dense 等价模型的参数和性能关系"></p>
+<p>代价也很现实：expert routing 需要 all-to-all 通信，基础设施复杂，跨节点拓扑会决定它到底是不是净收益；同时 router 的 softmax、TopK 和负载不均衡会带来稳定性问题。</p>
+<p>这也是 MoE 长期没有立刻普及的原因：总参数很难塞进单卡，跨节点通信和容量管理复杂，训练目标中还混有不少 heuristic；而且如果只看理论上的 FLOPs，容易漏掉 dispatch、padding、queue overflow 和小矩阵乘法等运行时成本。</p>
+<h2 id="6-MoE-的结构与路由设计"><a href="#6-MoE-的结构与路由设计" class="headerlink" title="6. MoE 的结构与路由设计"></a>6. MoE 的结构与路由设计</h2><p>课件把 MoE 的设计空间概括成三个轴：</p>
+<ol>
+<li><strong>Routing function</strong>：token 如何选择 experts；</li>
+<li><strong>Expert sizes</strong>：少量大 expert，还是大量 fine-grained 小 expert；</li>
+<li><strong>Training objectives</strong>：如何处理 TopK 的稀疏性、不可微性和负载均衡。</li>
+</ol>
+<p>这三个轴不能独立看待。例如，把专家切得更细通常会增加路由和通信次数，而 shared experts 又会改变“所有 token 都要经过哪些计算”的系统结构。</p>
+<h3 id="6-1-典型位置：MLP，不是-attention"><a href="#6-1-典型位置：MLP，不是-attention" class="headerlink" title="6.1 典型位置：MLP，不是 attention"></a>6.1 典型位置：MLP，不是 attention</h3><p>标准做法是把一个 dense FFN 换成 MoE layer；把 attention heads 也做成 experts 的工作少得多，因为更难稳定训练，也更难证明收益。</p>
+<p><img src="/img/posts/c1b8e7f4/moe-structure.png" alt="MoE 通常替换 MLP，attention-head MoE 则相对少见"></p>
+<h3 id="6-2-三种路由视角"><a href="#6-2-三种路由视角" class="headerlink" title="6.2 三种路由视角"></a>6.2 三种路由视角</h3><p>对 token-expert 分数矩阵，可以有三种基本做法：</p>
+<p><img src="/img/posts/c1b8e7f4/routing-overview.png" alt="Token choice、expert choice 与全局优化路由"></p>
+<table>
+<thead>
+<tr>
+<th>路由方式</th>
+<th>做法</th>
+<th>现实中的情况</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Token choice</td>
+<td>每个 token 选择自己的 Top-$k$ experts</td>
+<td>几乎所有主流 MoE 的默认方案</td>
+</tr>
+<tr>
+<td>Expert choice</td>
+<td>每个 expert 选择最想处理的 token</td>
+<td>可以工作，但通常不如 token choice 稳定&#x2F;常见</td>
+</tr>
+<tr>
+<td>Global assignment</td>
+<td>解一个全局匹配&#x2F;线性分配问题</td>
+<td>目标合理，但代价太高，尚未成为规模化默认方案</td>
+</tr>
+</tbody></table>
+<p>最常见的 router 极其简单：一个线性层加 Top-$k$。有趣的是，hash routing 也能比 dense baseline 更好；RL 路由在概念上更自然，但梯度方差和额外复杂度使它不常用。</p>
+<p>常见的 token-choice TopK 可以更具体地写成：</p>
+<p>$$
+h(x)=W_gx,\qquad
+p(x)=\operatorname{softmax}(h(x)),
+$$</p>
+<p>$$
+\mathcal{I}(x)=\operatorname{TopK}(h(x),k),
+\qquad
+g_e(x)=p_e(x)\,\mathbf{1}[e\in\mathcal{I}(x)].
+$$</p>
+<p>有些实现先对 logits 做 TopK，再只在选中的 $k$ 个位置上重新归一化 softmax；另一些实现先得到完整 softmax 再 mask。课件列出的典型 $k$ 包括 Switch Transformer 的 $1$、GShard&#x2F;Mixtral&#x2F;Grok 的 $2$、Qwen 的 $4$、DeepSeek 的 $7$。常见路由器本质上只是一个 logistic&#x2F;linear regressor，并不需要一个复杂的“语义分类器”。</p>
+<p>除 TopK 外，课件还列了三种对照：</p>
+<ul>
+<li><strong>Hash routing</strong>：把输入 hash 到 experts，是常见 baseline，虽然通常不如 learned TopK；</li>
+<li><strong>RL routing</strong>：把选 expert 看成 bandit policy，用 REINFORCE 学习，早期工作做过，但梯度方差大；</li>
+<li><strong>Global matching</strong>：对所有 token-expert 对求分数，再解 linear assignment，目标清晰，但代价太高，尚未成为规模化默认方案。</li>
+</ul>
+<p>课件中的规模对照如下（<code>active</code> 是每个 token 实际激活的 routed experts 数）：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th align="right">Routed experts</th>
+<th align="right">Active</th>
+<th align="right">Shared</th>
+<th align="right">Fine-grained ratio</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GShard</td>
+<td align="right">2048</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">-</td>
+</tr>
+<tr>
+<td>Switch Transformer</td>
+<td align="right">64</td>
+<td align="right">1</td>
+<td align="right">0</td>
+<td align="right">-</td>
+</tr>
+<tr>
+<td>Mixtral</td>
+<td align="right">8</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">-</td>
+</tr>
+<tr>
+<td>DBRX</td>
+<td align="right">16</td>
+<td align="right">4</td>
+<td align="right">0</td>
+<td align="right">-</td>
+</tr>
+<tr>
+<td>DeepSeek v1</td>
+<td align="right">64</td>
+<td align="right">6</td>
+<td align="right">2</td>
+<td align="right">$1/4$</td>
+</tr>
+<tr>
+<td>Qwen 1.5 MoE</td>
+<td align="right">60</td>
+<td align="right">4</td>
+<td align="right">4</td>
+<td align="right">$1/8$</td>
+</tr>
+<tr>
+<td>DeepSeek v3</td>
+<td align="right">256</td>
+<td align="right">8</td>
+<td align="right">1</td>
+<td align="right">$1/14$</td>
+</tr>
+<tr>
+<td>OlMoE</td>
+<td align="right">64</td>
+<td align="right">8</td>
+<td align="right">0</td>
+<td align="right">$1/8$</td>
+</tr>
+<tr>
+<td>Llama 4 Maverick</td>
+<td align="right">128</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="right">$1/2$</td>
+</tr>
+</tbody></table>
+<h3 id="6-3-Fine-grained-experts-与-shared-experts"><a href="#6-3-Fine-grained-experts-与-shared-experts" class="headerlink" title="6.3 Fine-grained experts 与 shared experts"></a>6.3 Fine-grained experts 与 shared experts</h3><p>DeepSeekMoE 的重要改动是：把原本较大的专家进一步切成更多、更小的 fine-grained experts，同时保留少数 <strong>shared experts</strong>：</p>
+<p>$$
+y=f_{\text{shared}}(x)+
+\sum_{e\in\mathcal{I}(x)}g_e(x)f_e(x).
+$$</p>
+<p>shared expert 绕过 router、对所有 token 都启用，负责通用变换；被路由的 fine-grained experts 则有更多空间去 specialization。</p>
+<p><img src="/img/posts/c1b8e7f4/shared-experts.png" alt="DeepSeekMoE 从普通 Top-2 到 fine-grained 与 shared experts 的演化"></p>
+<p>两组消融的结论并不完全相同。DeepSeek 的结果支持 fine-grained segmentation 和 shared expert isolation 都有收益：</p>
+<p><img src="/img/posts/c1b8e7f4/deepseek-expert-ablation.png" alt="DeepSeek 对 fine-grained 与 shared experts 的消融"></p>
+<p>OlMoE 则观察到更多、更细的 experts 有稳定收益，但 shared expert 本身没有明显收益：</p>
+<p><img src="/img/posts/c1b8e7f4/olmoe-expert-ablation.png" alt="OlMoE 对 expert 数量与 shared expert 的消融"></p>
+<p>因此，fine-grained experts 是较稳定的经验结论；shared expert 是很强的工程 recipe，但不是无条件成立的理论结论。</p>
+<h2 id="7-MoE-为什么难训练？"><a href="#7-MoE-为什么难训练？" class="headerlink" title="7. MoE 为什么难训练？"></a>7. MoE 为什么难训练？</h2><h3 id="7-1-稀疏路由带来的两个问题"><a href="#7-1-稀疏路由带来的两个问题" class="headerlink" title="7.1 稀疏路由带来的两个问题"></a>7.1 稀疏路由带来的两个问题</h3><p>训练时不能把所有专家都激活，否则计算量会退化成所有 FFN 之和；但只激活 Top-$k$ 又带来：</p>
+<ol>
+<li>路由决策包含 TopK，整体不可微；</li>
+<li>未被选中的专家没有得到当前 token 的反事实梯度。</li>
+</ol>
+<p>如果完全不处理，容易出现 <strong>rich-get-richer</strong>：某个专家早期偶然被选中，得到更多梯度，分数变高，于是被选得更多，最后发生 expert collapse&#x2F;starvation。</p>
+<h3 id="7-2-三类解决思路"><a href="#7-2-三类解决思路" class="headerlink" title="7.2 三类解决思路"></a>7.2 三类解决思路</h3><ul>
+<li><strong>RL &#x2F; bandit</strong>：把专家选择当作策略学习。理论上直接，但梯度方差和系统复杂度都很高。</li>
+<li><strong>随机扰动</strong>：在 router logits 中加入与输入尺度相关的噪声，让接近的专家有机会探索，并让专家更鲁棒。</li>
+<li><strong>负载均衡辅助损失</strong>：实践中的主流方案，用一个简单的启发式损失把热门专家的概率质量压低。</li>
+</ul>
+<p>随机 jitter 在早期工作中有用，后续实验显示去掉它有时反而更稳定；RL 路由也能工作，但没有稳定地超过简单 TopK + balancing 的组合。</p>
+<p>早期 Shazeer et al. 的 noisy routing 可以抽象为：</p>
+<p>$$
+h_e(x)=x^\top w_e+\epsilon_e\,\operatorname{softplus}(x^\top w_e^{\text{noise}}),
+\qquad
+p(x)=\operatorname{softmax}(h(x)),
+$$</p>
+<p>其中 $\epsilon_e$ 是随机扰动。Fedus et al. 还尝试过 uniform multiplicative jitter，例如</p>
+<p>$$
+h_e'(x)=u_eh_e(x),\qquad u_e\sim\operatorname{Uniform}(1-\varepsilon,1+\varepsilon).
+$$</p>
+<p>这些扰动的作用是让相近的 experts 有机会被探索，并通过 softmax 学习如何给 Top-$k$ experts 排序；它们后来在一些更稳定的训练 recipe 中被移除。</p>
+<h3 id="7-3-Switch-style-load-balancing-loss"><a href="#7-3-Switch-style-load-balancing-loss" class="headerlink" title="7.3 Switch-style load balancing loss"></a>7.3 Switch-style load balancing loss</h3><p>设 batch 中有 $T$ 个 token、$N$ 个专家：</p>
+<ul>
+<li>$f_i$：实际被 dispatch 到专家 $i$ 的 token 比例；</li>
+<li>$P_i$：router 对专家 $i$ 分配的平均 soft probability mass。</li>
+</ul>
+<p>常见的辅助损失是：</p>
+<p>$$
+\mathcal{L}_{\text{balance}}
+ =\alpha N\sum_{i=1}^{N}f_iP_i.
+$$</p>
+<p>若采用 $f_i=T^{-1}\sum_t\mathbf{1}[a_t=i]$、$P_i=T^{-1}\sum_t p_i(x_t)$ 的定义，则对单个 token 的 router probability 有：</p>
+<p>$$
+\frac{\partial\mathcal{L}_{\text{balance}}}{\partial p_i(x_t)}
+ =\frac{\alpha N}{T}f_i
+ =\frac{\alpha N}{T^2}\sum_{u=1}^{T}\mathbf{1}[a_u=i].
+$$</p>
+<p>因此，实际被选择得越频繁的 expert，受到的下压梯度越强，这就是课上所说的“popular experts get downweighted”。</p>
+<p>它不是从一个唯一的生成模型推导出的“真目标”，更适合从梯度作用来理解：$P_i$ 对应的梯度与 $f_i$ 成正比，因此已经收到很多 token 的专家会被更强地下压。</p>
+<p>DeepSeek 还会额外做 <strong>device-level balancing</strong>，因为专家即使在全局上均匀，若某些设备上的专家更热门，all-to-all 仍然会堵塞。DeepSeek v3 进一步使用 per-expert bias 和 online update，减少对 auxiliary loss 的依赖，但“完全不需要任何平衡机制”目前仍不是现实。</p>
+<p>如果设备 $d$ 上包含专家集合 $E_d$，可以把同一个目标聚合到设备级：</p>
+<p>$$
+f_d=\sum_{i\in E_d}f_i,\qquad
+P_d=\sum_{i\in E_d}P_i,\qquad
+\mathcal{L}_{\text{device}}=\alpha_dD\sum_d f_dP_d.
+$$</p>
+<p>DeepSeek v3 的 bias-based balancing 则先改写 router 分数：</p>
+<p>$$
+h'_e(x)=h_e(x)+b_e,
+$$</p>
+<p>再根据近期 load 在线更新 $b_e$，让过载专家更难被选中、低载专家更容易被选中。它常被称为 auxiliary-loss-free balancing，但课上特别提醒：实际系统仍可能保留很小的序列级或极端失衡保护项，因此不能理解成完全没有任何辅助约束。</p>
+<p>移除 load balancing loss 的后果很直接：绝大多数 token 会集中到少数专家，其余参数几乎闲置，训练 loss 和下游表现都会明显恶化。</p>
+<p><img src="/img/posts/c1b8e7f4/load-balancing-ablation.png" alt="移除 load balancing loss 后，token 集中到极少数 experts"></p>
+<h3 id="7-4-Router-稳定性"><a href="#7-4-Router-稳定性" class="headerlink" title="7.4 Router 稳定性"></a>7.4 Router 稳定性</h3><p>router 又引入了一个 softmax，而指数、除法和 softmax 都是数值稳定性的敏感点。常见措施是：</p>
+<ul>
+<li>router logits &#x2F; softmax 使用 FP32；</li>
+<li>对 router 加 z-loss，抑制 logits 整体变大；</li>
+<li>监控各 expert 的 token fraction 和 device load。</li>
+</ul>
+<p>一个常见的 router z-loss 写法是：</p>
+<p>$$
+\mathcal{L}_{z}
+ =\lambda_z\left(\log\sum_{e=1}^{E}\exp h_e(x)\right)^2.
+$$</p>
+<p>它不负责选择专家，只是抑制 router logits 的整体尺度，避免低精度 softmax 出现尖峰或溢出。</p>
+<p><img src="/img/posts/c1b8e7f4/router-zloss.png" alt="router z-loss 可以显著减少训练曲线中的尖峰"></p>
+<h3 id="7-5-系统侧：expert-parallelism-与稀疏矩阵乘法"><a href="#7-5-系统侧：expert-parallelism-与稀疏矩阵乘法" class="headerlink" title="7.5 系统侧：expert parallelism 与稀疏矩阵乘法"></a>7.5 系统侧：expert parallelism 与稀疏矩阵乘法</h3><p>MoE 的专家天然可分片到不同 GPU，但 token 必须通过 all-to-all 发往对应设备。现代实现会把不同 expert 的输入打包成结构化稀疏矩阵乘法，而不是启动大量小 GEMM：</p>
+<p><img src="/img/posts/c1b8e7f4/expert-parallelism.png" alt="MoE 在数据、模型与 expert parallelism 之间提供额外的切分维度"></p>
+<p><img src="/img/posts/c1b8e7f4/sparse-mm.png" alt="MoE 的 batched、block-diagonal 与 block-sparse 矩阵乘法"></p>
+<p>MegaBlocks 等库利用这类稀疏 MM 提升 GPU 利用率。一个较新的系统技巧是：先把 residual activation down-project 到较小维度，再做跨设备 dispatch，减少通信量；shared expert 可以保留更大的维度，避免所有计算都被通信瓶颈限制。</p>
+<p><img src="/img/posts/c1b8e7f4/latent-moe-communication.png" alt="Nemotron 3 LatentMoE 在 all-to-all 前后加入低维投影以减少通信"></p>
+<p>早期实现还可能因为 expert queue 超载而静默丢 token，导致一个请求的输出受到其他请求路由的影响。现代稀疏矩阵和 routing infrastructure 已经大幅缓解这类问题，但容量因子和负载监控仍然重要。</p>
+<p>这也是 MoE 的一个反直觉随机性来源：如果某个 batch 内 expert 超载，早期实现会按 capacity factor 丢弃超出队列的 token；在线服务中，其他用户的 token 可能改变这个 batch 的拥塞，从而影响当前请求。现在的 MegaBlocks 等实现已经尽量避免这种 silent token dropping，但训练和服务仍需显式处理容量与负载。</p>
+<h2 id="8-MoE-的其他工程问题"><a href="#8-MoE-的其他工程问题" class="headerlink" title="8. MoE 的其他工程问题"></a>8. MoE 的其他工程问题</h2><h3 id="8-1-Fine-tuning-容易过拟合"><a href="#8-1-Fine-tuning-容易过拟合" class="headerlink" title="8.1 Fine-tuning 容易过拟合"></a>8.1 Fine-tuning 容易过拟合</h3><p>MoE 总参数量很大，而下游微调数据通常很少。直接更新所有 experts 时，train&#x2F;validation gap 可能非常大。课件把问题和两种解决方向放在同一页：Zoph et al. 倾向于只更新 attention 或 non-MoE MLP，DeepSeek 则使用约 $1.4$M 条 SFT 数据抵消过拟合。</p>
+<p><img src="/img/posts/c1b8e7f4/moe-finetuning.png" alt="稀疏 MoE 的微调过拟合，以及只调非 MoE 层和增加 SFT 数据两种方案"></p>
+<h3 id="8-2-Upcycling"><a href="#8-2-Upcycling" class="headerlink" title="8.2 Upcycling"></a>8.2 Upcycling</h3><p>upcycling 的做法是从一个已经训练好的 dense LM 出发：复制它的 MLP 权重作为多个初始 experts，随机初始化 router，然后继续训练，让不同 token 的路由逐渐使这些副本 specialization。</p>
+<p>下面这张原课件图直接展示了 dense block 如何复制 MLP、从零加入 router，并继续训练成 MoE；右图则显示同等继续预训练时间下的收益。</p>
+<p><img src="/img/posts/c1b8e7f4/upcycling.png" alt="从 dense Transformer block upcycle 成 MoE block"></p>
+<p>MiniCPM 的例子使用 Top-$2$、8 个 experts、约 $4$B active parameters，并继续训练约 $520$B tokens：</p>
+<p><img src="/img/posts/c1b8e7f4/upcycling-minicpm.png" alt="MiniCPM upcycling 的模型配置与 benchmark 结果"></p>
+<p>Qwen MoE 从 Qwen $1.8$B 初始化，使用 Top-$4$、60 个 routed experts 和 4 个 shared experts：</p>
+<p><img src="/img/posts/c1b8e7f4/upcycling-qwen.png" alt="Qwen MoE upcycling 的配置与 benchmark 结果"></p>
+<p>这些结果说明 upcycling 可以把已有 dense checkpoint 变成更强的稀疏模型；不过现在如果一开始就能直接训练 MoE，实际采用 upcycling 的模型已经减少。</p>
+<h2 id="9-DeepSeek-MoE-v1-v3：一条清晰的演化路线"><a href="#9-DeepSeek-MoE-v1-v3：一条清晰的演化路线" class="headerlink" title="9. DeepSeek MoE v1 -&gt; v3：一条清晰的演化路线"></a>9. DeepSeek MoE v1 -&gt; v3：一条清晰的演化路线</h2><p>DeepSeek v1 用 2 个 shared experts、64&#x2F;4 的 fine-grained design、标准 TopK 和 expert&#x2F;device auxiliary balancing，构成了后续模型的基本模板：</p>
+<p><img src="/img/posts/c1b8e7f4/deepseek-moe-v1.png" alt="DeepSeek MoE v1 的 shared&#x2F;fine-grained experts、TopK 与 balancing"></p>
+<p>v2 扩展到 $236$B 总参数、$21$B active parameters，并加入 Top-M device routing 和同时约束发送&#x2F;接收通信的 balancing loss：</p>
+<p><img src="/img/posts/c1b8e7f4/deepseek-moe-v2.png" alt="DeepSeek MoE v2 的 Top-M device routing 与通信平衡"></p>
+<p>v3 扩展到 $671$B 总参数、$37$B active parameters，使用 1 个 shared expert、258 个 routed experts、每 token 激活 8 个，并改为 sigmoid + softmax TopK&#x2F;TopM 与 bias-based、seq-wise balancing：</p>
+<p><img src="/img/posts/c1b8e7f4/deepseek-moe-v3.png" alt="DeepSeek MoE v3 的 sigmoid&#x2F;softmax 路由与辅助损失方案"></p>
+<p>这三张图比参数表更能说明演化方向：结构主体没有推倒重来，变化主要集中在 expert 数量、设备约束、通信平衡和 router 稳定性。<strong>架构设计和 systems design 是一起演化的。</strong></p>
+<h3 id="9-1-MLA：把-KV-cache-压到-latent-space"><a href="#9-1-MLA：把-KV-cache-压到-latent-space" class="headerlink" title="9.1 MLA：把 KV cache 压到 latent space"></a>9.1 MLA：把 KV cache 压到 latent space</h3><p>DeepSeek v3 还使用 Multi-head Latent Attention（MLA）。先把 hidden state 压缩成低维 latent activation：</p>
+<p>$$
+c_t^{KV}=W^{DKV}h_t,
+$$</p>
+<p>再由 $c_t^{KV}$ 生成 key&#x2F;value：</p>
+<p>$$
+k_t^C=W^{UK}c_t^{KV},
+\qquad
+v_t^C=W^{UV}c_t^{KV}.
+$$</p>
+<p>KV cache 只需要保存 $c_t^{KV}$，而不是每个 head 的完整 $K_t,V_t$，因此可以显著降低 decode memory。由于 $W^{UK}$ 可以并入 query projection，计算 query-key 内积时可以直接使用 latent cache；课件还提到，query 也会被压缩，以节省训练时的 activation memory。</p>
+<p>RoPE 会让这种合并更复杂。没有 RoPE 时：</p>
+<p>$$
+\langle Q,K\rangle
+=\left\langle hW^Q,\,W^{UK}c_t^{KV}\right\rangle
+=\left\langle hW^QW^{UK},\,c_t^{KV}\right\rangle.
+$$</p>
+<p>加入 query&#x2F;key 的位置旋转矩阵 $R_q,R_k$ 后：</p>
+<p>$$
+\langle QR_q,R_kK\rangle
+=\left\langle hW^QR_q,\,R_kW^{UK}c_t^{KV}\right\rangle
+=\left\langle hW^QR_qR_kW^{UK},\,c_t^{KV}\right\rangle.
+$$</p>
+<p>一般情况下 $R_k$ 不能被合并进一个与位置无关的 $W^{UK}$，因此 DeepSeek MLA 保留少量 non-latent key dimensions，让这些维度单独承担可旋转的位置部分。</p>
+<p><img src="/img/posts/c1b8e7f4/mla.png" alt="MLA 用低维 latent activation 压缩 KV cache"></p>
+<h3 id="9-2-MTP：一次预测多个未来-token"><a href="#9-2-MTP：一次预测多个未来-token" class="headerlink" title="9.2 MTP：一次预测多个未来 token"></a>9.2 MTP：一次预测多个未来 token</h3><p>Multi-token Prediction（MTP）在主模型之外加入轻量预测模块，让模型同时学习多个未来位置。它既可能提供额外训练信号，也可以把未来 token 当作 speculative decoding 的草稿。</p>
+<p>用 $K$ 个预测头表示，一个简化的多步目标是：</p>
+<p>$$
+\mathcal{L}_{\text{MTP}}
+=\sum_{k=1}^{K}\lambda_k\,
+\operatorname{CE}\left(p_{t+k}^{(k)},y_{t+k}\right),
+\qquad
+p_{t+k}^{(k)}=\operatorname{softmax}\left(W_kh_t^{(k)}\right).
+$$</p>
+<p>每个轻量模块可以复用 embedding、RMSNorm 或部分 Transformer 结构，然后预测一个偏移后的目标位置。它的系统意义和 EAGLE 一类方法相似：额外模块产生草稿 token，主模型再验证，从而减少自回归 decode 的串行步数。</p>
+<p>课上提醒：DeepSeek v3 的实际配置主要使用 one-token-ahead 的 MTP，不要把论文图中的多个模块误读成线上每一步都预测无限多个 token。</p>
+<p><img src="/img/posts/c1b8e7f4/mtp.png" alt="DeepSeek v3 的 MTP 与多步预测结构"></p>
+<h2 id="10-最后记住什么？"><a href="#10-最后记住什么？" class="headerlink" title="10. 最后记住什么？"></a>10. 最后记住什么？</h2><h3 id="Attention-alternatives"><a href="#Attention-alternatives" class="headerlink" title="Attention alternatives"></a>Attention alternatives</h3><ol>
+<li>标准 attention 的二次项来自 $QK^\top$ 的 token-to-token 全连接。</li>
+<li>去掉 softmax 后，结合律给出 $Q(K^\top V)$，并自然产生固定状态的 recurrent form。</li>
+<li>Mamba-2 和 Gated Delta Net 是在线性状态更新上加 gate 与擦除机制，训练用并行形式、推理用递归形式。</li>
+<li>DSA 走的是另一条路：轻量 indexer + Top-$k$ 候选 + 小子集上的 full attention；它不是严格线性，但常数因子很小。</li>
+<li>当前更可信的 recipe 是 hybrid，而不是纯线性 attention；少量 full attention 对表达能力和长上下文 retrieval 仍然很重要。</li>
+</ol>
+<h3 id="Mixture-of-Experts"><a href="#Mixture-of-Experts" class="headerlink" title="Mixture of Experts"></a>Mixture of Experts</h3><ol>
+<li>MoE 是一个稀疏、条件计算的 MLP：参数可以很多，但每个 token 只激活 Top-$k$ experts。</li>
+<li>主流 router 非常简单：线性打分、TopK、softmax；shared + fine-grained experts 是近年的重要结构。</li>
+<li>真正难的是训练和系统：expert collapse、load balancing、router 数值稳定性、跨设备通信和稀疏 MM。</li>
+<li><code>load balancing loss + FP32 router + z-loss + expert parallelism</code> 是一套很实用的默认组合。</li>
+<li>MoE 的收益不是“免费”：它把 dense FLOPs 换成更多参数、更多通信和更复杂的基础设施，但在大模型规模上，这个交换通常是值得的。</li>
+</ol>
+<p>本节课最值得迁移的思维方式，是不要只问“这是线性还是二次”“这是可微还是不可微”，还要问：<strong>昂贵的部分到底发生在哪个维度、哪些 token、哪些设备，以及能否把它变成更适合硬件的计算模式。</strong></p>
+<blockquote>
+<p>配图均来自本节课提供的原始 lecture PDF；公式和文字解释按课堂讲授内容重新整理。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/c1b8e7f4/">https://wick-7.github.io/posts/c1b8e7f4/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Attention/">Attention</a><a class="post-meta__tags" href="/tags/CS336/">CS336</a><a class="post-meta__tags" href="/tags/Mamba/">Mamba</a><a class="post-meta__tags" href="/tags/MoE/">MoE</a><a class="post-meta__tags" href="/tags/DeepSeek/">DeepSeek</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/eecs498l22/" title="《EECS 498 Lecture 22》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《EECS 498 Lecture 22》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 22：Course Recap and Open Problems最后一讲先把整门课串成一条技术路线，再讨论深度学习在偏差、数据、可解释性和常识理解方面的开放问题。 需要注意，这是一份 2019 年课程总结。Transformer、self-supervised learning 和大规模生成模型当时已经显出方向，但课件中的“当前方法”和“未来预测”应放回当年的时间背景理解。今天回看，许多趋势已经实现，偏差、泛化、数据效率与常识推理这些根本问题却仍没有因为模型变大而自动消失。 1. 一条贯穿全课的主线计算机视觉的目标是让人工系统处理、感知并推理视觉数据。输入从像素开始，模型通过数据驱动的方法学习表示，再输出分类、检测、分割、三维形状、视频动作、生成结果或决策策略。   数据驱动范式的基本循环是收集带标签数据、训练模型、在新图像上评估，而深度卷积网络负责学习从像素到语义的层次化映射。  2. 从简单模型到统一视觉系统线性分类器和 KNN 建立了分数、损失和泛化的基本概念；梯度下降和反向传播让参数可以高效更新；CNN 通过局部连接、共享权重和下采样利用图像结构；RNN...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-27</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。  1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。 与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。  2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：    模块 核心问题 主要内容 作业目标    Basics 如何训练出第一个 LM？ BPE、Transformer、loss、optimizer、训练循环 从零训练小型语言模...</div></div></div></a><a class="pagination-related" href="/posts/f2c7d9a4/" title="《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课的标题很诚实：Everything You Didn’t Want to Know About Architectures and Hyperparameters。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。 课程给出的学习优先级也很值得记住：  最好的方法是自己训练模型、亲手比较不同架构。 第二好的方法是系统地学习其他人的训练经验。  这里的“经验”不是简单抄一份 LLaMA 配置，而是理解每个选择同时受到三件事约束：表达能力、训练稳定性和真实硬件上的运行效率。 1. 先建立一张现代 Transformer 的地图原始 Transformer 的经典配置是：正弦&#x2F;余弦位置编码、ReLU FFN，以及残差路径上的 post-LayerNorm。现代 decoder-only 语言模型的常见默认值则更接近下面这张表：    组件 原始 Transformer 现代语言模型的常见选择 主要原因    残差块中的归一化 post-norm non-residual norm，通常是 ...</div></div></div></a><a class="pagination-related" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-28</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。 1.1 训练需要多久？对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是： $$ C \approx 6ND. $$ 因此，$70$B 参数、$15$T tokens 的训练约需要： $$ C = 6 \times 70\times 10^9 \times 15\times 10^{12}   = 6.3\times 10^{24}\ \text{FLOPs}. $$ H100 的 dense bf16 峰值约为 $1979/2...</div></div></div></a><a class="pagination-related" href="/posts/efc72a48/" title="《CS294-196 25fall Lecture3》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-11</div><div class="info-item-2">《CS294-196 25fall Lecture3》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Post-Training Verifiable Agents传统 Chat Model 的主要目标是生成“人类喜欢的回答”；Agentic Model 在此基础上，还需要在环境中采取行动、调用工具，并最终完成一个能够被检查的任务。因此，Agent 后训练的核心不只是语言风格对齐，而是： $$ \text{理解环境状态} \rightarrow \text{选择并调用工具} \rightarrow \text{改变或查询环境} \rightarrow \text{完成任务} \rightarrow \text{由 Verifier 检查结果} $$ 本节重点关注 Verifiable Agent 的三个关键：  Good Training Data：构造多样且高质量的环境、工具、任务和验证器。 Good Evaluations：定义什么是 Agent Intelligence，并用可靠评测量化它。 Good Training Recipes：通过 SFT 与 RL，让模型能够训练更久、学习更难任务并探索更多有效轨迹。  最后进一步提出实践问题：如何把环境、验证器、评测和算法整合成...</div></div></div></a><a class="pagination-related" href="/posts/0b60d60f/" title="《CS294-196 24fall Lecture1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-12</div><div class="info-item-2">《CS294-196 24fall Lecture1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Reasoning：关键思想、方法与局限1. Reasoning 在 LLM Agent 中的位置传统 LLM 的基本交互形式是： $$ \text{Text Input} \rightarrow \text{LLM} \rightarrow \text{Text Output}. $$ LLM Agent 则将 LLM 作为负责 Reasoning &amp; Planning 的核心模块，并进一步接入：  外部环境及其反馈； Tool Use； Retrieval &#x2F; Knowledge Base； Working Memory 与 Long-term Memory； 多模态感知和具身行动； 其他智能体与人类。  因此，Agent 需要完成的并不是一次性的文本生成，而是一个动态闭环： $$ \text{Observe} \rightarrow \text{Reason / Plan} \rightarrow \text{Act} \rightarrow \text{Receive Feedback} \rightarrow \text{Update}. $$...</div></div></div></a><a class="pagination-related" href="/posts/e7b43b2b/" title="《生成式人工智慧与机器学习导论25 第三讲》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-06</div><div class="info-item-2">《生成式人工智慧与机器学习导论25 第三讲》课堂笔记</div></div><div class="info-2"><div class="info-item-1">语言模型内部运作 第一部分：从 Prompt 到下一个 Token2. Tokenization 与 Embedding 输入文字先被 Tokenizer 切成 Token，每个 Token 对应一个整数 ID。课件为了方便，假设一个汉字就是一个 Token；真实情况中，一个 Token 可能包含多个汉字，一个汉字也可能被拆开。 12今  天  天  气  真  好  ！540 123 123 729 938 432 0  Embedding Table 将 Token ID 转成向量： $$ E\in\mathbb{R}^{V\times d},\qquad h_i^{(0)}=E[x_i] $$ 其中 $V$ 是词表大小，$d$ 是向量维度。Embedding Table 本身也是模型参数。 初始 Token Embedding 的特点：  相同 Token 的向量完全相同； 语义相关的 Token 通常更接近； 多义词还没有结合上下文，因此会混合不同含义。  例如，$apple$ 可能同时接近水果相关词和 Apple 公司相关词。  3. Layer by Layer To...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">48</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">71</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E6%9B%BF%E4%BB%A3%E6%A0%87%E5%87%86-attention%EF%BC%9F"><span class="toc-number">1.</span> <span class="toc-text">1. 为什么要替代标准 attention？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E5%85%88%E7%94%A8%E5%B7%B2%E6%9C%89%E5%B7%A5%E5%85%B7%E6%8E%A7%E5%88%B6%E6%88%90%E6%9C%AC"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 先用已有工具控制成本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-Linear-attention%EF%BC%9A%E5%88%A9%E7%94%A8%E7%9F%A9%E9%98%B5%E4%B9%98%E6%B3%95%E7%BB%93%E5%90%88%E5%BE%8B"><span class="toc-number">2.</span> <span class="toc-text">2. Linear attention：利用矩阵乘法结合律</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-Dense-%E5%BD%A2%E5%BC%8F%E4%B8%8E-recurrent-%E5%BD%A2%E5%BC%8F%E7%9A%84%E4%BA%8C%E8%B1%A1%E6%80%A7"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 Dense 形式与 recurrent 形式的二象性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E7%BA%BF%E6%80%A7-attention-%E8%BF%98%E4%B8%8D%E5%A4%9F%E5%BC%BA"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 线性 attention 还不够强</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BB%8E-linear-attention-%E5%88%B0-Mamba-2"><span class="toc-number">3.</span> <span class="toc-text">3. 从 linear attention 到 Mamba-2</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-Gated-Delta-Net%EF%BC%9A%E4%B8%8D%E4%BB%85%E5%86%99%E5%85%A5%EF%BC%8C%E8%BF%98%E8%A6%81%E6%93%A6%E9%99%A4"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 Gated Delta Net：不仅写入，还要擦除</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E7%BA%BF%E6%80%A7%E6%97%B6%E9%97%B4-attention-%E7%9A%84%E6%A0%B9%E6%9C%AC-trade-off"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 线性时间 attention 的根本 trade-off</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%8F%A6%E4%B8%80%E6%9D%A1%E8%B7%AF%E7%BA%BF%EF%BC%9ADeepSeek-Sparse-Attention"><span class="toc-number">4.</span> <span class="toc-text">4. 另一条路线：DeepSeek Sparse Attention</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Mixture-of-Experts-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">5.</span> <span class="toc-text">5. Mixture of Experts 是什么？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E4%B8%BA%E4%BB%80%E4%B9%88-MoE-%E7%8E%B0%E5%9C%A8%E5%8F%98%E5%BE%97%E6%99%AE%E9%81%8D%EF%BC%9F"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 为什么 MoE 现在变得普遍？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-MoE-%E7%9A%84%E7%BB%93%E6%9E%84%E4%B8%8E%E8%B7%AF%E7%94%B1%E8%AE%BE%E8%AE%A1"><span class="toc-number">6.</span> <span class="toc-text">6. MoE 的结构与路由设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E5%85%B8%E5%9E%8B%E4%BD%8D%E7%BD%AE%EF%BC%9AMLP%EF%BC%8C%E4%B8%8D%E6%98%AF-attention"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 典型位置：MLP，不是 attention</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E4%B8%89%E7%A7%8D%E8%B7%AF%E7%94%B1%E8%A7%86%E8%A7%92"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 三种路由视角</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-Fine-grained-experts-%E4%B8%8E-shared-experts"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 Fine-grained experts 与 shared experts</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-MoE-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9A%BE%E8%AE%AD%E7%BB%83%EF%BC%9F"><span class="toc-number">7.</span> <span class="toc-text">7. MoE 为什么难训练？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E7%A8%80%E7%96%8F%E8%B7%AF%E7%94%B1%E5%B8%A6%E6%9D%A5%E7%9A%84%E4%B8%A4%E4%B8%AA%E9%97%AE%E9%A2%98"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 稀疏路由带来的两个问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E4%B8%89%E7%B1%BB%E8%A7%A3%E5%86%B3%E6%80%9D%E8%B7%AF"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 三类解决思路</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-Switch-style-load-balancing-loss"><span class="toc-number">7.3.</span> <span class="toc-text">7.3 Switch-style load balancing loss</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-Router-%E7%A8%B3%E5%AE%9A%E6%80%A7"><span class="toc-number">7.4.</span> <span class="toc-text">7.4 Router 稳定性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-%E7%B3%BB%E7%BB%9F%E4%BE%A7%EF%BC%9Aexpert-parallelism-%E4%B8%8E%E7%A8%80%E7%96%8F%E7%9F%A9%E9%98%B5%E4%B9%98%E6%B3%95"><span class="toc-number">7.5.</span> <span class="toc-text">7.5 系统侧：expert parallelism 与稀疏矩阵乘法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-MoE-%E7%9A%84%E5%85%B6%E4%BB%96%E5%B7%A5%E7%A8%8B%E9%97%AE%E9%A2%98"><span class="toc-number">8.</span> <span class="toc-text">8. MoE 的其他工程问题</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-Fine-tuning-%E5%AE%B9%E6%98%93%E8%BF%87%E6%8B%9F%E5%90%88"><span class="toc-number">8.1.</span> <span class="toc-text">8.1 Fine-tuning 容易过拟合</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Upcycling"><span class="toc-number">8.2.</span> <span class="toc-text">8.2 Upcycling</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-DeepSeek-MoE-v1-v3%EF%BC%9A%E4%B8%80%E6%9D%A1%E6%B8%85%E6%99%B0%E7%9A%84%E6%BC%94%E5%8C%96%E8%B7%AF%E7%BA%BF"><span class="toc-number">9.</span> <span class="toc-text">9. DeepSeek MoE v1 -&gt; v3：一条清晰的演化路线</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-MLA%EF%BC%9A%E6%8A%8A-KV-cache-%E5%8E%8B%E5%88%B0-latent-space"><span class="toc-number">9.1.</span> <span class="toc-text">9.1 MLA：把 KV cache 压到 latent space</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-MTP%EF%BC%9A%E4%B8%80%E6%AC%A1%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5-token"><span class="toc-number">9.2.</span> <span class="toc-text">9.2 MTP：一次预测多个未来 token</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E6%9C%80%E5%90%8E%E8%AE%B0%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="toc-number">10.</span> <span class="toc-text">10. 最后记住什么？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Attention-alternatives"><span class="toc-number">10.1.</span> <span class="toc-text">Attention alternatives</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Mixture-of-Experts"><span class="toc-number">10.2.</span> <span class="toc-text">Mixture of Experts</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/c1b8e7f4/" title="《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</a><time datetime="2026-07-30T01:00:00.000Z" title="发表于 2026-07-30 09:00:00">2026-07-30</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l22/" title="《EECS 498 Lecture 22》课堂笔记">《EECS 498 Lecture 22》课堂笔记</a><time datetime="2026-07-29T05:10:00.000Z" title="发表于 2026-07-29 13:10:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l21/" title="《EECS 498 Lecture 21》课堂笔记">《EECS 498 Lecture 21》课堂笔记</a><time datetime="2026-07-29T05:00:00.000Z" title="发表于 2026-07-29 13:00:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l20/" title="《EECS 498 Lecture 20》课堂笔记">《EECS 498 Lecture 20》课堂笔记</a><time datetime="2026-07-29T04:50:00.000Z" title="发表于 2026-07-29 12:50:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l19/" title="《EECS 498 Lecture 19》课堂笔记">《EECS 498 Lecture 19》课堂笔记</a><time datetime="2026-07-29T04:40:00.000Z" title="发表于 2026-07-29 12:40:00">2026-07-29</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
