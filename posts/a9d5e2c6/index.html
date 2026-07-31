@@ -1,0 +1,731 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记 | 雨田三狼</title><meta name="author" content="Wick"><meta name="copyright" content="Wick"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="这节课进入 CS336 的系统部分。目标不是记住 CUDA 的每个 API，而是建立一套能解释性能的心智模型：GPU 为什么会慢，以及怎样重新组织计算和数据，让它快起来。 全课可以压缩成一句话：  现代加速器的矩阵乘法能力增长得比内存带宽快得多，所以高性能机器学习的核心往往不是少算几个 FLOP，而是少搬数据、连续搬数据，并让搬进片上存储的数据被尽可能多地复用。  课程分为三部分：  GPU 的硬">
+<meta property="og:type" content="article">
+<meta property="og:title" content="《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记">
+<meta property="og:url" content="https://wick-7.github.io/posts/a9d5e2c6/index.html">
+<meta property="og:site_name" content="雨田三狼">
+<meta property="og:description" content="这节课进入 CS336 的系统部分。目标不是记住 CUDA 的每个 API，而是建立一套能解释性能的心智模型：GPU 为什么会慢，以及怎样重新组织计算和数据，让它快起来。 全课可以压缩成一句话：  现代加速器的矩阵乘法能力增长得比内存带宽快得多，所以高性能机器学习的核心往往不是少算几个 FLOP，而是少搬数据、连续搬数据，并让搬进片上存储的数据被尽可能多地复用。  课程分为三部分：  GPU 的硬">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wick-7.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-07-31T01:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-31T06:02:41.250Z">
+<meta property="article:author" content="Wick">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="CS336">
+<meta property="article:tag" content="CUDA">
+<meta property="article:tag" content="FlashAttention">
+<meta property="article:tag" content="GPU">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="TPU">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://wick-7.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记",
+  "url": "https://wick-7.github.io/posts/a9d5e2c6/",
+  "image": "https://wick-7.github.io/img/avatar.jpg",
+  "datePublished": "2026-07-31T01:00:00.000Z",
+  "dateModified": "2026-07-31T06:02:41.250Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Wick",
+      "url": "https://wick-7.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://wick-7.github.io/posts/a9d5e2c6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.5.4"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><style>
+  [data-theme="dark"] #footer {
+    background: #2b2b2b !important;
+  }
+  [data-theme="dark"] #footer,
+  [data-theme="dark"] #footer a {
+    color: #aaa !important;
+  }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">49</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">75</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">雨田三狼</span></a><a class="nav-page-title" href="/"><span class="site-name">《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-31T01:00:00.000Z" title="发表于 2026-07-31 09:00:00">2026-07-31</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-31T06:02:41.250Z" title="更新于 2026-07-31 14:02:41">2026-07-31</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>这节课进入 CS336 的系统部分。目标不是记住 CUDA 的每个 API，而是建立一套能解释性能的心智模型：<strong>GPU 为什么会慢，以及怎样重新组织计算和数据，让它快起来。</strong></p>
+<p>全课可以压缩成一句话：</p>
+<blockquote>
+<p>现代加速器的矩阵乘法能力增长得比内存带宽快得多，所以高性能机器学习的核心往往不是少算几个 FLOP，而是少搬数据、连续搬数据，并让搬进片上存储的数据被尽可能多地复用。</p>
+</blockquote>
+<p>课程分为三部分：</p>
+<ol>
+<li>GPU 的硬件、执行和内存模型，以及它与 CPU、TPU 的关系；</li>
+<li>Roofline 模型与六类 GPU 优化方法；</li>
+<li>用 tiling、fusion、online softmax 和 recomputation 重新推导 FlashAttention。</li>
+</ol>
+<h2 id="开场：为什么语言模型需要-GPU？"><a href="#开场：为什么语言模型需要-GPU？" class="headerlink" title="开场：为什么语言模型需要 GPU？"></a>开场：为什么语言模型需要 GPU？</h2><p>语言模型的能力会随计算量增加而以相当稳定的方式提升。更快的硬件、更好的利用率和更多芯片，即使不改变模型算法，也能推动性能继续增长。</p>
+<p>早期处理器主要依靠 <strong>Dennard scaling</strong>：晶体管变小后，提高时钟频率，在大致相同的功耗密度下让串行指令越来越快。这个趋势在 2000 年代逐渐失效。晶体管数量仍在增加，但频率和单线程性能不能再按原来的速度增长，于是扩展计算的主要方式变成了并行：</p>
+<p>$$
+\text{更快的单个执行单元}
+\quad\longrightarrow\quad
+\text{大量执行单元同时工作}.
+$$</p>
+<p>过去十年 GPU 可提供的浮点算力增长超过三个数量级。这里不只有晶体管数量的贡献，还包括：</p>
+<ul>
+<li>更多并行执行单元；</li>
+<li>专门执行矩阵乘法的 Tensor Core；</li>
+<li>BF16、FP8、INT8 等低精度数据格式；</li>
+<li>稀疏性以及更高效的数据通路。</li>
+</ul>
+<p>因此，LLM scaling 和 GPU scaling 实际上紧密绑定。模型设计也不能完全脱离硬件：一个数学上 FLOPs 更少的结构，真实运行时未必更快。</p>
+<h2 id="Part-1：GPUs-in-depth-how-they-work-and-important-parts"><a href="#Part-1：GPUs-in-depth-how-they-work-and-important-parts" class="headerlink" title="Part 1：GPUs in depth - how they work and important parts"></a>Part 1：GPUs in depth - how they work and important parts</h2><h3 id="1-CPU、GPU-与-TPU-的核心差异"><a href="#1-CPU、GPU-与-TPU-的核心差异" class="headerlink" title="1. CPU、GPU 与 TPU 的核心差异"></a>1. CPU、GPU 与 TPU 的核心差异</h3><h4 id="1-1-CPU-优化延迟，GPU-优化吞吐"><a href="#1-1-CPU-优化延迟，GPU-优化吞吐" class="headerlink" title="1.1 CPU 优化延迟，GPU 优化吞吐"></a>1.1 CPU 优化延迟，GPU 优化吞吐</h4><p>CPU 只有相对少量但很强的核心，拥有复杂的控制逻辑、大缓存、分支预测和乱序执行。它希望让<strong>一个线程尽快完成</strong>，适合复杂控制流和低延迟任务。</p>
+<p>GPU 则把更多晶体管用于大量较简单的计算单元，减少对复杂分支和大缓存的投入。它希望让<strong>单位时间内处理的数据总量最大</strong>，适合规则、可并行的数值计算。</p>
+<p><img src="/img/posts/a9d5e2c6/cpu-vs-gpu.png" alt="CPU 用少量复杂核心优化延迟，GPU 用大量简单核心优化吞吐"></p>
+<p>这带来一个基本 trade-off：</p>
+<table>
+<thead>
+<tr>
+<th>硬件</th>
+<th>优化目标</th>
+<th>擅长</th>
+<th>不擅长</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CPU</td>
+<td>单任务延迟</td>
+<td>分支、控制、串行依赖、通用程序</td>
+<td>数量巨大的规则并行运算</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>总吞吐</td>
+<td>矩阵运算、向量运算、相同程序处理大量数据</td>
+<td>复杂分支、细粒度同步、小而不规则的任务</td>
+</tr>
+<tr>
+<td>TPU</td>
+<td>机器学习吞吐</td>
+<td>大规模矩阵乘法和规则 tensor program</td>
+<td>GPU 式细粒度、通用的 SIMT 编程</td>
+</tr>
+</tbody></table>
+<h4 id="1-2-GPU-的计算组织：SM、block、warp、thread"><a href="#1-2-GPU-的计算组织：SM、block、warp、thread" class="headerlink" title="1.2 GPU 的计算组织：SM、block、warp、thread"></a>1.2 GPU 的计算组织：SM、block、warp、thread</h4><p>GPU 包含多个 <strong>SM（Streaming Multiprocessor）</strong>。可以把每个 SM 看成一个能独立接收任务的计算簇，其中有普通算术单元、矩阵乘法单元、寄存器、调度器和 shared memory。</p>
+<p>CUDA 的工作层级可以写成：</p>
+<p>$$
+\text{grid}
+\supset
+\text{block}
+\supset
+\text{warp}
+\supset
+\text{thread}.
+$$</p>
+<ul>
+<li><strong>thread</strong>：执行 kernel 的一个逻辑实例，不同 thread 处理不同数据；</li>
+<li><strong>warp</strong>：NVIDIA GPU 中 32 个连续编号的 thread，硬件按 warp 发射指令；</li>
+<li><strong>block</strong>：一组 thread，被调度到某个 SM 上，并共享该 block 的 shared memory；</li>
+<li><strong>grid</strong>：一次 kernel launch 产生的全部 block。</li>
+</ul>
+<p><img src="/img/posts/a9d5e2c6/gpu-execution.png" alt="CUDA thread、warp、block 与 SM 的映射"></p>
+<p>GPU 采用 <strong>SIMT（Single Instruction, Multiple Threads）</strong>：同一 warp 中的 thread 在同一时刻执行同一条指令，但操作不同的数据。thread 本身很轻量；当一个 warp 等待内存时，调度器可以切换到另一个已经就绪的 warp，用并发隐藏延迟。</p>
+<p>需要注意：block 与 SM 不是永久的一一绑定。一个 SM 可以先后执行许多 block，也可能同时驻留多个 block，具体数量受寄存器、shared memory 和硬件上限约束。</p>
+<h4 id="1-3-GPU-的内存层级"><a href="#1-3-GPU-的内存层级" class="headerlink" title="1.3 GPU 的内存层级"></a>1.3 GPU 的内存层级</h4><p>离执行单元越近的存储越快、越小、也越昂贵：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>作用域</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Register</td>
+<td>单个 thread</td>
+<td>最快、容量很小，过量使用会降低可并发的 warp 数</td>
+</tr>
+<tr>
+<td>Shared memory &#x2F; L1</td>
+<td>单个 block &#x2F; SM</td>
+<td>片上 SRAM，快且可由程序显式管理</td>
+</tr>
+<tr>
+<td>L2 cache</td>
+<td>整张 GPU</td>
+<td>片上共享缓存</td>
+</tr>
+<tr>
+<td>Global memory &#x2F; HBM</td>
+<td>整张 GPU</td>
+<td>容量大、带宽高，但延迟远高于片上 SRAM</td>
+</tr>
+</tbody></table>
+<p><img src="/img/posts/a9d5e2c6/gpu-memory.png" alt="GPU 的片上 SRAM、缓存与片外 global memory"></p>
+<p>同一 block 内的 thread 可以经 shared memory 交换数据。不同 block 若要通信，通常必须经过 global memory 或拆成多个 kernel，因为 block 的执行顺序一般没有保证。</p>
+<p>课件给出的数量级直觉是：SRAM 面积成本可比 DRAM 高约 $100\times$，但访问速度约快 $8\times$。因此不可能简单地把全部 HBM 换成 shared memory。高性能 kernel 要做的是：<strong>只把当前需要的一小块数据搬入片上存储，并充分复用。</strong></p>
+<h4 id="1-4-TPU-与-GPU：结构趋同，粒度不同"><a href="#1-4-TPU-与-GPU：结构趋同，粒度不同" class="headerlink" title="1.4 TPU 与 GPU：结构趋同，粒度不同"></a>1.4 TPU 与 GPU：结构趋同，粒度不同</h4><p>GPU 与 TPU 在高层结构上非常相似，都包含：</p>
+<ul>
+<li>轻量控制单元；</li>
+<li>专门的矩阵乘法电路；</li>
+<li>较快的片上存储；</li>
+<li>大容量的外部高带宽内存。</li>
+</ul>
+<p>二者的主要差异在粒度。GPU 有较多 SM 和较多、较小的矩阵乘法单元，因此更灵活，非矩阵操作也更容易映射。TPU 通常用较少但更大的 Tensor Core，每个 core 内的 <strong>MXU（Matrix Multiply Unit）</strong> 负责大块矩阵乘法，编程模型更规则，没有完全对应 CUDA warp 的层级。</p>
+<p>术语尤其容易混淆：</p>
+<ul>
+<li>NVIDIA 的 <strong>Tensor Core</strong> 指 SM 内的矩阵乘法单元；</li>
+<li>TPU 的 <strong>TensorCore</strong> 指一个较完整的处理核心，其中的矩阵单元叫 MXU。</li>
+</ul>
+<p>二者底层矩阵乘法电路都可采用 systolic array。后续并行课程还会看到，更大的区别来自芯片之间怎样互连，而不只是单芯片内部如何计算。</p>
+<h3 id="2-为什么矩阵乘法在-GPU-上很特别？"><a href="#2-为什么矩阵乘法在-GPU-上很特别？" class="headerlink" title="2. 为什么矩阵乘法在 GPU 上很特别？"></a>2. 为什么矩阵乘法在 GPU 上很特别？</h3><p>早期 GPU 没有专用矩阵乘法硬件，研究者借用 programmable shader 实现通用数值计算。V100 时代开始加入 Tensor Core 后，矩阵乘法成为硬件中特殊的一等公民：低精度矩阵乘法吞吐可以比普通标量浮点操作高一个数量级以上。</p>
+<p>这会改变算法设计的成本模型：</p>
+<blockquote>
+<p>“一个矩阵乘法 + 若干逐元素操作”的时间，可能主要不是由矩阵乘法决定，而是由那些需要反复读写 HBM 的逐元素操作决定。</p>
+</blockquote>
+<p>与此同时，峰值 FLOP&#x2F;s 的增长快于 HBM 带宽。计算单元越来越多，但把数据及时送到这些单元越来越难，这就是 <strong>memory wall</strong>。</p>
+<h3 id="Part-1-recap"><a href="#Part-1-recap" class="headerlink" title="Part 1 recap"></a>Part 1 recap</h3><ul>
+<li>GPU 以大量并行 thread 和 SIMT 执行模型换取吞吐；</li>
+<li>block 在 SM 上执行，warp 是硬件发射和分支分歧的基本单位；</li>
+<li>register、shared memory、cache 和 HBM 构成速度递减、容量递增的内存层级；</li>
+<li>Tensor Core 让矩阵乘法变得特殊，也让数据搬运成为主要瓶颈。</li>
+</ul>
+<h2 id="Part-2：Understanding-GPU-performance"><a href="#Part-2：Understanding-GPU-performance" class="headerlink" title="Part 2：Understanding GPU performance"></a>Part 2：Understanding GPU performance</h2><p><img src="/img/posts/a9d5e2c6/part2-workloads.png" alt="Part 2：GPU 上即使是方阵乘法，性能也可能非常复杂"></p>
+<h3 id="1-Roofline：先判断瓶颈在哪里"><a href="#1-Roofline：先判断瓶颈在哪里" class="headerlink" title="1. Roofline：先判断瓶颈在哪里"></a>1. Roofline：先判断瓶颈在哪里</h3><p>定义算术强度（arithmetic intensity）：</p>
+<p>$$
+I=\frac{\text{FLOPs}}{\text{从目标内存层级搬运的 bytes}}.
+$$</p>
+<p>设硬件峰值计算吞吐为 $P_{\max}$，内存带宽为 $B$，则可达到的吞吐上界是：</p>
+<p>$$
+P\leq \min\left(P_{\max},\; B I\right).
+$$</p>
+<p>等价地，一个操作的时间至少为：</p>
+<p>$$
+T\geq \max\left(\frac{F}{P_{\max}},\;\frac{M}{B}\right),
+$$</p>
+<p>其中 $F$ 是 FLOPs，$M$ 是搬运的字节数。</p>
+<p><img src="/img/posts/a9d5e2c6/roofline.png" alt="Roofline 模型：算术强度较低时受带宽限制，较高时受峰值算力限制"></p>
+<ul>
+<li>当 $I&lt;P_{\max}/B$ 时，程序位于斜线段，是 <strong>memory-bound</strong>；</li>
+<li>当 $I\geq P_{\max}/B$ 时，程序到达平台，是 <strong>compute-bound</strong>；</li>
+<li>转折点 $I^*=P_{\max}/B$ 也叫 ridge point。</li>
+</ul>
+<p>优化的第一步不是盲目减少 FLOPs，而是判断瓶颈：</p>
+<ul>
+<li>memory-bound：减少 HBM 访问、增加数据复用、融合操作、降低精度；</li>
+<li>compute-bound：减少 FLOPs，或使用更快的矩阵&#x2F;低精度硬件；</li>
+<li>工作量太小：增加并行度或 batch，摊薄 launch 和调度开销。</li>
+</ul>
+<p>课件用 ReLU 举例时写了 $8$ bytes&#x2F;FLOP（FP32）和 $4$ bytes&#x2F;FLOP（FP16）。这其实是算术强度的倒数。按标准定义，若把比较记作一个 operation：</p>
+<p>$$
+I_{\mathrm{FP32}}=\frac{1}{8}\ \mathrm{op/byte},
+\qquad
+I_{\mathrm{FP16}}=\frac{1}{4}\ \mathrm{op/byte}.
+$$</p>
+<p>精度减半后，同样带宽能送入两倍元素，所以算术强度翻倍。</p>
+<h3 id="2-让-GPU-变快的六种方法"><a href="#2-让-GPU-变快的六种方法" class="headerlink" title="2. 让 GPU 变快的六种方法"></a>2. 让 GPU 变快的六种方法</h3><p>课程列出的六种方法不是彼此独立的零散技巧。除 control divergence 外，它们几乎都在回答同一个问题：<strong>如何缓解数据搬运瓶颈？</strong></p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>直接解决的问题</th>
+<th>核心代价或限制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Control divergence</td>
+<td>warp 内不同 thread 走不同分支</td>
+<td>需要改写控制流，未必总能避免</td>
+</tr>
+<tr>
+<td>Low precision</td>
+<td>每个元素占用的带宽和存储过多</td>
+<td>数值范围、精度与量化开销</td>
+</tr>
+<tr>
+<td>Operator fusion</td>
+<td>中间结果反复写回、读出 HBM</td>
+<td>kernel 更复杂，寄存器压力可能上升</td>
+</tr>
+<tr>
+<td>Recomputation</td>
+<td>保存和读取 activation 太贵</td>
+<td>增加 FLOPs</td>
+</tr>
+<tr>
+<td>Memory coalescing</td>
+<td>warp 的访存分散成许多事务</td>
+<td>受 layout、stride、alignment 约束</td>
+</tr>
+<tr>
+<td>Tiling</td>
+<td>同一数据从 HBM 被重复读取</td>
+<td>tile 选择复杂，受片上容量和 shape 影响</td>
+</tr>
+</tbody></table>
+<h4 id="2-1-Control-divergence：warp-会串行执行分支"><a href="#2-1-Control-divergence：warp-会串行执行分支" class="headerlink" title="2.1 Control divergence：warp 会串行执行分支"></a>2.1 Control divergence：warp 会串行执行分支</h4><p>假设一个 warp 中部分 thread 走 <code>if</code>，另一部分走 <code>else</code>。由于同一 warp 一次只能发射一条共同指令，硬件通常会：</p>
+<ol>
+<li>执行 <code>if</code> 分支，屏蔽走 <code>else</code> 的 thread；</li>
+<li>再执行 <code>else</code> 分支，屏蔽走 <code>if</code> 的 thread；</li>
+<li>在分支汇合后恢复共同执行。</li>
+</ol>
+<p>所以两个分支都可能被执行，只是不同 thread 在不同阶段处于空闲状态。最坏情况下，有效吞吐接近各分支时间之和。</p>
+<p>分支本身并非绝对禁止。真正需要避免的是<strong>同一 warp 内的分歧</strong>。如果整个 warp 都走同一分支，影响会小得多。规则的 mask、predication 或 branchless 表达有时更适合 GPU，但也不应为了消灭一个很便宜的分支而增加大量无用计算。</p>
+<h4 id="2-2-Low-precision：少搬-bit，也让专用硬件算得更快"><a href="#2-2-Low-precision：少搬-bit，也让专用硬件算得更快" class="headerlink" title="2.2 Low precision：少搬 bit，也让专用硬件算得更快"></a>2.2 Low precision：少搬 bit，也让专用硬件算得更快</h4><p>低精度有两个收益：</p>
+<ol>
+<li>相同数量的元素需要更少内存和带宽；</li>
+<li>Tensor Core 对 BF16、FP16、FP8 等格式提供更高计算吞吐。</li>
+</ol>
+<p>训练通常采用 <strong>mixed precision</strong>，不是把每一步都粗暴地改成低精度。例如矩阵乘法的输入可用 BF16&#x2F;FP8，乘积的部分和用 FP32 累加；softmax、归一化、loss 或优化器状态可能保留更高精度。</p>
+<p>格式越低，选择越不统一：</p>
+<ul>
+<li>BF16：8 位 exponent、7 位 mantissa，范围接近 FP32，训练中常用；</li>
+<li>FP8 E4M3：更多 mantissa，精度较好但动态范围较小；</li>
+<li>FP8 E5M2：更多 exponent，动态范围较大但精度更低；</li>
+<li>MXFP8：以小 block 共享 scale，改善单一全局 scale 无法适应局部幅值的问题；</li>
+<li>MXFP4：进一步压缩到 4 bit，但可表示值极少，对 scaling 和训练稳定性要求更高。</li>
+</ul>
+<p><img src="/img/posts/a9d5e2c6/mxfp8.png" alt="MXFP8 使用细粒度 block scaling，并使转置与量化布局相互耦合"></p>
+<p>课上以 Blackwell 的 MXFP8 为例：每 32 个元素共享一个 E8M0 scale，数据本身可用 E4M3。细粒度 scale 提高了有效精度，却让转置变复杂，因为转置后的 32 元素分组发生了变化。实际训练可能同时维护正常布局和转置布局的量化副本。</p>
+<p>这说明低精度不是免费的：需要计算 scale、量化和反量化，也可能保留多个副本。FP8 matmul 理论峰值即使约为 BF16 的两倍，端到端训练也不会自动获得 $2\times$ 加速。真正困难的是决定<strong>哪些 tensor、哪些层、哪些操作可以降低到哪一种精度</strong>。</p>
+<h4 id="2-3-Operator-fusion：让中间结果留在片上"><a href="#2-3-Operator-fusion：让中间结果留在片上" class="headerlink" title="2.3 Operator fusion：让中间结果留在片上"></a>2.3 Operator fusion：让中间结果留在片上</h4><p>考虑：</p>
+<p>$$
+y=\sin^2(x)+\cos^2(x).
+$$</p>
+<p>朴素 eager 执行可能启动 5 个 kernel：<code>sin</code>、平方、<code>cos</code>、平方、加法。每个 kernel 都可能从 HBM 读输入、把中间结果写回 HBM，再被下一个 kernel 读入。</p>
+<p>融合后，一个 kernel 只读取一次 $x$，在寄存器或 shared memory 中完成全部计算，最后只写一次 $y$。</p>
+<p><img src="/img/posts/a9d5e2c6/operator-fusion.png" alt="未融合算子反复访问内存，融合 kernel 在片上连续完成多个操作"></p>
+<p>融合同时减少：</p>
+<ul>
+<li>中间 tensor 的 HBM 流量；</li>
+<li>临时 tensor 占用的显存；</li>
+<li>kernel launch 的固定开销。</li>
+</ul>
+<p>简单 pointwise fusion 可由 <code>torch.compile</code>、XLA 等编译器自动完成。复杂 fusion 仍可能需要 Triton&#x2F;CUDA kernel。融合也不是越多越好：过大的 kernel 会增加寄存器和 shared memory 压力，降低 occupancy，甚至造成 register spill，必须以 profiling 结果为准。</p>
+<h4 id="2-4-Recomputation：用便宜计算换昂贵内存"><a href="#2-4-Recomputation：用便宜计算换昂贵内存" class="headerlink" title="2.4 Recomputation：用便宜计算换昂贵内存"></a>2.4 Recomputation：用便宜计算换昂贵内存</h4><p>反向传播通常保存前向 activation，反向时读取它们来计算梯度。但对 sigmoid、ReLU 等低算术强度操作，保存和读取 activation 可能比重新计算更贵。</p>
+<p>课上的三个连续 sigmoid 示例中：</p>
+<ul>
+<li>保存每一层中间值，需要 8 次内存读写；</li>
+<li>丢弃中间值、反向时重算，降为 5 次必要读写，即原来的 $5/8$；</li>
+<li>代价是多做几次 sigmoid。</li>
+</ul>
+<p>这就是 activation checkpointing 背后的系统逻辑。它不只是“显存不够时的妥协”：当计算单元富余而 HBM 是瓶颈时，<strong>主动丢掉结果再计算，可能同时节省显存并提高速度。</strong></p>
+<p>是否值得重算取决于操作：矩阵乘法很贵，盲目重算可能拖慢程序；简单逐元素操作或巨大中间矩阵则更适合重算。</p>
+<h4 id="2-5-Memory-coalescing：让一个-warp-的地址落在连续-burst-中"><a href="#2-5-Memory-coalescing：让一个-warp-的地址落在连续-burst-中" class="headerlink" title="2.5 Memory coalescing：让一个 warp 的地址落在连续 burst 中"></a>2.5 Memory coalescing：让一个 warp 的地址落在连续 burst 中</h4><p>DRAM 不是逐字节独立读取。一次访问会激活一段 row，并以 burst 形式返回一块连续数据。如果一个 warp 的 32 个 thread 同时访问相邻地址，硬件可以把这些请求合并为少量 memory transaction，这叫 <strong>coalesced access</strong>。</p>
+<p>关键是比较<strong>同一条指令、同一时刻、不同 thread 的地址</strong>，而不是看单个 thread 随时间是否连续。例如对 row-major 矩阵：</p>
+<ul>
+<li>thread $t$ 访问 <code>A[row, col + t]</code>：相邻 thread 访问相邻列，通常可合并；</li>
+<li>thread $t$ 访问 <code>A[row + t, col]</code>：相邻 thread 的地址相差一整行，形成大 stride，通常不能合并。</li>
+</ul>
+<p>即使每个 thread 自己沿一行顺序扫描，如果不同 thread 同时位于不同的行，warp 级访问仍可能是不连续的。这也是阅读 CUDA 索引时最容易混淆的地方。</p>
+<p>Layout、stride、vectorization 和 alignment 都会影响合并效果。矩阵维度若让每一行起点错开 burst 或 tile 边界，一个 tile 可能需要额外 transaction。此时给维度做 padding，虽然增加了少量 FLOPs，却可能显著加快运行。</p>
+<h4 id="2-6-Tiling：把-HBM-流量变成片上复用"><a href="#2-6-Tiling：把-HBM-流量变成片上复用" class="headerlink" title="2.6 Tiling：把 HBM 流量变成片上复用"></a>2.6 Tiling：把 HBM 流量变成片上复用</h4><p>考虑方阵乘法：</p>
+<p>$$
+C=AB,
+\qquad
+C_{ij}=\sum_{k=1}^{N}A_{ik}B_{kj}.
+$$</p>
+<p>朴素实现会从 global memory 反复读取同一个 $A_{ik}$ 和 $B_{kj}$。Tiling 把 $A$、$B$、$C$ 分成边长约为 $T$ 的小块：</p>
+<ol>
+<li>协作地把 $A$ 和 $B$ 的当前 tile 搬入 shared memory；</li>
+<li>在片上计算该 tile 对 $C$ 的部分和；</li>
+<li>沿归约维度换入下一对 tile；</li>
+<li>完成后把 $C$ tile 写回 HBM。</li>
+</ol>
+<p><img src="/img/posts/a9d5e2c6/tiling.png" alt="矩阵 tiling：每个输入 tile 搬入片上后被反复使用"></p>
+<p>按课件的简化分析：</p>
+<ul>
+<li>未 tiled 时，每个输入元素约从 global memory 读取 $N$ 次；</li>
+<li>tile size 为 $T$ 时，每个输入约从 global memory 读取 $N/T$ 次；</li>
+<li>因而 global memory 访问减少约 $T$ 倍。</li>
+</ul>
+<p>Tiling 同时带来两类收益：<strong>复用</strong>发生在 shared memory，<strong>搬入</strong>时还可以让 thread 协作形成 coalesced access。</p>
+<p>但 tile 越大并不一定越好。tile size 要同时满足：</p>
+<ul>
+<li>能装进 SM 的 shared memory 和 register；</li>
+<li>保留足够多的 resident block &#x2F; warp 来隐藏延迟；</li>
+<li>与矩阵维度和内存布局对齐；</li>
+<li>避免大量边界 thread 只做 padding；</li>
+<li>适配 Tensor Core 所要求的矩阵 fragment 形状。</li>
+</ul>
+<p>所以高性能库会为不同 shape 准备多个 kernel，编译器的 autotune 则会实际 benchmark 多种 tile 配置。矩阵维度取 8、16、32 的倍数不是数字崇拜，而是为了匹配硬件的 transaction、vector width 和 tensor-core tile。</p>
+<h3 id="3-为什么矩阵只增大一维，速度会突然下降？"><a href="#3-为什么矩阵只增大一维，速度会突然下降？" class="headerlink" title="3. 为什么矩阵只增大一维，速度会突然下降？"></a>3. 为什么矩阵只增大一维，速度会突然下降？</h3><p>课程开头展示了一张反直觉的曲线：方阵维度整体越大，吞吐通常越高，但曲线中夹杂着离散的分层和周期性断崖。</p>
+<p><img src="/img/posts/a9d5e2c6/matrix-throughput.png" alt="方阵乘法吞吐中的三种现象：算术强度、tiling&#x2F;alignment 和 wave quantization"></p>
+<p>现在可以逐层解释：</p>
+<ol>
+<li><strong>总体上升</strong>：小矩阵工作量不足，算术强度和并行度较低；矩阵变大后逐渐填满计算单元，接近 Roofline 平台。</li>
+<li><strong>同一尺寸附近出现多层曲线</strong>：维度能否被 2、8、16、32 等整除，会影响 tile 边界、vectorized load 和 memory alignment。对齐好的 shape 更容易得到 coalesced access。</li>
+<li><strong>周期性骤降</strong>：tile 数量越过 SM 数量的整数波次，产生 wave quantization。</li>
+</ol>
+<p>课上的 A100 例子使用 $256\times128$ tile：</p>
+<p>$$
+1792:\quad
+\frac{1792}{256}\times\frac{1792}{128}
+=7\times14=98\ \text{tiles},
+$$</p>
+<p>而维度增加到 1793 后需要向上取整：</p>
+<p>$$
+1793:\quad
+\left\lceil\frac{1793}{256}\right\rceil
+\times
+\left\lceil\frac{1793}{128}\right\rceil
+=8\times15=120\ \text{tiles}.
+$$</p>
+<p>A100 有 108 个 SM。98 个 tile 可以在一波中完成；120 个 tile 需要第二波，但第二波只有 12 个 tile，绝大多数 SM 都空闲。矩阵仅增大一维，却因为调度粒度从一波变成两波而显著变慢。</p>
+<p><img src="/img/posts/a9d5e2c6/wave-quantization.png" alt="1792 到 1793 使 tile 数从 98 增到 120，并跨过 A100 的 108 个 SM"></p>
+<p>这也解释了为什么给 vocabulary、hidden size 或 batch 维度做少量 padding，有时反而会加速。多算一点并不可怕；让昂贵硬件等待才可怕。</p>
+<h3 id="Part-2-recap"><a href="#Part-2-recap" class="headerlink" title="Part 2 recap"></a>Part 2 recap</h3><ul>
+<li>Roofline 用算术强度判断程序位于 memory-bound 还是 compute-bound 区域；</li>
+<li>coalescing 和 fusion 减少不必要的 HBM 事务；</li>
+<li>tiling 把数据搬到 shared memory 后反复复用；</li>
+<li>low precision 与 recomputation 分别用精度和额外计算换内存；</li>
+<li>shape、alignment 和 wave quantization 解释了矩阵性能曲线中的锯齿与断崖。</li>
+</ul>
+<h2 id="Part-3：Putting-it-together-unpacking-FlashAttention"><a href="#Part-3：Putting-it-together-unpacking-FlashAttention" class="headerlink" title="Part 3：Putting it together - unpacking FlashAttention"></a>Part 3：Putting it together - unpacking FlashAttention</h2><h3 id="1-FlashAttention：把所有原则放到一个-kernel-中"><a href="#1-FlashAttention：把所有原则放到一个-kernel-中" class="headerlink" title="1. FlashAttention：把所有原则放到一个 kernel 中"></a>1. FlashAttention：把所有原则放到一个 kernel 中</h3><p>单个 attention head 的标准计算是：</p>
+<p>$$
+S=\frac{QK^\top}{\sqrt d},
+\qquad
+P=\operatorname{softmax}(S),
+\qquad
+O=PV.
+$$</p>
+<p>如果序列长度为 $N$，$S$ 和 $P$ 都是 $N\times N$。朴素实现会：</p>
+<ol>
+<li>计算 $S$，写回 HBM；</li>
+<li>从 HBM 读取 $S$ 做 softmax，把 $P$ 写回 HBM；</li>
+<li>再从 HBM 读取 $P$ 与 $V$ 相乘。</li>
+</ol>
+<p>问题不只是 $\mathcal{O}(N^2d)$ FLOPs，而是 materialize 并反复搬运两个 $\mathcal{O}(N^2)$ 中间矩阵。FlashAttention 是 <strong>exact attention</strong>：它不改变数学结果，也不把二次 FLOPs 变成线性；它通过 IO-aware 的计算顺序，避免把完整 $S$、$P$ 写到 HBM。</p>
+<h4 id="1-1-第一步：对-Q-、-K-、-V-做-tiling"><a href="#1-1-第一步：对-Q-、-K-、-V-做-tiling" class="headerlink" title="1.1 第一步：对 $Q$、$K$、$V$ 做 tiling"></a>1.1 第一步：对 $Q$、$K$、$V$ 做 tiling</h4><p>把 $Q$ 按行切成 $Q_i$，把 $K,V$ 切成 $K_j,V_j$。每次只在 SRAM 中计算一个 score tile：</p>
+<p>$$
+S_{ij}=\frac{Q_iK_j^\top}{\sqrt d}.
+$$</p>
+<p>矩阵乘法本身很容易 tiled，真正的问题是 softmax。softmax 的分母依赖整行所有 key，似乎必须先看到完整的 $S$。</p>
+<h4 id="1-2-第二步：用-online-softmax-合并分块结果"><a href="#1-2-第二步：用-online-softmax-合并分块结果" class="headerlink" title="1.2 第二步：用 online softmax 合并分块结果"></a>1.2 第二步：用 online softmax 合并分块结果</h4><p>对某个 query row，假设已经处理了前几个 key block，并维护：</p>
+<ul>
+<li>$m$：目前见过的 score 最大值；</li>
+<li>$\ell$：以 $m$ 为基准的指数和；</li>
+<li>$\widetilde O$：尚未除以归一化分母的加权 value 和。</li>
+</ul>
+<p>处理新的 score block $S_j$ 和 value block $V_j$ 时，逐行更新：</p>
+<p>$$
+m_{\mathrm{new}}
+=\max\left(m,\operatorname{rowmax}(S_j)\right),
+$$</p>
+<p>$$
+P_j=\exp\left(S_j-m_{\mathrm{new}}\right),
+$$</p>
+<p>$$
+\ell_{\mathrm{new}}
+=e^{m-m_{\mathrm{new}}}\ell
++\operatorname{rowsum}(P_j),
+$$</p>
+<p>$$
+\widetilde O_{\mathrm{new}}
+=e^{m-m_{\mathrm{new}}}\widetilde O
++P_jV_j.
+$$</p>
+<p>所有 key block 处理完后：</p>
+<p>$$
+O=\frac{\widetilde O}{\ell}.
+$$</p>
+<p>其中除法按 row broadcast。若新 block 出现更大的最大值，因子 $e^{m-m_{\mathrm{new}}}$ 会把旧的指数和与旧输出重新缩放到新的基准下。因此，这个递推和一次性计算稳定 softmax 完全等价。</p>
+<p><img src="/img/posts/a9d5e2c6/online-softmax.png" alt="Online softmax 增量维护最大值与归一化项，使 softmax 可以逐 tile 计算"></p>
+<h4 id="1-3-第三步：融合、片上复用与反向重算"><a href="#1-3-第三步：融合、片上复用与反向重算" class="headerlink" title="1.3 第三步：融合、片上复用与反向重算"></a>1.3 第三步：融合、片上复用与反向重算</h4><p>对每个 tile，FlashAttention 在一个融合 kernel 内完成：</p>
+<ol>
+<li>从 HBM 载入 $Q_i,K_j,V_j$；</li>
+<li>在 SRAM 中计算 $S_{ij}$；</li>
+<li>应用 causal mask、缩放、指数等操作；</li>
+<li>更新 online softmax 的 $m,\ell,\widetilde O$；</li>
+<li>直接把概率 tile 与 $V_j$ 相乘，不把 $S_{ij}$ 或 $P_{ij}$ 写回 HBM；</li>
+<li>最后只写出 $O$ 以及反向传播所需的少量统计量。</li>
+</ol>
+<p><img src="/img/posts/a9d5e2c6/flashattention-forward.png" alt="FlashAttention 前向：蓝色 tensor 位于 HBM，虚线 tile 在 SRAM 中计算并融合"></p>
+<p>反向传播同样不保存完整的 $N\times N$ attention matrix，而是根据 $Q,K,V,O$ 和 softmax 统计量逐 tile 重算 score 与 probability。这正是 recomputation：增加一些便宜且高吞吐的矩阵计算，换掉巨大的 activation 存储和 HBM 流量。</p>
+<p>因此，FlashAttention 同时使用了本课几乎全部核心思想：</p>
+<table>
+<thead>
+<tr>
+<th>原则</th>
+<th>在 FlashAttention 中的体现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tiling</td>
+<td>分块读取 $Q,K,V$，在 SRAM 中计算 score 和 output tile</td>
+</tr>
+<tr>
+<td>Fusion</td>
+<td>matmul、mask、scale、exp、归一化与 value 聚合尽量在一个 kernel 内完成</td>
+</tr>
+<tr>
+<td>Recomputation</td>
+<td>backward 重新生成 score&#x2F;probability，不保存完整 $N\times N$ activation</td>
+</tr>
+<tr>
+<td>Coalescing</td>
+<td>以适合硬件的 layout 和 block shape 读取连续数据</td>
+</tr>
+<tr>
+<td>Low precision</td>
+<td>matmul 可使用 BF16&#x2F;FP16&#x2F;FP8，关键归约保留足够精度</td>
+</tr>
+<tr>
+<td>Control regularity</td>
+<td>规则 tile 与 mask 让 warp 以结构化方式执行</td>
+</tr>
+</tbody></table>
+<p>FlashAttention 的关键结论是：</p>
+<blockquote>
+<p>渐近 FLOPs 相同，不代表算法一样快。只改变计算顺序和存储位置，就可能得到数量级可观的端到端收益。</p>
+</blockquote>
+<h3 id="2-把六种方法统一成一张图"><a href="#2-把六种方法统一成一张图" class="headerlink" title="2. 把六种方法统一成一张图"></a>2. 把六种方法统一成一张图</h3><p>课程最后将优化方法归纳为三类资源交换：</p>
+<h4 id="2-1-减少必须发生的内存访问"><a href="#2-1-减少必须发生的内存访问" class="headerlink" title="2.1 减少必须发生的内存访问"></a>2.1 减少必须发生的内存访问</h4><ul>
+<li><strong>coalescing</strong>：让分散请求合并为更少的 DRAM transaction；</li>
+<li><strong>fusion</strong>：让中间结果不离开片上存储。</li>
+</ul>
+<h4 id="2-2-让一次搬入的数据多用几次"><a href="#2-2-让一次搬入的数据多用几次" class="headerlink" title="2.2 让一次搬入的数据多用几次"></a>2.2 让一次搬入的数据多用几次</h4><ul>
+<li><strong>tiling</strong>：把工作集搬入 shared memory&#x2F;register，完成一批计算后再换下一块。</li>
+</ul>
+<h4 id="2-3-用其他资源换内存"><a href="#2-3-用其他资源换内存" class="headerlink" title="2.3 用其他资源换内存"></a>2.3 用其他资源换内存</h4><ul>
+<li><strong>low precision</strong>：用数值精度换带宽、容量和 Tensor Core 吞吐；</li>
+<li><strong>recomputation</strong>：用额外 FLOPs 换 activation 读写与存储；</li>
+<li><strong>control regularity</strong>：用规则的数据和控制布局换有效并行度。</li>
+</ul>
+<p>它们共同提高的是“每个昂贵 byte 所完成的有效工作”，最终目标是越过 Roofline 的 ridge point，让矩阵单元持续忙碌。</p>
+<h3 id="3-实际优化时的检查顺序"><a href="#3-实际优化时的检查顺序" class="headerlink" title="3. 实际优化时的检查顺序"></a>3. 实际优化时的检查顺序</h3><p>面对一个慢的 ML workload，可以按下面的顺序排查：</p>
+<ol>
+<li><strong>先测量</strong>：看 kernel time、HBM bandwidth、Tensor Core 利用率、occupancy 和 launch 数，不凭 FLOPs 猜性能。</li>
+<li><strong>判断瓶颈</strong>：用 arithmetic intensity 和 Roofline 区分 memory-bound、compute-bound 或 launch-bound。</li>
+<li><strong>检查 shape</strong>：矩阵是否足够大，维度是否适配 Tensor Core、vector width 和 tile；padding 后是否更快。</li>
+<li><strong>检查 layout</strong>：warp 的同一条 load&#x2F;store 是否访问连续地址，transpose 是否导致 stride access。</li>
+<li><strong>减少中间 tensor</strong>：尝试 compiler fusion 或 fused library kernel。</li>
+<li><strong>提高复用</strong>：如果在写自定义 kernel，选择合适 tiling，把热数据留在 register&#x2F;shared memory。</li>
+<li><strong>选择精度</strong>：优先使用成熟 mixed-precision 路径，验证 loss、overflow 和端到端速度。</li>
+<li><strong>考虑重算</strong>：对 activation 巨大而计算便宜的部分做 checkpointing 或 fused recomputation。</li>
+<li><strong>最后再手写 kernel</strong>：先用 cuBLAS、cuDNN、FlashAttention、PyTorch compile 等成熟实现，再针对 profiler 证明的热点下手。</li>
+</ol>
+<h2 id="全课总结：本节课最重要的结论"><a href="#全课总结：本节课最重要的结论" class="headerlink" title="全课总结：本节课最重要的结论"></a>全课总结：本节课最重要的结论</h2><ol>
+<li><strong>GPU 是吞吐机器，不是更快的 CPU。</strong> 它用大量轻量 thread 和规则的 SIMT 执行换取并行吞吐。</li>
+<li><strong>block、warp 和 thread 是理解 CUDA 的基本层级。</strong> 性能问题经常来自 warp 内分支、block 调度和资源占用。</li>
+<li><strong>必须尊重内存层级。</strong> HBM 容量大但昂贵，register&#x2F;shared memory 小而快；好 kernel 会显式管理数据在哪里。</li>
+<li><strong>Roofline 是第一诊断工具。</strong> $P\leq\min(P_{\max},BI)$ 说明性能由计算峰值和带宽共同限制。</li>
+<li><strong>矩阵维度会改变真实性能。</strong> alignment、tile divisibility 和 SM wave 都会让相邻 shape 的速度差很多。</li>
+<li><strong>低精度、fusion、recomputation、coalescing、tiling 本质上都在优化有效数据移动。</strong></li>
+<li><strong>FlashAttention 是 IO-aware algorithm。</strong> 它以 online softmax 解开全局归一化依赖，再用 tiling、fusion 和 recomputation 避免 materialize 二次大小的中间矩阵。</li>
+<li><strong>硬件意识会反过来影响模型架构。</strong> 在当前加速器上，规则的大矩阵乘法和少量数据移动通常比理论 FLOPs 更值得优先考虑。</li>
+</ol>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://stanford-cs336.github.io/spring2026/">CS336: Language Modeling from Scratch</a></li>
+<li><a target="_blank" rel="noopener" href="https://horace.io/brrr_intro.html">Horace He: Making Deep Learning Go Brrrr From First Principles</a></li>
+<li><a target="_blank" rel="noopener" href="https://jax-ml.github.io/scaling-book/">How to Scale Your Model: A Systems View of LLMs on TPUs</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/2205.14135">Dao et al., FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness</a></li>
+<li><a target="_blank" rel="noopener" href="https://arxiv.org/abs/1805.02867">Milakov and Gimelshein, Online Normalizer Calculation for Softmax</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.thonking.ai/p/what-shapes-do-matrix-multiplications">What Shapes Do Matrix Multiplications Like?</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://wick-7.github.io">Wick</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://wick-7.github.io/posts/a9d5e2c6/">https://wick-7.github.io/posts/a9d5e2c6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://wick-7.github.io" target="_blank">雨田三狼</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/CS336/">CS336</a><a class="post-meta__tags" href="/tags/GPU/">GPU</a><a class="post-meta__tags" href="/tags/TPU/">TPU</a><a class="post-meta__tags" href="/tags/CUDA/">CUDA</a><a class="post-meta__tags" href="/tags/FlashAttention/">FlashAttention</a></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/c1b8e7f4/" title="《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课讨论两个“在 Transformer 之上改结构”的方向：  Attention alternatives：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。 Mixture of Experts（MoE）：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。  可以把全课压缩成一句话：  attention 的关键瓶颈是 token 两两交互，MoE 的关键瓶颈是所有参数都被每个 token 使用；前者利用结合律或稀疏性，后者利用条件计算。  1. 为什么要替代标准 attention？标准 self-attention 为每个 token 和所有 token 建立连接。令序列长度为 $n$，query、key、value 的维度分别为 $d_k,d_k,d_v$： $$ Q\in\mathbb{R}^{n\times d_k},\qquad K\in\mathbb{R}^{n\times d_k},\qquad V\in\mathbb{R}^{n\times d_v}. $$ 课件把这个维度账本直接写成...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/posts/f2c7d9a4/" title="《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-29</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 3：Architectures and Hyperparameters》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课的标题很诚实：Everything You Didn’t Want to Know About Architectures and Hyperparameters。语言模型架构并不存在一套从理论上唯一正确的答案；更现实的做法是观察大量成功模型，找出稳定的共同点，再把仍然开放的部分留给小规模实验。 课程给出的学习优先级也很值得记住：  最好的方法是自己训练模型、亲手比较不同架构。 第二好的方法是系统地学习其他人的训练经验。  这里的“经验”不是简单抄一份 LLaMA 配置，而是理解每个选择同时受到三件事约束：表达能力、训练稳定性和真实硬件上的运行效率。 1. 先建立一张现代 Transformer 的地图原始 Transformer 的经典配置是：正弦&#x2F;余弦位置编码、ReLU FFN，以及残差路径上的 post-LayerNorm。现代 decoder-only 语言模型的常见默认值则更接近下面这张表：    组件 原始 Transformer 现代语言模型的常见选择 主要原因    残差块中的归一化 post-norm non-residual norm，通常是 ...</div></div></div></a><a class="pagination-related" href="/posts/c1b8e7f4/" title="《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-30</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课讨论两个“在 Transformer 之上改结构”的方向：  Attention alternatives：用线性时间的状态更新、混合 attention，或稀疏选择来降低长上下文成本。 Mixture of Experts（MoE）：把一个大的 MLP 换成很多个专家，只激活其中一小部分，在相近 FLOPs 下容纳更多参数。  可以把全课压缩成一句话：  attention 的关键瓶颈是 token 两两交互，MoE 的关键瓶颈是所有参数都被每个 token 使用；前者利用结合律或稀疏性，后者利用条件计算。  1. 为什么要替代标准 attention？标准 self-attention 为每个 token 和所有 token 建立连接。令序列长度为 $n$，query、key、value 的维度分别为 $d_k,d_k,d_v$： $$ Q\in\mathbb{R}^{n\times d_k},\qquad K\in\mathbb{R}^{n\times d_k},\qquad V\in\mathbb{R}^{n\times d_v}. $$ 课件把这个维度账本直接写成...</div></div></div></a><a class="pagination-related" href="/posts/33601be1/" title="《Stanford CS336 Spring 2026 Lecture 1》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-27</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 1》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Lecture 1：Overview, Tokenization这节课的主线是：如何在有限的数据、算力、显存与通信带宽下，构造尽可能好的语言模型。  1. 为什么要从零构建语言模型？语言模型的使用方式已经从“自己实现和训练”，逐渐发展到微调、prompting、对话和 agent。抽象层不断上移提高了使用效率，但抽象也会泄漏：当模型无法完成任务时，仅修改 prompt 往往无法扩大设计空间；要做基础研究，仍然需要理解 tokenizer、模型结构、训练和系统。 与此同时，语言模型已经高度工业化。前沿模型的训练成本快速上升，关键数据与训练细节却越来越不透明；小模型实验也不能简单等比例外推到前沿规模，因为计算热点和能力表现都会随规模变化。开放权重、代码和数据的模型生态正在改善这种状况，但要真正理解模型如何形成，仍需要回到完整的训练技术栈。  2. 课程全景：五个部分，一条效率主线课程内容与五份作业一一对应：    模块 核心问题 主要内容 作业目标    Basics 如何训练出第一个 LM？ BPE、Transformer、loss、optimizer、训练循环 从零训练小型语言模...</div></div></div></a><a class="pagination-related" href="/posts/8a6e2d41/" title="《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-28</div><div class="info-item-2">《Stanford CS336 Spring 2026 Lecture 2：PyTorch（einops）》课堂笔记</div></div><div class="info-2"><div class="info-item-1">这节课借助 PyTorch 张量和 einops，建立 resource accounting（资源核算） 的基本视角：写下每一行代码时，都要能大致判断它需要多少计算、显存和数据搬运。 核心目标是： $$ \text{在固定的 compute、memory、data 和 time 预算下，训练尽可能好的模型。} $$  1. 先做一页纸的资源估算课上用两个问题说明为什么需要“napkin math”。这些结果不是精确的 profiler 报告，却能在几分钟内判断一个方案是否大致可行。 1.1 训练需要多久？对参数量为 $N$、训练 token 数为 $D$ 的 dense Transformer，训练 FLOPs 的一阶估计是： $$ C \approx 6ND. $$ 因此，$70$B 参数、$15$T tokens 的训练约需要： $$ C = 6 \times 70\times 10^9 \times 15\times 10^{12}   = 6.3\times 10^{24}\ \text{FLOPs}. $$ H100 的 dense bf16 峰值约为 $1979/2...</div></div></div></a><a class="pagination-related" href="/posts/123ed23d/" title="《CS294-196 25fall Lecture4》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-15</div><div class="info-item-2">《CS294-196 25fall Lecture4》课堂笔记</div></div><div class="info-2"><div class="info-item-1">LLM Agent Evaluations &amp; Project Overview0. 本节课要点 理解 Agent Evaluation 的基本分类 理解什么是“好的评测” 把 Benchmark 落地为 Green Agent   1. 为什么需要 Evaluation？1.1 Evaluation 的定义Evaluation 是对模型或 Agent 进行系统化、可重复测量的过程。它通过统一的 Benchmark、环境和指标，帮助我们回答：  当前模型具备什么能力？ 相比其他模型是否有真实提升？ 模型在哪些场景中容易失败？ 是否能够安全、可靠地部署到真实环境？  评测的价值不仅在于给模型排名，还包括：  用可复现证据衡量领域进展； 识别模型能力边界和潜在风险； 支持模型选择、部署与论文比较； 推动整个研究领域持续进步。  1.2 Evaluation 贯穿模型开发全过程 不同开发阶段对评测系统的要求并不完全相同：    阶段 评测的主要作用 更关注的性质    Train 提供可优化的训练目标与 Validation Signal 极快、便宜、最好可微，不能存在明显 s...</div></div></div></a><a class="pagination-related" href="/posts/3bf666cf/" title="《CS294-196 25fall Lecture7》课堂笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-07-18</div><div class="info-item-2">《CS294-196 25fall Lecture7》课堂笔记</div></div><div class="info-2"><div class="info-item-1">Predictable Noise and Patterns from Millions of Questions本节课主线现代评测正在发生一个明显变化：  过去的 MNIST、ImageNet 等 benchmark 有成千上万甚至十万级样本； 当前的代码生成与 Agent benchmark 往往只有几百道题； 单道题虽然更复杂，会产生长代码、长文本或长 trajectory，但最终通常仍只压缩成一个二元结果：成功或失败； 在不同模型、不同题目之间，结果存在明显的不一致性：强模型会错简单题，弱模型也可能偶然做对困难题； 因此，仅看平均 Accuracy &#x2F; Pass@1 不足以判断一个改进是否可靠，仍需进行统计分析。  本节课的核心结论是：  当前的小型 generative &#x2F; agentic benchmark 即使包含困难任务，也往往仍然具有较大的统计噪声。困难题本身不能自动弥补样本规模不足。  课程进一步给出了一套分析框架：  将 benchmark 中的问题看成从一个 super-population 中抽取的样本； 区分 题目抽样噪声 与 模型...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Wick</div><div class="author-info-description">生活、学习、思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">49</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">75</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/wick-7" target="_blank" title="GitHub"><i class="fab fa-github"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>这是我的个人博客</p>
+<p>课程笔记由 AI 结合课件、录音整理</p>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%80%E5%9C%BA%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E9%9C%80%E8%A6%81-GPU%EF%BC%9F"><span class="toc-number">1.</span> <span class="toc-text">开场：为什么语言模型需要 GPU？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-1%EF%BC%9AGPUs-in-depth-how-they-work-and-important-parts"><span class="toc-number">2.</span> <span class="toc-text">Part 1：GPUs in depth - how they work and important parts</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-CPU%E3%80%81GPU-%E4%B8%8E-TPU-%E7%9A%84%E6%A0%B8%E5%BF%83%E5%B7%AE%E5%BC%82"><span class="toc-number">2.1.</span> <span class="toc-text">1. CPU、GPU 与 TPU 的核心差异</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-CPU-%E4%BC%98%E5%8C%96%E5%BB%B6%E8%BF%9F%EF%BC%8CGPU-%E4%BC%98%E5%8C%96%E5%90%9E%E5%90%90"><span class="toc-number">2.1.1.</span> <span class="toc-text">1.1 CPU 优化延迟，GPU 优化吞吐</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-GPU-%E7%9A%84%E8%AE%A1%E7%AE%97%E7%BB%84%E7%BB%87%EF%BC%9ASM%E3%80%81block%E3%80%81warp%E3%80%81thread"><span class="toc-number">2.1.2.</span> <span class="toc-text">1.2 GPU 的计算组织：SM、block、warp、thread</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-3-GPU-%E7%9A%84%E5%86%85%E5%AD%98%E5%B1%82%E7%BA%A7"><span class="toc-number">2.1.3.</span> <span class="toc-text">1.3 GPU 的内存层级</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-4-TPU-%E4%B8%8E-GPU%EF%BC%9A%E7%BB%93%E6%9E%84%E8%B6%8B%E5%90%8C%EF%BC%8C%E7%B2%92%E5%BA%A6%E4%B8%8D%E5%90%8C"><span class="toc-number">2.1.4.</span> <span class="toc-text">1.4 TPU 与 GPU：结构趋同，粒度不同</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E7%9F%A9%E9%98%B5%E4%B9%98%E6%B3%95%E5%9C%A8-GPU-%E4%B8%8A%E5%BE%88%E7%89%B9%E5%88%AB%EF%BC%9F"><span class="toc-number">2.2.</span> <span class="toc-text">2. 为什么矩阵乘法在 GPU 上很特别？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Part-1-recap"><span class="toc-number">2.3.</span> <span class="toc-text">Part 1 recap</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-2%EF%BC%9AUnderstanding-GPU-performance"><span class="toc-number">3.</span> <span class="toc-text">Part 2：Understanding GPU performance</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Roofline%EF%BC%9A%E5%85%88%E5%88%A4%E6%96%AD%E7%93%B6%E9%A2%88%E5%9C%A8%E5%93%AA%E9%87%8C"><span class="toc-number">3.1.</span> <span class="toc-text">1. Roofline：先判断瓶颈在哪里</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E8%AE%A9-GPU-%E5%8F%98%E5%BF%AB%E7%9A%84%E5%85%AD%E7%A7%8D%E6%96%B9%E6%B3%95"><span class="toc-number">3.2.</span> <span class="toc-text">2. 让 GPU 变快的六种方法</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-Control-divergence%EF%BC%9Awarp-%E4%BC%9A%E4%B8%B2%E8%A1%8C%E6%89%A7%E8%A1%8C%E5%88%86%E6%94%AF"><span class="toc-number">3.2.1.</span> <span class="toc-text">2.1 Control divergence：warp 会串行执行分支</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2-Low-precision%EF%BC%9A%E5%B0%91%E6%90%AC-bit%EF%BC%8C%E4%B9%9F%E8%AE%A9%E4%B8%93%E7%94%A8%E7%A1%AC%E4%BB%B6%E7%AE%97%E5%BE%97%E6%9B%B4%E5%BF%AB"><span class="toc-number">3.2.2.</span> <span class="toc-text">2.2 Low precision：少搬 bit，也让专用硬件算得更快</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-Operator-fusion%EF%BC%9A%E8%AE%A9%E4%B8%AD%E9%97%B4%E7%BB%93%E6%9E%9C%E7%95%99%E5%9C%A8%E7%89%87%E4%B8%8A"><span class="toc-number">3.2.3.</span> <span class="toc-text">2.3 Operator fusion：让中间结果留在片上</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-4-Recomputation%EF%BC%9A%E7%94%A8%E4%BE%BF%E5%AE%9C%E8%AE%A1%E7%AE%97%E6%8D%A2%E6%98%82%E8%B4%B5%E5%86%85%E5%AD%98"><span class="toc-number">3.2.4.</span> <span class="toc-text">2.4 Recomputation：用便宜计算换昂贵内存</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-5-Memory-coalescing%EF%BC%9A%E8%AE%A9%E4%B8%80%E4%B8%AA-warp-%E7%9A%84%E5%9C%B0%E5%9D%80%E8%90%BD%E5%9C%A8%E8%BF%9E%E7%BB%AD-burst-%E4%B8%AD"><span class="toc-number">3.2.5.</span> <span class="toc-text">2.5 Memory coalescing：让一个 warp 的地址落在连续 burst 中</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-6-Tiling%EF%BC%9A%E6%8A%8A-HBM-%E6%B5%81%E9%87%8F%E5%8F%98%E6%88%90%E7%89%87%E4%B8%8A%E5%A4%8D%E7%94%A8"><span class="toc-number">3.2.6.</span> <span class="toc-text">2.6 Tiling：把 HBM 流量变成片上复用</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E4%B8%BA%E4%BB%80%E4%B9%88%E7%9F%A9%E9%98%B5%E5%8F%AA%E5%A2%9E%E5%A4%A7%E4%B8%80%E7%BB%B4%EF%BC%8C%E9%80%9F%E5%BA%A6%E4%BC%9A%E7%AA%81%E7%84%B6%E4%B8%8B%E9%99%8D%EF%BC%9F"><span class="toc-number">3.3.</span> <span class="toc-text">3. 为什么矩阵只增大一维，速度会突然下降？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Part-2-recap"><span class="toc-number">3.4.</span> <span class="toc-text">Part 2 recap</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Part-3%EF%BC%9APutting-it-together-unpacking-FlashAttention"><span class="toc-number">4.</span> <span class="toc-text">Part 3：Putting it together - unpacking FlashAttention</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-FlashAttention%EF%BC%9A%E6%8A%8A%E6%89%80%E6%9C%89%E5%8E%9F%E5%88%99%E6%94%BE%E5%88%B0%E4%B8%80%E4%B8%AA-kernel-%E4%B8%AD"><span class="toc-number">4.1.</span> <span class="toc-text">1. FlashAttention：把所有原则放到一个 kernel 中</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%AF%B9-Q-%E3%80%81-K-%E3%80%81-V-%E5%81%9A-tiling"><span class="toc-number">4.1.1.</span> <span class="toc-text">1.1 第一步：对 $Q$、$K$、$V$ 做 tiling</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-%E7%AC%AC%E4%BA%8C%E6%AD%A5%EF%BC%9A%E7%94%A8-online-softmax-%E5%90%88%E5%B9%B6%E5%88%86%E5%9D%97%E7%BB%93%E6%9E%9C"><span class="toc-number">4.1.2.</span> <span class="toc-text">1.2 第二步：用 online softmax 合并分块结果</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-3-%E7%AC%AC%E4%B8%89%E6%AD%A5%EF%BC%9A%E8%9E%8D%E5%90%88%E3%80%81%E7%89%87%E4%B8%8A%E5%A4%8D%E7%94%A8%E4%B8%8E%E5%8F%8D%E5%90%91%E9%87%8D%E7%AE%97"><span class="toc-number">4.1.3.</span> <span class="toc-text">1.3 第三步：融合、片上复用与反向重算</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E6%8A%8A%E5%85%AD%E7%A7%8D%E6%96%B9%E6%B3%95%E7%BB%9F%E4%B8%80%E6%88%90%E4%B8%80%E5%BC%A0%E5%9B%BE"><span class="toc-number">4.2.</span> <span class="toc-text">2. 把六种方法统一成一张图</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-%E5%87%8F%E5%B0%91%E5%BF%85%E9%A1%BB%E5%8F%91%E7%94%9F%E7%9A%84%E5%86%85%E5%AD%98%E8%AE%BF%E9%97%AE"><span class="toc-number">4.2.1.</span> <span class="toc-text">2.1 减少必须发生的内存访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2-%E8%AE%A9%E4%B8%80%E6%AC%A1%E6%90%AC%E5%85%A5%E7%9A%84%E6%95%B0%E6%8D%AE%E5%A4%9A%E7%94%A8%E5%87%A0%E6%AC%A1"><span class="toc-number">4.2.2.</span> <span class="toc-text">2.2 让一次搬入的数据多用几次</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-%E7%94%A8%E5%85%B6%E4%BB%96%E8%B5%84%E6%BA%90%E6%8D%A2%E5%86%85%E5%AD%98"><span class="toc-number">4.2.3.</span> <span class="toc-text">2.3 用其他资源换内存</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E5%AE%9E%E9%99%85%E4%BC%98%E5%8C%96%E6%97%B6%E7%9A%84%E6%A3%80%E6%9F%A5%E9%A1%BA%E5%BA%8F"><span class="toc-number">4.3.</span> <span class="toc-text">3. 实际优化时的检查顺序</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%A8%E8%AF%BE%E6%80%BB%E7%BB%93%EF%BC%9A%E6%9C%AC%E8%8A%82%E8%AF%BE%E6%9C%80%E9%87%8D%E8%A6%81%E7%9A%84%E7%BB%93%E8%AE%BA"><span class="toc-number">5.</span> <span class="toc-text">全课总结：本节课最重要的结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">6.</span> <span class="toc-text">参考资料</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/a9d5e2c6/" title="《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记">《Stanford CS336 Spring 2026 Lecture 5：GPUs, TPUs, and FlashAttention》课堂笔记</a><time datetime="2026-07-31T01:00:00.000Z" title="发表于 2026-07-31 09:00:00">2026-07-31</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/c1b8e7f4/" title="《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记">《Stanford CS336 Spring 2026 Lecture 4：Attention Alternatives and Mixture of Experts》课堂笔记</a><time datetime="2026-07-30T01:00:00.000Z" title="发表于 2026-07-30 09:00:00">2026-07-30</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l22/" title="《EECS 498 Lecture 22》课堂笔记">《EECS 498 Lecture 22》课堂笔记</a><time datetime="2026-07-29T05:10:00.000Z" title="发表于 2026-07-29 13:10:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l21/" title="《EECS 498 Lecture 21》课堂笔记">《EECS 498 Lecture 21》课堂笔记</a><time datetime="2026-07-29T05:00:00.000Z" title="发表于 2026-07-29 13:00:00">2026-07-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/eecs498l20/" title="《EECS 498 Lecture 20》课堂笔记">《EECS 498 Lecture 20》课堂笔记</a><time datetime="2026-07-29T04:50:00.000Z" title="发表于 2026-07-29 12:50:00">2026-07-29</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Wick</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.4"></script><script src="/js/main.js?v=5.5.4"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.0/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="/js/home-categories.js"></script><script>
+  function fixCopyright() {
+    var el = document.querySelector('.post-copyright__notice .post-copyright-info');
+    if (el) el.innerHTML = '本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处。';
+  }
+  document.addEventListener('DOMContentLoaded', fixCopyright);
+  document.addEventListener('pjax:complete', fixCopyright);
+</script>
+<script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.4"></script></div></div></body></html>
