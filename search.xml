@@ -15735,4 +15735,291 @@ What Shapes Do Matrix Multiplications Like?
         <tag>FlashAttention</tag>
       </tags>
   </entry>
+  <entry>
+    <title>《Stanford CS336 Spring 2026 Lecture 6：Kernels、Triton 与 XLA》课堂笔记</title>
+    <url>/posts/7f3c2a91/</url>
+    <content><![CDATA[这节课是上一讲 GPU 性能模型的代码续篇。目标不是背诵某个 Triton API，而是建立一条可重复的优化闭环：
+
+先测量端到端时间，再用 profiler 找到实际 kernel；理解硬件约束后，把计算组织成 thread block，尽量让数据在片上完成复用，最后再测量一次。
+
+课程代码顺序很有代表性：
+
+复习 GPU 的执行层级和内存层级；
+从零实现 benchmark 与 profiling；
+对比 naive PyTorch、内置算子和 torch.compile 的 GeLU；
+用 Triton 依次实现 element-wise GeLU、能放入一个 block 的 softmax、需要跨 tile 的 row sum，以及 tiled matmul + ReLU。
+
+
+关于标题中的 XLA：本讲实际演示集中在 PyTorch、Triton 和 PTX；转录没有展开 JAX&#x2F;XLA 的 API 或实验。可以把 XLA 放在同一类“从高层计算图生成设备 kernel”的编译栈背景中理解，但不要把 XLA 细节当作本讲已讲内容。
+
+1. GPU：程序模型与硬件现实1.1 内存层级：越近越快，越大越远
+以 A100、H100、B200 为例，GPU 由大约一百多个 SM（Streaming Multiprocessor）组成。一个 SM 内有寄存器、L1&#x2F;shared memory、调度器和计算单元；整张芯片共享 L2，片外是容量更大的 HBM。
+
+
+
+层级
+作用域
+典型用途
+关键限制
+
+
+
+Register
+单个 thread
+中间标量、累加器
+最快但很小；用得多会降低 occupancy
+
+
+Shared memory &#x2F; L1
+SM，shared memory 对 block 可见
+block 内复用、线程通信
+容量有限；shared memory 会有 bank conflict
+
+
+L2 cache
+整张 GPU
+跨 SM 的缓存
+不能像 shared memory 一样显式协作
+
+
+HBM &#x2F; global memory
+整张 GPU
+输入、输出、持久化 tensor
+容量大，但延迟高；访问模式决定有效带宽
+
+
+课程中给出的直觉是：寄存器带宽可达数百 TB&#x2F;s，而 B200 的 HBM 带宽约 8 TB&#x2F;s。HBM “慢”并不是绝对速度低，而是相对于片上存储和 Tensor Core 的计算速度不够快。因此 kernel 的第一问题通常是：一个元素从 HBM 被读了几次？
+1.2 grid、block、warp、threadCUDA 的逻辑层级可以写成：
+$$
+\text{grid}\supset\text{thread block (CTA)}\supset\text{warp}\supset\text{thread}.
+$$
+
+thread：处理一个或一小组元素；寄存器是 thread 私有的。
+warp：NVIDIA 中通常包含 32 个 thread，是硬件发射指令的基本单位。
+thread block &#x2F; CTA：一组 thread，被调度到同一个 SM，可以共享 shared memory。
+grid：一次 kernel launch 中的所有 block。
+
+一个 block 在执行期间保持在同一个 SM 上；不同 block 之间不能假定执行顺序，也不能直接使用对方的 shared memory。需要跨 block 通信时，通常要写回 HBM 并启动下一个 kernel。
+这正是 block 存在的原因：GeLU 这样的逐元素操作可以让每个 thread 独立工作；softmax、归约和矩阵乘法需要线程协作，应该把一组相关元素放进同一个 block，读入片上存储后再计算。
+1.3 warp 与 occupancy同一 warp 的 thread 必须锁步执行相同指令。如果不同 thread 走 if/else 的不同分支，硬件通常会先执行一条分支，再执行另一条分支，这叫 control divergence，有效吞吐会下降。
+warp 之间可以被 SM 调度器零成本切换：一个 warp 等待 HBM 时，SM 执行另一个已经就绪的 warp，以此隐藏内存延迟。能同时驻留多少 warp，受寄存器总量、shared memory、每 block 最大 thread 数等共同限制。
+课程的 occupancy 例子：一个 block 有 128 个 thread，每个 thread 使用 160 个寄存器；若 SM 有 65,536 个寄存器、最多 64 个 warp，则
+$$
+R_{\text{block}}=128\times160=20{,}480,
+\quad
+N_{\text{block}}=\left\lfloor\frac{65{,}536}{20{,}480}\right\rfloor=3,
+$$
+$$
+\text{occupancy}=\frac{3\times128/32}{64}=18.75\%.
+$$
+occupancy 不是“越大越好”的分数。若每个 thread 做更多工作（thread coarsening），减少 thread 数反而可能减少调度开销、提高数据复用；只有在延迟无法被其他 warp 隐藏时，低 occupancy 才会明显伤害性能。
+1.4 shared memory bank conflict 与 HBM coalescingshared memory 被划分为 32 个 bank，每个 bank 通常宽 4 bytes。一个周期内，同一个 bank 不能服务多个不同地址的并发访问；多个 thread 命中同一 bank 时会串行化，称为 bank conflict。矩阵转置和 matmul 访问列时尤其容易出现 32-way conflict。常见缓解方法是 padding 或 swizzling（例如按行列索引做 XOR 重排）。
+HBM 侧是另一种约束：一个 warp 的 32 个 thread 访问 global memory 时，硬件会把访问合并为 cache-line transaction（课程用 128 bytes 的直觉说明）。连续、对齐的访问是 coalesced；跨很大 stride 的访问会取回大量不用的数据。
+两者不要混淆：
+
+
+
+问题
+发生在哪里
+解决思路
+
+
+
+bank conflict
+shared memory
+改变片上布局、padding、swizzling
+
+
+uncoalesced access
+HBM&#x2F;global memory
+连续线程访问连续地址、调整 stride&#x2F;layout
+
+
+此外，block 是以 wave 的形式分配到有限数量的 SM。若 B200 有 148 个 SM，却只在最后一波运行 12 个 block，那么大部分 SM 都闲置；这叫低 block occupancy。对规则 workload，可以让 block 数尽量接近或整除 SM 数，减少尾部浪费。
+2. Benchmark 与 profiling：先测量，再优化2.1 Benchmark 的正确姿势benchmark 回答“总共用了多长时间”，不能告诉你时间花在哪里，但它能比较不同实现，也能观察矩阵维度扩大后的 scaling。
+GPU benchmark 最容易犯的错误是把异步 launch 或首次编译计入结果。课程给出的最小流程是：
+def benchmark(run, num_warmups=1, num_trials=3):    for _ in range(num_warmups):        run()                         # 触发 lazy compilation / cache    torch.cuda.synchronize()    times = []    for _ in range(num_trials):        start = torch.cuda.Event(enable_timing=True)        end = torch.cuda.Event(enable_timing=True)        start.record()        run()        end.record()        torch.cuda.synchronize()       # 等 GPU 真正完成        times.append(start.elapsed_time(end))    return sum(times) / len(times)
+
+要点：
+
+warm-up：排除首次编译、内核加载和 cache 未命中的冷启动成本；
+CUDA events：测 GPU 时间，而不是只测 CPU 发起 launch 的时间；
+多次 trial：报告均值之外，严肃实验还应查看方差和 P95；
+按 shape 扫描：小矩阵时 launch 开销占主导，尺寸足够大后才出现接近 matmul 的三次增长。
+
+2.2 Profiler 告诉你“实际执行了什么”PyTorch 的 eager 代码只是高层表达。比如 a + b 最终会调用名为 CUDAFunctor_add 的 kernel；a @ b 则会根据 shape 选择不同的 CUTLASS kernel。profile 中的长 kernel 名称通常包含实现线索：
+
+cutlass：NVIDIA 线性代数库；
+sm100：Blackwell 架构；
+f32：数据格式；
+64x64x16：kernel 使用的 tile shape。
+
+因此 profiler 不是“优化完成后的验收工具”，而是理解框架到底做了什么的入口。推荐的循环是：
+benchmark -&gt; profile -&gt; 找到瓶颈 -&gt; 修改实现 -&gt; benchmark -&gt; profile
+
+3. GeLU：同一个数学表达式，三种性能使用 tanh 近似时，GeLU 可以写作：
+$$
+\operatorname{GeLU}(x)
+=\frac12x\left(1+\tanh\left(\sqrt{\frac2\pi}\left(x+0.044715x^3\right)\right)\right).
+$$
+课程比较三种实现：
+
+naive PyTorch：逐个写出乘法、加法、tanh；
+PyTorch built-in：标准库中专门优化的 GeLU kernel；
+torch.compile(naive_gelu)：编译计算图，生成融合 kernel。
+
+naive 版本的计算图会启动多个 element-wise kernel。每个 kernel 都要从 HBM 读输入、写回中间结果；profile 可以看到多个 unary&#x2F;binary&#x2F;tanh kernel。built-in 版本只启动一个 GeLU kernel；compiled 版本也只启动一个名为 triton_poi_fused_add_mul_tanh_0 的 Triton kernel。
+这解释了“数学相同但速度差很多”：主要差异不是少算了几个乘法，而是把多次 HBM round-trip 变成一次读、一次写。torch.compile 做的关键事情之一，就是从计算图识别可融合的逐元素操作并生成 Triton kernel。
+4. Triton 的抽象：描述一个 block 做什么CUDA 让程序员描述“每一个 thread 做什么”，控制细粒度、表达能力强，但需要自己管理更多同步和 shared memory 细节。Triton 则让程序员描述“每一个 thread block 做什么”：
+从 HBM load 一块数据在寄存器/shared memory 中计算（可以融合多个操作）将结果 store 回 HBM
+
+Triton kernel 仍会编译成 PTX（Parallel Thread Execution），再由 NVIDIA 工具链生成设备代码。PTX 中可以看到 ld.global、st.global、寄存器和 block&#x2F;thread id；但具体映射到哪个 SM、warp 如何调度，仍由硬件控制。课程展示的 PTX 还体现了 thread coarsening：一个 thread 可能一次处理 8 个元素，而不是严格一个 thread 对应一个元素。
+4.1 Element-wise GeLU：block + mask下面是最小的 Triton 结构，省略了输入检查和 Python wrapper：
+@triton.jitdef gelu_kernel(x_ptr, y_ptr, n, BLOCK: tl.constexpr):    pid = tl.program_id(0)             # 当前 block 的 id    offsets = pid * BLOCK + tl.arange(0, BLOCK)    mask = offsets &lt; n                  # 处理非整除的尾 block    x = tl.load(x_ptr + offsets, mask=mask)    a = 0.79788456 * (x + 0.044715 * x * x * x)    e = tl.exp(2 * a)    y = 0.5 * x * (1 + (e - 1) / (e + 1))    tl.store(y_ptr + offsets, y, mask=mask)
+
+Python 侧把一维向量切成 BLOCK=1024 的逻辑块，并以 (num_blocks,) 作为 grid。tl.arange 产生的是一个 block 内的向量索引；它不是让 Python 循环真的执行 1024 次，而是给编译器一个可向量化的索引集合。
+mask 是正确性机制，不是装饰品：当 n 不是 BLOCK 的整数倍时，最后一个 block 仍然会产生越界的 offsets；masked load&#x2F;store 能安全地忽略这些位置。
+5. Softmax：一个 block 内完成 row-wise reductionsoftmax 不是 element-wise，它需要先求每行最大值，再指数化并求和：
+$$
+\operatorname{softmax}(x_i)=
+\frac{\exp(x_i-\max_j x_j)}{\sum_j\exp(x_j-\max_j x_j)}.
+$$
+减去行最大值是数值稳定性技巧，避免 exp 溢出。若一整行能放进一个 block，可以让一个 block 负责一整行：
+@triton.jitdef softmax_kernel(x_ptr, y_ptr, x_stride, y_stride, n,                   BLOCK: tl.constexpr):    row = tl.program_id(0)    cols = tl.arange(0, BLOCK)    x_ptrs = x_ptr + row * x_stride + cols    x = tl.load(x_ptrs, mask=cols &lt; n, other=-float(&quot;inf&quot;))    x = x - tl.max(x, axis=0)    p = tl.exp(x)    y = p / tl.sum(p, axis=0)    y_ptrs = y_ptr + row * y_stride + cols    tl.store(y_ptrs, y, mask=cols &lt; n)
+
+关键点：
+
+grid 是 (M,)，每个 block 对应一行，而不是每个元素一个 block；
+BLOCK 取 next_power_of_2(N)，方便 reduction 的实现；
+padding 出来的位置用 -inf，这样在 softmax 中贡献为 0；
+row 内部不需要 block 间通信，所以能在一个 block 内完成。
+
+
+6. Row sum：行放不进一个 block 时怎么办？如果一行有 4096 个元素、block 只有 1024 个位置，不能简单地把一行拆成四个独立 block，因为最终仍要把四块的部分和合并起来。课程先用更简单的 row sum 展示这个模式：
+
+一个 block 仍然负责一整行；
+block 内循环遍历该行的多个 tile；
+每个 lane&#x2F;thread 维护自己的累加值；
+循环结束后，对 BLOCK 个累加器做最终 reduction。
+
+@triton.jitdef row_sum_kernel(x_ptr, out_ptr, n, BLOCK: tl.constexpr):    row = tl.program_id(0)    acc = tl.zeros([BLOCK], dtype=tl.float32)    for start in range(0, n, BLOCK):        cols = start + tl.arange(0, BLOCK)        x = tl.load(x_ptr + row * n + cols,                    mask=cols &lt; n, other=0.0)        acc += x    result = tl.sum(acc, axis=0)    tl.store(out_ptr + row, result)
+
+这里要区分 block 和 tile：block 是调度和通信的单位，tile 只是该 block 循环处理的一段数据。GeLU 中不同片段可以属于不同 block；row sum 中所有 tile 都由同一个 block 处理。累加器最终可能被 Triton 放到寄存器或 shared memory，具体位置由编译器和资源压力决定。
+
+7. Matmul：tiling 与 kernel fusion设 $A\in\mathbb{R}^{M\times K}$、$B\in\mathbb{R}^{K\times N}$，目标是 $C=AB$。
+7.1 naive matmul 的问题：算术强度太低最直接的 kernel 为每个 $C_{mn}$ 分配一个 thread，遍历 $k$：
+for each (m, n):    acc = 0    for k in range(K):        acc += A[m, k] * B[k, n]   # 每次都从 HBM 取    C[m, n] = acc
+
+它大约需要 $MKN$ 次读取和 $MN$ 次写入。大量读取是冗余的：计算相邻的 $C$ 元素时，$A$ 的同一行和 $B$ 的同一列会被反复取回 HBM。FLOPs 与读取字节数同阶，算术强度接近常数，无法喂饱 Tensor Core。
+理想情况是把整个 $A$ 和 $B$ 搬进 shared memory，只读一次、反复复用；但实际矩阵太大，装不下。因此采用 tiling：
+
+$C$ 的每个 $BLOCK_M\times BLOCK_N$ tile 由一个 block 负责；
+沿 $K$ 维分块，每轮把 $A$ 的 $BLOCK_M\times BLOCK_K$ 和 $B$ 的 $BLOCK_K\times BLOCK_N$ tile 读入片上；
+在片上做 tl.dot，累加到 $BLOCK_M\times BLOCK_N$ 的 accumulator；
+所有 $K$ tile 完成后，只把结果 tile 写回 HBM。
+
+这样全局视角仍需要处理完整矩阵，但局部视角接近“读一次、计算很多次”。算术强度从 $O(1)$ 提高到与 tile size 同阶。
+
+7.2 stride：把二维索引映射到线性内存tensor 在内存中是线性排列的。二维索引通过 stride 变成地址：
+$$
+\operatorname{offset}(r,c)=r\cdot s_{row}+c\cdot s_{col}.
+$$
+因此 Triton matmul wrapper 不应该假定所有输入都是某一种 layout，而是把 a.stride(0)、a.stride(1) 等显式传入 kernel。这样同一个 kernel 才能正确计算非连续或转置后的张量（当然，性能仍取决于访问是否 coalesced）。
+7.3 matmul + ReLU：顺手做 fusion课程把 ReLU 放在 matmul kernel 的最后：
+acc = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float32)for k in range(0, K, BLOCK_K):    a = tl.load(a_ptrs, mask=a_mask, other=0.0)    b = tl.load(b_ptrs, mask=b_mask, other=0.0)    acc += tl.dot(a, b)    a_ptrs += BLOCK_K * stride_ak    b_ptrs += BLOCK_K * stride_bkacc = tl.maximum(acc, 0.0)              # ReLU 留在片上tl.store(c_ptrs, acc, mask=c_mask)
+
+如果分开实现，matmul 输出要先写回 HBM，ReLU 再读回来并写出；融合后，ReLU 直接作用于片上的 accumulator，省掉一次中间 tensor 的读写。这是 kernel fusion 最实用的形态：当你已经为昂贵的主算子写了 kernel，就把紧邻的逐元素后处理放进去。
+8. 把四个例子放到同一张图里
+
+
+例子
+block 如何划分
+是否需要跨 tile 循环
+关键技术
+
+
+
+GeLU
+一个 block 处理一段向量
+否
+pointer arithmetic、mask、thread coarsening
+
+
+Softmax
+一个 block 处理一整行
+否（行能放下）
+block 内 reduction、-inf padding
+
+
+Row sum
+一个 block 负责一整行
+是
+tile loop、partial accumulator、最终 reduction
+
+
+Matmul + ReLU
+一个 block 负责一个输出 tile
+是（沿 K）
+2D tiling、tl.dot、stride、fusion
+
+
+可以用同一个模板记忆：
+确定当前 program/block 的 id计算 offsets / pointers用 mask 安全地 load在寄存器或 shared memory 中计算与复用必要时沿 tile 循环并累加在片上完成可融合的后处理用 mask store 回 HBM
+
+9. XLA&#x2F;JAX 的位置：如何与 Triton 联系起来？虽然本讲没有展开 XLA 实验，但可以把三种层级区分开：
+
+
+
+层级
+程序员主要描述
+优点
+代价
+
+
+
+PyTorch eager
+算子组合&#x2F;张量表达式
+易写、易调试
+可能产生多个 kernel 和中间 HBM 往返
+
+
+torch.compile &#x2F; XLA
+计算图、融合和编译约束
+自动 fusion、shape 专门化、减少手写 kernel
+编译开销、调试和动态 shape 更复杂
+
+
+Triton &#x2F; CUDA &#x2F; PTX
+block、tile、指针与硬件友好的布局
+直接控制局部计算和内存复用
+需要理解 mask、stride、资源与硬件细节
+
+
+本讲的 GeLU 实验展示了同一条路径：PyTorch 表达式 → torch.compile → 一个融合的 Triton kernel → PTX。XLA&#x2F;JAX 在概念上也是类似的编译路线，但实际 IR、后端和调优接口不同。不要把“编译器能 fusion”理解成“任何程序都会达到手写 kernel 的性能”：shape、layout、动态控制流和硬件后端仍然决定最终结果。
+10. 复习清单与实践建议
+看到低性能，先问是 HBM、计算、launch 还是并行度瓶颈；
+benchmark 前 warm-up，使用 CUDA events，并显式 synchronize；
+profiler 先确认实际调用的 kernel，再猜优化方向；
+写 Triton 时先固定正确性：指针、stride、边界 mask、输出 shape；
+能在一个 block 内完成的 reduction 最简单；放不下时，保留一个 block、让它循环扫 tile；
+matmul 的核心不是“三重循环”，而是让 A&#x2F;B tile 在片上复用，提升 arithmetic intensity；
+把相邻的逐元素操作融合到主 kernel，但留意寄存器压力和 occupancy 可能反过来变差；
+不要迷信 occupancy 数字，也不要默认低层手写一定胜过库实现，最终以目标 shape 和目标硬件上的测量为准。
+
+一句话总结： Triton 的价值在于把“线程之间如何协作、数据如何搬运、哪些操作可以融合”提升到 thread-block 这一层表达；而 benchmark、profiler 和硬件知识，决定你写出的 kernel 是“正确”还是“真的快”。
+课程资料： CS336: Language Modeling from Scratch（页面与本地 Trace 代码来自课程附件）。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>LLM</tag>
+        <tag>CS336</tag>
+        <tag>GPU</tag>
+        <tag>CUDA</tag>
+        <tag>Triton</tag>
+        <tag>XLA</tag>
+      </tags>
+  </entry>
 </search>
